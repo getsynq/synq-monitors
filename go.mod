@@ -1,6 +1,6 @@
 module github.com/getsynq/monitor_mgmt
 
-go 1.24.5
+go 1.25.0
 
 require (
 	buf.build/gen/go/getsynq/api/grpc/go v1.5.1-20250813150149-5818d3cb4e3c.2
