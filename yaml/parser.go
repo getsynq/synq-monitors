@@ -8,7 +8,7 @@ import (
 	entitiesv1 "buf.build/gen/go/getsynq/api/protocolbuffers/go/synq/entities/v1"
 	pb "buf.build/gen/go/getsynq/api/protocolbuffers/go/synq/monitors/custom_monitors/v1"
 
-	"github.com/getsynq/monitor_mgmt/uuid"
+	"github.com/getsynq/monitors_mgmt/uuid"
 	"google.golang.org/protobuf/types/known/wrapperspb"
 	goyaml "gopkg.in/yaml.v3"
 )

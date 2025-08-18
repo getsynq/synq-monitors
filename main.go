@@ -9,9 +9,10 @@ import (
 	iamv1grpc "buf.build/gen/go/getsynq/api/grpc/go/synq/auth/iam/v1/iamv1grpc"
 	iamv1 "buf.build/gen/go/getsynq/api/protocolbuffers/go/synq/auth/iam/v1"
 	pb "buf.build/gen/go/getsynq/api/protocolbuffers/go/synq/monitors/custom_monitors/v1"
-	"github.com/getsynq/monitor_mgmt/mgmt"
-	"github.com/getsynq/monitor_mgmt/uuid"
-	"github.com/getsynq/monitor_mgmt/yaml"
+	"github.com/getsynq/monitors_mgmt/config"
+	"github.com/getsynq/monitors_mgmt/mgmt"
+	"github.com/getsynq/monitors_mgmt/uuid"
+	"github.com/getsynq/monitors_mgmt/yaml"
 	"github.com/manifoldco/promptui"
 	"github.com/spf13/cobra"
 	"golang.org/x/oauth2/clientcredentials"
@@ -51,19 +52,24 @@ func run(filePath string, printProtobuf bool) {
 	port := "443"
 	apiUrl := fmt.Sprintf("%s:%s", host, port)
 
-	clientID := os.Getenv("SYNQ_CLIENT_ID")
-	clientSecret := os.Getenv("SYNQ_CLIENT_SECRET")
+	// Load credentials from .env file or environment variables
+	configLoader := config.NewLoader()
+	creds, err := configLoader.LoadCredentials()
+	if err != nil {
+		panic(fmt.Errorf("❌ Failed to load credentials: %v", err))
+	}
+
 	tokenURL := fmt.Sprintf("https://%s/oauth2/token", host)
 
 	authConfig := &clientcredentials.Config{
-		ClientID:     clientID,
-		ClientSecret: clientSecret,
+		ClientID:     creds.ClientID,
+		ClientSecret: creds.ClientSecret,
 		TokenURL:     tokenURL,
 	}
 	oauthTokenSource := oauth.TokenSource{TokenSource: authConfig.TokenSource(ctx)}
-	creds := credentials.NewTLS(&tls.Config{InsecureSkipVerify: false})
+	tlsCreds := credentials.NewTLS(&tls.Config{InsecureSkipVerify: false})
 	opts := []grpc.DialOption{
-		grpc.WithTransportCredentials(creds),
+		grpc.WithTransportCredentials(tlsCreds),
 		grpc.WithPerRPCCredentials(oauthTokenSource),
 		grpc.WithAuthority(host),
 	}

@@ -12,9 +12,30 @@ go run ./.. sample_config.yaml
 
 ```bash
 # Build the CLI
-cd cli/custom_monitors_mgmt
-go build -o monitors-mgmt .
+go build -o monitor-mgmt .
 ```
+
+## Configuration
+
+The CLI requires Synq API credentials. You can provide them in two ways:
+
+### Option 1: Environment Variables
+
+```bash
+export SYNQ_CLIENT_ID="your_client_id"
+export SYNQ_CLIENT_SECRET="your_client_secret"
+```
+
+### Option 2: .env File
+
+Create a `.env` file in your project root:
+
+```bash
+SYNQ_CLIENT_ID=your_client_id
+SYNQ_CLIENT_SECRET=your_client_secret
+```
+
+**Note**: Environment variables take precedence over `.env` files.
 
 ## Usage
 
