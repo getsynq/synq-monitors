@@ -1,0 +1,114 @@
+package mgmt
+
+import (
+	"context"
+	"errors"
+	"fmt"
+
+	custommonitorsv1grpc "buf.build/gen/go/getsynq/api/grpc/go/synq/monitors/custom_monitors/v1/custom_monitorsv1grpc"
+	pb "buf.build/gen/go/getsynq/api/protocolbuffers/go/synq/monitors/custom_monitors/v1"
+	"github.com/samber/lo"
+	"google.golang.org/grpc"
+)
+
+type MgmtService interface {
+	ConfigChangesOverview(protoMonitors []*pb.MonitorDefinition, configId string) (*ChangesOverview, error)
+	DeployMonitors(changesOverview *ChangesOverview) error
+}
+
+type RemoteMgmtService struct {
+	service custommonitorsv1grpc.CustomMonitorsServiceClient
+	ctx     context.Context
+}
+
+var _ MgmtService = &RemoteMgmtService{}
+
+func NewMgmtRemoteService(
+	ctx context.Context,
+	conn *grpc.ClientConn,
+) *RemoteMgmtService {
+	return &RemoteMgmtService{
+		service: custommonitorsv1grpc.NewCustomMonitorsServiceClient(conn),
+		ctx:     ctx,
+	}
+}
+
+func (s *RemoteMgmtService) ConfigChangesOverview(
+	protoMonitors []*pb.MonitorDefinition,
+	configId string,
+) (*ChangesOverview, error) {
+	if len(protoMonitors) == 0 {
+		return nil, errors.New("no monitors provided")
+	}
+
+	var configIds []string
+	if configId != "" {
+		configIds = []string{configId}
+	}
+
+	req := &pb.ConfigChangesOverviewRequest{
+		ConfigIds: configIds,
+		Monitors:  protoMonitors,
+	}
+	resp, err := s.service.ConfigChangesOverview(s.ctx, req)
+	if err != nil {
+		return nil, err
+	}
+
+	changesOverview := NewChangesOverview(
+		resp.MonitorsToCreate,
+		resp.MonitorsToDelete,
+		resp.MonitorsUnchanged,
+		resp.MonitorsManagedByApp,
+		resp.MonitorsChangesOverview,
+		configId,
+	)
+	return changesOverview, nil
+}
+
+func (s *RemoteMgmtService) DeployMonitors(
+	changesOverview *ChangesOverview,
+) error {
+	if len(changesOverview.MonitorsToCreate) > 0 {
+		fmt.Println("Creating monitors...")
+		_, err := s.service.BatchCreateMonitor(s.ctx, &pb.BatchCreateMonitorRequest{
+			Monitors: changesOverview.MonitorsToCreate,
+		})
+		if err != nil {
+			return err
+		}
+	}
+
+	if len(changesOverview.MonitorsToDelete) > 0 {
+		fmt.Println("Deleting monitors...")
+		_, err := s.service.BatchDeleteMonitor(s.ctx, &pb.BatchDeleteMonitorRequest{
+			Ids: lo.Map(changesOverview.MonitorsToDelete, func(monitor *pb.MonitorDefinition, _ int) string {
+				return monitor.Id
+			}),
+		})
+
+		if err != nil {
+			return err
+		}
+	}
+
+	if len(changesOverview.MonitorsChangesOverview) > 0 {
+		fmt.Println("Updating monitors...")
+		newDefinitions := lo.Map(changesOverview.MonitorsChangesOverview, func(changeOverview *pb.ChangeOverview, _ int) *pb.MonitorDefinition {
+			return changeOverview.NewDefinition
+		})
+		monitorIdsToReset := lo.FilterMap(changesOverview.MonitorsChangesOverview, func(changeOverview *pb.ChangeOverview, _ int) (string, bool) {
+			return changeOverview.MonitorId, changeOverview.ShouldReset
+		})
+
+		_, err := s.service.BatchUpdateMonitor(s.ctx, &pb.BatchUpdateMonitorRequest{
+			MonitorIdsToReset: monitorIdsToReset,
+			Monitors:          newDefinitions,
+		})
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}

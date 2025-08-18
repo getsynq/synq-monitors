@@ -1,0 +1,194 @@
+package main
+
+import (
+	"context"
+	"crypto/tls"
+	"fmt"
+	"os"
+
+	iamv1grpc "buf.build/gen/go/getsynq/api/grpc/go/synq/auth/iam/v1/iamv1grpc"
+	iamv1 "buf.build/gen/go/getsynq/api/protocolbuffers/go/synq/auth/iam/v1"
+	pb "buf.build/gen/go/getsynq/api/protocolbuffers/go/synq/monitors/custom_monitors/v1"
+	"github.com/getsynq/monitor_mgmt/mgmt"
+	"github.com/getsynq/monitor_mgmt/uuid"
+	"github.com/getsynq/monitor_mgmt/yaml"
+	"github.com/manifoldco/promptui"
+	"github.com/spf13/cobra"
+	"golang.org/x/oauth2/clientcredentials"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials"
+	"google.golang.org/grpc/credentials/oauth"
+)
+
+func main() {
+	var printProtobuf bool
+
+	var rootCmd = &cobra.Command{
+		Use:   "monitors-mgmt [yaml-file-path]",
+		Short: "Deploy custom monitors from YAML configuration",
+		Long: `Deploy custom monitors by parsing YAML configuration and converting to protobuf.
+Shows YAML preview and asks for confirmation before proceeding.`,
+		Args: cobra.ExactArgs(1),
+		Run: func(cmd *cobra.Command, args []string) {
+			filePath := args[0]
+			run(filePath, printProtobuf)
+		},
+	}
+
+	// Add the -p flag
+	rootCmd.Flags().BoolVarP(&printProtobuf, "print-protobuf", "p", false, "Print protobuf messages in JSON format")
+
+	if err := rootCmd.Execute(); err != nil {
+		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+		os.Exit(1)
+	}
+}
+
+func run(filePath string, printProtobuf bool) {
+	ctx := context.Background()
+
+	host := "developer.synq.io"
+	port := "443"
+	apiUrl := fmt.Sprintf("%s:%s", host, port)
+
+	clientID := os.Getenv("SYNQ_CLIENT_ID")
+	clientSecret := os.Getenv("SYNQ_CLIENT_SECRET")
+	tokenURL := fmt.Sprintf("https://%s/oauth2/token", host)
+
+	authConfig := &clientcredentials.Config{
+		ClientID:     clientID,
+		ClientSecret: clientSecret,
+		TokenURL:     tokenURL,
+	}
+	oauthTokenSource := oauth.TokenSource{TokenSource: authConfig.TokenSource(ctx)}
+	creds := credentials.NewTLS(&tls.Config{InsecureSkipVerify: false})
+	opts := []grpc.DialOption{
+		grpc.WithTransportCredentials(creds),
+		grpc.WithPerRPCCredentials(oauthTokenSource),
+		grpc.WithAuthority(host),
+	}
+
+	conn, err := grpc.DialContext(ctx, apiUrl, opts...)
+	if err != nil {
+		panic(err)
+	}
+	defer conn.Close()
+
+	fmt.Printf("Connected to API...\n\n")
+
+	iamApi := iamv1grpc.NewIamServiceClient(conn)
+	iamResponse, err := iamApi.Iam(ctx, &iamv1.IamRequest{})
+	if err != nil {
+		panic(err)
+	}
+	workspace := iamResponse.Workspace
+	fmt.Printf("🔍 Workspace: %s\n\n", workspace)
+
+	// Check if file exists
+	if _, err := os.Stat(filePath); os.IsNotExist(err) {
+		fmt.Printf("❌ Error: File '%s' does not exist\n", filePath)
+		return
+	}
+
+	fmt.Printf("🚀 Deploying monitors from: %s\n\n", filePath)
+
+	err = yaml.PrintFileOverview(filePath)
+	if err != nil {
+		panic(fmt.Errorf("❌ Error getting file overview: %v\n", err))
+	}
+
+	// Ask for confirmation
+	prompt := promptui.Prompt{
+		Label:     "Is this the correct file to deploy? (y/N)",
+		IsConfirm: true,
+	}
+
+	result, err := prompt.Run()
+	if err != nil {
+		fmt.Println("❌ Deployment cancelled")
+		return
+	}
+
+	if result != "y" && result != "Y" {
+		fmt.Println("❌ Deployment cancelled")
+		return
+	}
+
+	fmt.Println("\n✅ Confirmed! Processing YAML and converting to protobuf...")
+
+	// Parse and convert
+	protoMonitors, config, err := parse(filePath, workspace, printProtobuf)
+	if err != nil {
+		panic(err)
+	}
+
+	// localDatabaseURL := "postgres://postgres:postgres@localhost:5432/kernel_anomalies?sslmode=disable"
+	// localPostgresConn, err := sqlx.Connect("postgres", localDatabaseURL)
+	// if err != nil {
+	// 	panic(err)
+	// }
+	// defer localPostgresConn.Close()
+	// workspace = "synq"
+	// mgmtService := mgmt.NewMgmtLocalService(ctx, localPostgresConn, workspace)
+	mgmtService := mgmt.NewMgmtRemoteService(ctx, conn)
+
+	changesOverview, err := mgmtService.ConfigChangesOverview(protoMonitors, config.ConfigID)
+	if err != nil {
+		panic(fmt.Errorf("❌ Error getting config changes overview: %v\n", err))
+	}
+
+	changesOverview.PrettyPrint()
+
+	if !changesOverview.HasChanges {
+		return
+	}
+
+	prompt = promptui.Prompt{
+		Label:     "Are you sure you want to deploy these monitors? (y/N)",
+		IsConfirm: true,
+	}
+	result, err = prompt.Run()
+	if err != nil {
+		fmt.Println("❌ Deployment cancelled")
+		return
+	}
+	if result != "y" && result != "Y" {
+		fmt.Println("❌ Deployment cancelled")
+		return
+	}
+
+	err = mgmtService.DeployMonitors(changesOverview)
+	if err != nil {
+		panic(fmt.Errorf("❌ Error deploying monitors: %v\n", err))
+	}
+
+}
+
+func parse(filePath, workspace string, printProtobuf bool) ([]*pb.MonitorDefinition, *yaml.YAMLConfig, error) {
+	uuidGenerator := uuid.NewUUIDGenerator(workspace)
+
+	yamlParser, err := yaml.NewYAMLParser(filePath, uuidGenerator)
+	if err != nil {
+		return nil, nil, fmt.Errorf("❌ Error parsing YAML file: %v\n", err)
+	}
+
+	// Convert to protobuf
+	fmt.Println("\n🔄 Converting to protobuf format...")
+	protoMonitors, conversionErrors := yamlParser.ConvertToMonitorDefinitions()
+	if conversionErrors.HasErrors() {
+		return nil, nil, fmt.Errorf("❌ Conversion errors found: %s\n", conversionErrors.Error())
+	}
+
+	fmt.Printf("✅ Successfully converted to %d protobuf MonitorDefinition(s)\n", len(protoMonitors))
+
+	// Conditionally show protobuf output based on the -p flag
+	if printProtobuf {
+		PrintMonitorDefs(protoMonitors)
+	} else {
+		fmt.Println("\n💡 Use -p flag to print protobuf messages in JSON format")
+	}
+
+	fmt.Println("🎉 Deployment preparation complete!")
+
+	return protoMonitors, yamlParser.GetYAMLConfig(), nil
+}
