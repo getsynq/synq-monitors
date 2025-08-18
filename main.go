@@ -9,9 +9,10 @@ import (
 	iamv1grpc "buf.build/gen/go/getsynq/api/grpc/go/synq/auth/iam/v1/iamv1grpc"
 	iamv1 "buf.build/gen/go/getsynq/api/protocolbuffers/go/synq/auth/iam/v1"
 	pb "buf.build/gen/go/getsynq/api/protocolbuffers/go/synq/monitors/custom_monitors/v1"
-	"github.com/getsynq/monitor_mgmt/mgmt"
-	"github.com/getsynq/monitor_mgmt/uuid"
-	"github.com/getsynq/monitor_mgmt/yaml"
+	"github.com/getsynq/monitors_mgmt/config"
+	"github.com/getsynq/monitors_mgmt/mgmt"
+	"github.com/getsynq/monitors_mgmt/uuid"
+	"github.com/getsynq/monitors_mgmt/yaml"
 	"github.com/manifoldco/promptui"
 	"github.com/spf13/cobra"
 	"golang.org/x/oauth2/clientcredentials"
@@ -22,6 +23,8 @@ import (
 
 func main() {
 	var printProtobuf bool
+	var clientID string
+	var clientSecret string
 
 	var rootCmd = &cobra.Command{
 		Use:   "monitors-mgmt [yaml-file-path]",
@@ -31,12 +34,16 @@ Shows YAML preview and asks for confirmation before proceeding.`,
 		Args: cobra.ExactArgs(1),
 		Run: func(cmd *cobra.Command, args []string) {
 			filePath := args[0]
-			run(filePath, printProtobuf)
+			run(filePath, printProtobuf, clientID, clientSecret)
 		},
 	}
 
 	// Add the -p flag
 	rootCmd.Flags().BoolVarP(&printProtobuf, "print-protobuf", "p", false, "Print protobuf messages in JSON format")
+
+	// Add credential flags
+	rootCmd.Flags().StringVar(&clientID, "client-id", "", "Synq client ID (overrides .env and environment variables)")
+	rootCmd.Flags().StringVar(&clientSecret, "client-secret", "", "Synq client secret (overrides .env and environment variables)")
 
 	if err := rootCmd.Execute(); err != nil {
 		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
@@ -44,26 +51,37 @@ Shows YAML preview and asks for confirmation before proceeding.`,
 	}
 }
 
-func run(filePath string, printProtobuf bool) {
+func run(filePath string, printProtobuf bool, flagClientID, flagClientSecret string) {
 	ctx := context.Background()
 
 	host := "developer.synq.io"
 	port := "443"
 	apiUrl := fmt.Sprintf("%s:%s", host, port)
 
-	clientID := os.Getenv("SYNQ_CLIENT_ID")
-	clientSecret := os.Getenv("SYNQ_CLIENT_SECRET")
+	// Load credentials from .env file, environment variables, or command line flags
+	configLoader := config.NewLoader()
+
+	// Set flag credentials if provided
+	if flagClientID != "" || flagClientSecret != "" {
+		configLoader.SetFlagCredentials(flagClientID, flagClientSecret)
+	}
+
+	creds, err := configLoader.LoadCredentials()
+	if err != nil {
+		panic(fmt.Errorf("❌ Failed to load credentials: %v", err))
+	}
+
 	tokenURL := fmt.Sprintf("https://%s/oauth2/token", host)
 
 	authConfig := &clientcredentials.Config{
-		ClientID:     clientID,
-		ClientSecret: clientSecret,
+		ClientID:     creds.ClientID,
+		ClientSecret: creds.ClientSecret,
 		TokenURL:     tokenURL,
 	}
 	oauthTokenSource := oauth.TokenSource{TokenSource: authConfig.TokenSource(ctx)}
-	creds := credentials.NewTLS(&tls.Config{InsecureSkipVerify: false})
+	tlsCreds := credentials.NewTLS(&tls.Config{InsecureSkipVerify: false})
 	opts := []grpc.DialOption{
-		grpc.WithTransportCredentials(creds),
+		grpc.WithTransportCredentials(tlsCreds),
 		grpc.WithPerRPCCredentials(oauthTokenSource),
 		grpc.WithAuthority(host),
 	}

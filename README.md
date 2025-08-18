@@ -12,15 +12,49 @@ go run ./.. sample_config.yaml
 
 ```bash
 # Build the CLI
-cd cli/custom_monitors_mgmt
-go build -o monitors-mgmt .
+go build -o monitor-mgmt .
 ```
+
+## Configuration
+
+The CLI requires Synq API credentials. You can provide them in three ways (in order of priority):
+
+### Option 1: Command Line Flags (Highest Priority)
+
+```bash
+./monitors-mgmt sample_config.yaml --client-id="your_client_id" --client-secret="your_client_secret"
+```
+
+### Option 2: Environment Variables
+
+```bash
+export SYNQ_CLIENT_ID="your_client_id"
+export SYNQ_CLIENT_SECRET="your_client_secret"
+```
+
+### Option 3: .env File
+
+Create a `.env` file in your project root:
+
+```bash
+SYNQ_CLIENT_ID=your_client_id
+SYNQ_CLIENT_SECRET=your_client_secret
+```
+
+**Priority Order**: Command line flags > Environment variables > .env files
 
 ## Usage
 
 ```bash
-./monitors-mgmt [yaml-file-path]
+./monitors-mgmt [yaml-file-path] [flags]
 ```
+
+### Available Flags
+
+- `--client-id string`: Synq client ID (overrides .env and environment variables)
+- `--client-secret string`: Synq client secret (overrides .env and environment variables)
+- `-p, --print-protobuf`: Print protobuf messages in JSON format
+- `-h, --help`: Show help information
 
 ### How it works
 
@@ -29,10 +63,17 @@ go build -o monitors-mgmt .
 3. **Convert**: Parses YAML and converts to protobuf MonitorDefinitions
 4. **Display**: Shows configuration summary and protobuf JSON output
 
-### Example
+### Examples
 
 ```bash
+# Basic usage
 ./monitors-mgmt sample_monitors.yaml
+
+# With command line credentials
+./monitors-mgmt sample_monitors.yaml --client-id="prod_client" --client-secret="prod_secret"
+
+# With protobuf output
+./monitors-mgmt sample_monitors.yaml -p
 ```
 
 ## YAML Format
