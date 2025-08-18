@@ -17,6 +17,9 @@ type Credentials struct {
 // Loader handles loading configuration from various sources
 type Loader struct {
 	envFiles []string
+	// Command line overrides
+	flagClientID     string
+	flagClientSecret string
 }
 
 // NewLoader creates a new configuration loader
@@ -26,18 +29,33 @@ func NewLoader(envFiles ...string) *Loader {
 	}
 }
 
-// LoadCredentials loads client credentials from .env files and environment variables
-// with fallback priority: environment variables > .env files
+// SetFlagCredentials sets credentials from command line flags
+func (l *Loader) SetFlagCredentials(clientID, clientSecret string) {
+	l.flagClientID = clientID
+	l.flagClientSecret = clientSecret
+}
+
+// LoadCredentials loads client credentials with priority: command line flags > environment variables > .env files
 func (l *Loader) LoadCredentials() (*Credentials, error) {
 	// First, try to load from .env files
 	if err := l.loadEnvFiles(); err != nil {
 		return nil, fmt.Errorf("failed to load .env files: %w", err)
 	}
 
-	// Load credentials from environment variables
-	creds := &Credentials{
-		ClientID:     os.Getenv("SYNQ_CLIENT_ID"),
-		ClientSecret: os.Getenv("SYNQ_CLIENT_SECRET"),
+	// Load credentials with priority order
+	creds := &Credentials{}
+
+	// Priority 1: Command line flags (highest priority)
+	if l.flagClientID != "" {
+		creds.ClientID = l.flagClientID
+	} else {
+		creds.ClientID = os.Getenv("SYNQ_CLIENT_ID")
+	}
+
+	if l.flagClientSecret != "" {
+		creds.ClientSecret = l.flagClientSecret
+	} else {
+		creds.ClientSecret = os.Getenv("SYNQ_CLIENT_SECRET")
 	}
 
 	// Validate credentials

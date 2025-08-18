@@ -23,6 +23,8 @@ import (
 
 func main() {
 	var printProtobuf bool
+	var clientID string
+	var clientSecret string
 
 	var rootCmd = &cobra.Command{
 		Use:   "monitors-mgmt [yaml-file-path]",
@@ -32,12 +34,16 @@ Shows YAML preview and asks for confirmation before proceeding.`,
 		Args: cobra.ExactArgs(1),
 		Run: func(cmd *cobra.Command, args []string) {
 			filePath := args[0]
-			run(filePath, printProtobuf)
+			run(filePath, printProtobuf, clientID, clientSecret)
 		},
 	}
 
 	// Add the -p flag
 	rootCmd.Flags().BoolVarP(&printProtobuf, "print-protobuf", "p", false, "Print protobuf messages in JSON format")
+
+	// Add credential flags
+	rootCmd.Flags().StringVar(&clientID, "client-id", "", "Synq client ID (overrides .env and environment variables)")
+	rootCmd.Flags().StringVar(&clientSecret, "client-secret", "", "Synq client secret (overrides .env and environment variables)")
 
 	if err := rootCmd.Execute(); err != nil {
 		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
@@ -45,15 +51,21 @@ Shows YAML preview and asks for confirmation before proceeding.`,
 	}
 }
 
-func run(filePath string, printProtobuf bool) {
+func run(filePath string, printProtobuf bool, flagClientID, flagClientSecret string) {
 	ctx := context.Background()
 
 	host := "developer.synq.io"
 	port := "443"
 	apiUrl := fmt.Sprintf("%s:%s", host, port)
 
-	// Load credentials from .env file or environment variables
+	// Load credentials from .env file, environment variables, or command line flags
 	configLoader := config.NewLoader()
+
+	// Set flag credentials if provided
+	if flagClientID != "" || flagClientSecret != "" {
+		configLoader.SetFlagCredentials(flagClientID, flagClientSecret)
+	}
+
 	creds, err := configLoader.LoadCredentials()
 	if err != nil {
 		panic(fmt.Errorf("❌ Failed to load credentials: %v", err))

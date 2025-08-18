@@ -3,11 +3,13 @@ package config
 import (
 	"os"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
 )
 
 func TestLoadCredentials(t *testing.T) {
 	// Test with environment variables
-	t.Run("from environment variables", func(t *testing.T) {
+	t.Run("from_environment_variables", func(t *testing.T) {
 		// Set environment variables
 		os.Setenv("SYNQ_CLIENT_ID", "test_client_id")
 		os.Setenv("SYNQ_CLIENT_SECRET", "test_client_secret")
@@ -19,20 +21,68 @@ func TestLoadCredentials(t *testing.T) {
 		loader := NewLoader()
 		creds, err := loader.LoadCredentials()
 
-		if err != nil {
-			t.Errorf("Expected no error, got %v", err)
-		}
-
-		if creds.ClientID != "test_client_id" {
-			t.Errorf("Expected ClientID 'test_client_id', got '%s'", creds.ClientID)
-		}
-
-		if creds.ClientSecret != "test_client_secret" {
-			t.Errorf("Expected ClientSecret 'test_client_secret', got '%s'", creds.ClientSecret)
-		}
+		assert.NoError(t, err)
+		assert.Equal(t, "test_client_id", creds.ClientID)
+		assert.Equal(t, "test_client_secret", creds.ClientSecret)
 	})
 
-	t.Run("missing credentials", func(t *testing.T) {
+	t.Run("from_command_line_flags", func(t *testing.T) {
+		// Ensure environment variables are not set
+		os.Unsetenv("SYNQ_CLIENT_ID")
+		os.Unsetenv("SYNQ_CLIENT_SECRET")
+
+		loader := NewLoader()
+		loader.SetFlagCredentials("flag_client_id", "flag_client_secret")
+
+		creds, err := loader.LoadCredentials()
+
+		assert.NoError(t, err)
+		assert.Equal(t, "flag_client_id", creds.ClientID)
+		assert.Equal(t, "flag_client_secret", creds.ClientSecret)
+	})
+
+	t.Run("command_line_flags_override_environment_variables", func(t *testing.T) {
+		// Set environment variables
+		os.Setenv("SYNQ_CLIENT_ID", "env_client_id")
+		os.Setenv("SYNQ_CLIENT_SECRET", "env_client_secret")
+		defer func() {
+			os.Unsetenv("SYNQ_CLIENT_ID")
+			os.Unsetenv("SYNQ_CLIENT_SECRET")
+		}()
+
+		loader := NewLoader()
+		loader.SetFlagCredentials("flag_client_id", "flag_client_secret")
+
+		creds, err := loader.LoadCredentials()
+
+		assert.NoError(t, err)
+		// Flags should override environment variables
+		assert.Equal(t, "flag_client_id", creds.ClientID)
+		assert.Equal(t, "flag_client_secret", creds.ClientSecret)
+	})
+
+	t.Run("partial_flag_override", func(t *testing.T) {
+		// Set environment variables
+		os.Setenv("SYNQ_CLIENT_ID", "env_client_id")
+		os.Setenv("SYNQ_CLIENT_SECRET", "env_client_secret")
+		defer func() {
+			os.Unsetenv("SYNQ_CLIENT_ID")
+			os.Unsetenv("SYNQ_CLIENT_SECRET")
+		}()
+
+		loader := NewLoader()
+		loader.SetFlagCredentials("flag_client_id", "") // Only override ClientID
+
+		creds, err := loader.LoadCredentials()
+
+		assert.NoError(t, err)
+		// Flag should override environment variable for ClientID
+		assert.Equal(t, "flag_client_id", creds.ClientID)
+		// ClientSecret should come from environment variable
+		assert.Equal(t, "env_client_secret", creds.ClientSecret)
+	})
+
+	t.Run("missing_credentials", func(t *testing.T) {
 		// Ensure environment variables are not set
 		os.Unsetenv("SYNQ_CLIENT_ID")
 		os.Unsetenv("SYNQ_CLIENT_SECRET")
@@ -40,17 +90,12 @@ func TestLoadCredentials(t *testing.T) {
 		loader := NewLoader()
 		_, err := loader.LoadCredentials()
 
-		if err == nil {
-			t.Error("Expected error for missing credentials, got nil")
-		}
-
+		assert.Error(t, err)
 		expectedErr := "missing required credentials: SYNQ_CLIENT_ID, SYNQ_CLIENT_SECRET"
-		if err.Error() != expectedErr {
-			t.Errorf("Expected error '%s', got '%s'", expectedErr, err.Error())
-		}
+		assert.Equal(t, expectedErr, err.Error())
 	})
 
-	t.Run("empty credentials", func(t *testing.T) {
+	t.Run("empty_credentials", func(t *testing.T) {
 		// Set empty environment variables
 		os.Setenv("SYNQ_CLIENT_ID", "")
 		os.Setenv("SYNQ_CLIENT_SECRET", "")
@@ -62,17 +107,12 @@ func TestLoadCredentials(t *testing.T) {
 		loader := NewLoader()
 		_, err := loader.LoadCredentials()
 
-		if err == nil {
-			t.Error("Expected error for empty credentials, got nil")
-		}
-
+		assert.Error(t, err)
 		expectedErr := "missing required credentials: SYNQ_CLIENT_ID, SYNQ_CLIENT_SECRET"
-		if err.Error() != expectedErr {
-			t.Errorf("Expected error '%s', got '%s'", expectedErr, err.Error())
-		}
+		assert.Equal(t, expectedErr, err.Error())
 	})
 
-	t.Run("whitespace only credentials", func(t *testing.T) {
+	t.Run("whitespace_only_credentials", func(t *testing.T) {
 		// Set whitespace-only environment variables
 		os.Setenv("SYNQ_CLIENT_ID", "   ")
 		os.Setenv("SYNQ_CLIENT_SECRET", "\t\n")
@@ -84,33 +124,40 @@ func TestLoadCredentials(t *testing.T) {
 		loader := NewLoader()
 		_, err := loader.LoadCredentials()
 
-		if err == nil {
-			t.Error("Expected error for whitespace-only credentials, got nil")
-		}
-
+		assert.Error(t, err)
 		expectedErr := "missing required credentials: SYNQ_CLIENT_ID, SYNQ_CLIENT_SECRET"
-		if err.Error() != expectedErr {
-			t.Errorf("Expected error '%s', got '%s'", expectedErr, err.Error())
-		}
+		assert.Equal(t, expectedErr, err.Error())
 	})
 }
 
 func TestNewLoader(t *testing.T) {
-	t.Run("default loader", func(t *testing.T) {
+	t.Run("default_loader", func(t *testing.T) {
 		loader := NewLoader()
-		if loader == nil {
-			t.Error("Expected loader to be created, got nil")
-		}
+		assert.NotNil(t, loader)
 	})
 
-	t.Run("loader with env files", func(t *testing.T) {
+	t.Run("loader_with_env_files", func(t *testing.T) {
 		envFiles := []string{".env.test", ".env.local"}
 		loader := NewLoader(envFiles...)
-		if loader == nil {
-			t.Error("Expected loader to be created, got nil")
-		}
-		if len(loader.envFiles) != 2 {
-			t.Errorf("Expected 2 env files, got %d", len(loader.envFiles))
-		}
+		assert.NotNil(t, loader)
+		assert.Len(t, loader.envFiles, 2)
+	})
+}
+
+func TestSetFlagCredentials(t *testing.T) {
+	t.Run("set_flag_credentials", func(t *testing.T) {
+		loader := NewLoader()
+		loader.SetFlagCredentials("test_id", "test_secret")
+
+		assert.Equal(t, "test_id", loader.flagClientID)
+		assert.Equal(t, "test_secret", loader.flagClientSecret)
+	})
+
+	t.Run("set_empty_flag_credentials", func(t *testing.T) {
+		loader := NewLoader()
+		loader.SetFlagCredentials("", "")
+
+		assert.Empty(t, loader.flagClientID)
+		assert.Empty(t, loader.flagClientSecret)
 	})
 }
