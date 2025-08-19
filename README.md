@@ -72,7 +72,7 @@ SYNQ_CLIENT_SECRET=your_client_secret
 # With command line credentials
 ./monitors-mgmt sample_monitors.yaml --client-id="prod_client" --client-secret="prod_secret"
 
-# With protobuf output
+# With protobuf output in JSON format
 ./monitors-mgmt sample_monitors.yaml -p
 ```
 
@@ -83,10 +83,10 @@ config_id: "data-team-pipeline"
 
 defaults:
   severity: ERROR
-  time_partitioning: created_at
 
 monitors:
   - name: freshness_on_orders
+    time_partitioning: created_at
     type: freshness
     expression: "created_at"
     monitored_ids:
@@ -94,6 +94,7 @@ monitors:
       - orders_table_us
 
   - name: volume_on_logs
+    time_partitioning: at
     type: volume
     monitored_id: log_table
     segmentation: "country"
@@ -101,11 +102,11 @@ monitors:
 
   - name: stats_on_user_fields
     type: field_stats
+    time_partitioning: registered_at
     fields:
       - age
       - signup_method
-    monitored_ids:
-      - users_table
+    monitored_id: users_table
     mode:
       anomaly_engine:
         sensitivity: BALANCED
@@ -113,6 +114,7 @@ monitors:
       daily: 0
 
   - name: custom_numeric_active_users
+    time_partitioning: registered_at
     type: custom_numeric
     metric_aggregation: "COUNT(DISTINCT user_id)"
     monitored_ids:
@@ -167,13 +169,13 @@ monitors:
 | `type`               | string        | ✅       | -                              | Monitor type: `freshness`, `volume`, `custom_numeric`, `field_stats`   |
 | `expression`         | string        | ❌       | -                              | **Required for `freshness` monitors** - SQL expression to evaluate     |
 | `metric_aggregation` | string        | ❌       | -                              | **Required for `custom_numeric` monitors** - Aggregation function      |
-| `monitored_ids`      | array[string] | ❌       | -                              | Array of monitored entity IDs (mutually exclusive with `monitored_id`) |
-| `monitored_id`       | string        | ❌       | -                              | Single monitored entity ID (mutually exclusive with `monitored_ids`)   |
+| `monitored_ids`      | array[string] | ✅❌     | -                              | Array of monitored entity IDs (mutually exclusive with `monitored_id`) |
+| `monitored_id`       | string        | ❌✅     | -                              | Single monitored entity ID (mutually exclusive with `monitored_ids`)   |
 | `fields`             | array[string] | ❌       | -                              | **Required for `field_stats` monitors** - Fields to analyze            |
 | `segmentation`       | string        | ❌       | -                              | SQL expression for data segmentation                                   |
 | `filter`             | string        | ❌       | -                              | SQL WHERE clause for filtering data                                    |
 | `severity`           | string        | ❌       | `{defaults.severity}`          | Monitor severity: `WARNING`, `ERROR`                                   |
-| `time_partitioning`  | string        | ❌       | `{defaults.time_partitioning}` | Time partitioning expression                                           |
+| `time_partitioning`  | string        | ✅       | `{defaults.time_partitioning}` | Time partitioning expression                                           |
 | `mode`               | object        | ❌       | `{defaults.mode}`              | Detection mode configuration                                           |
 | `schedule`           | object        | ❌       | `{defaults.schedule}`          | Schedule configuration                                                 |
 | `config_id`          | string        | ❌       | `{config_id}`                  | Override default config ID                                             |
@@ -188,10 +190,10 @@ monitors:
 
 ### Schedule Configuration
 
-| Field             | Type | Required | Default | Description                                |
-| ----------------- | ---- | -------- | ------- | ------------------------------------------ |
-| `schedule.daily`  | int  | ❌       | `0`     | Hour of day (0-23) for daily execution     |
-| `schedule.hourly` | int  | ❌       | -       | Minute of hour (0-59) for hourly execution |
+| Field             | Type | Required | Default | Description                                         |
+| ----------------- | ---- | -------- | ------- | --------------------------------------------------- |
+| `schedule.daily`  | int  | ❌       | `0`     | Minutes since midnigth (0-1439) for daily execution |
+| `schedule.hourly` | int  | ❌       | -       | Minute of hour (0-59) for hourly execution          |
 
 **Note:** Only one of `daily` or `hourly` should be specified per schedule.
 
