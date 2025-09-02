@@ -21,6 +21,11 @@ import (
 	"google.golang.org/grpc/credentials/oauth"
 )
 
+func exitWithError(err error) {
+	fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+	os.Exit(1)
+}
+
 func main() {
 	var printProtobuf bool
 	var clientID string
@@ -46,8 +51,7 @@ Shows YAML preview and asks for confirmation before proceeding.`,
 	rootCmd.Flags().StringVar(&clientSecret, "client-secret", "", "Synq client secret (overrides .env and environment variables)")
 
 	if err := rootCmd.Execute(); err != nil {
-		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
-		os.Exit(1)
+		exitWithError(err)
 	}
 }
 
@@ -68,7 +72,7 @@ func run(filePath string, printProtobuf bool, flagClientID, flagClientSecret str
 
 	creds, err := configLoader.LoadCredentials()
 	if err != nil {
-		panic(fmt.Errorf("❌ Failed to load credentials: %v", err))
+		exitWithError(fmt.Errorf("❌ Failed to load credentials: %v", err))
 	}
 
 	tokenURL := fmt.Sprintf("https://%s/oauth2/token", host)
@@ -88,7 +92,7 @@ func run(filePath string, printProtobuf bool, flagClientID, flagClientSecret str
 
 	conn, err := grpc.DialContext(ctx, apiUrl, opts...)
 	if err != nil {
-		panic(err)
+		exitWithError(err)
 	}
 	defer conn.Close()
 
@@ -97,7 +101,7 @@ func run(filePath string, printProtobuf bool, flagClientID, flagClientSecret str
 	iamApi := iamv1grpc.NewIamServiceClient(conn)
 	iamResponse, err := iamApi.Iam(ctx, &iamv1.IamRequest{})
 	if err != nil {
-		panic(err)
+		exitWithError(err)
 	}
 	workspace := iamResponse.Workspace
 	fmt.Printf("🔍 Workspace: %s\n\n", workspace)
@@ -112,7 +116,7 @@ func run(filePath string, printProtobuf bool, flagClientID, flagClientSecret str
 
 	err = yaml.PrintFileOverview(filePath)
 	if err != nil {
-		panic(fmt.Errorf("❌ Error getting file overview: %v\n", err))
+		exitWithError(fmt.Errorf("❌ Error getting file overview: %v", err))
 	}
 
 	// Ask for confirmation
@@ -137,7 +141,7 @@ func run(filePath string, printProtobuf bool, flagClientID, flagClientSecret str
 	// Parse and convert
 	protoMonitors, config, err := parse(filePath, workspace, printProtobuf)
 	if err != nil {
-		panic(err)
+		exitWithError(err)
 	}
 
 	// localDatabaseURL := "postgres://postgres:postgres@localhost:5432/kernel_anomalies?sslmode=disable"
@@ -152,7 +156,7 @@ func run(filePath string, printProtobuf bool, flagClientID, flagClientSecret str
 
 	changesOverview, err := mgmtService.ConfigChangesOverview(protoMonitors, config.ConfigID)
 	if err != nil {
-		panic(fmt.Errorf("❌ Error getting config changes overview: %v\n", err))
+		exitWithError(fmt.Errorf("❌ Error getting config changes overview: %v", err))
 	}
 
 	changesOverview.PrettyPrint()
@@ -177,9 +181,10 @@ func run(filePath string, printProtobuf bool, flagClientID, flagClientSecret str
 
 	err = mgmtService.DeployMonitors(changesOverview)
 	if err != nil {
-		panic(fmt.Errorf("❌ Error deploying monitors: %v\n", err))
+		exitWithError(fmt.Errorf("❌ Error deploying monitors: %v", err))
 	}
 
+	fmt.Println("✅ Deployment complete!")
 }
 
 func parse(filePath, workspace string, printProtobuf bool) ([]*pb.MonitorDefinition, *yaml.YAMLConfig, error) {
