@@ -54,6 +54,7 @@ SYNQ_CLIENT_SECRET=your_client_secret
 - `--client-id string`: Synq client ID (overrides .env and environment variables)
 - `--client-secret string`: Synq client secret (overrides .env and environment variables)
 - `-p, --print-protobuf`: Print protobuf messages in JSON format
+- `--auto-confirm`: Automatically confirm all prompts (skip interactive confirmations)
 - `-h, --help`: Show help information
 
 ### How it works
@@ -74,6 +75,9 @@ SYNQ_CLIENT_SECRET=your_client_secret
 
 # With protobuf output in JSON format
 ./monitors-mgmt sample_monitors.yaml -p
+
+# With auto-confirm (skip all prompts)
+./monitors-mgmt sample_monitors.yaml --auto-confirm
 ```
 
 ## YAML Format
