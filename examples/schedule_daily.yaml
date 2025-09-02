@@ -5,6 +5,6 @@ monitors:
     type: volume
     time_partitioning: created_at
     schedule:
-      daily: 15
+      daily: 15 # runs at 15th minute since midnight
     monitored_ids:
       - ch-prod::default::runs

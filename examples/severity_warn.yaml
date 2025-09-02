@@ -4,6 +4,6 @@ monitors:
   - id: runs_volume_warn
     type: volume
     time_partitioning: created_at
-    severity: WARNING
+    severity: WARNING # change severity to WARNING
     monitored_ids:
       - ch-prod::default::runs
