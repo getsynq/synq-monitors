@@ -83,7 +83,7 @@ SYNQ_CLIENT_SECRET=your_client_secret
 ## YAML Format
 
 ```yaml
-config_id: "data-team-pipeline"
+namespace: "data-team-pipeline"
 
 defaults:
   severity: ERROR
@@ -151,7 +151,7 @@ monitors:
 
 | Field       | Type   | Required | Default | Description                             |
 | ----------- | ------ | -------- | ------- | --------------------------------------- |
-| `config_id` | string | ❌       | -       | Unique identifier for the configuration |
+| `namespace` | string | ❌       | -       | Unique identifier for the configuration |
 | `defaults`  | object | ❌       | -       | Default values applied to all monitors  |
 | `monitors`  | array  | ✅       | -       | Array of monitor definitions            |
 
@@ -182,7 +182,7 @@ monitors:
 | `time_partitioning`  | string        | ✅       | `{defaults.time_partitioning}` | Time partitioning expression                                           |
 | `mode`               | object        | ❌       | `{defaults.mode}`              | Detection mode configuration                                           |
 | `schedule`           | object        | ❌       | `{defaults.schedule}`          | Schedule configuration                                                 |
-| `config_id`          | string        | ❌       | `{config_id}`                  | Override default config ID                                             |
+| `namespace`          | string        | ❌       | `{namespace}`                  | Override default namespace ID                                          |
 
 ### Mode Configuration
 
@@ -227,6 +227,6 @@ monitors:
 
 - `monitored_id` and `monitored_ids` cannot be used together
 - At least one of `monitored_id` or `monitored_ids` must be specified
-- Monitor `id` must be unique across all monitors (across all configs)
+- Monitor `id` must be unique across all monitors (across all namespaces)
 - `time_partitioning` is required for all monitors
 - Only one schedule type (`daily` or `hourly`) can be specified per monitor

@@ -344,7 +344,7 @@ func parseSensitivity(sensitivity string) (pb.Sensitivity, bool) {
 // GetYAMLSummary provides a summary of the YAML configuration
 func GetYAMLSummary(config *YAMLConfig) map[string]interface{} {
 	summary := make(map[string]interface{})
-	summary["config_id"] = config.ConfigID
+	summary["namespace"] = config.ConfigID
 	summary["monitors_count"] = len(config.Monitors)
 
 	if config.Defaults.Severity != "" {
