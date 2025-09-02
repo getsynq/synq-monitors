@@ -1,0 +1,8 @@
+# Create a single volume monitor for runs table with defaults (schedule=daily, severity=Error)
+
+monitors:
+  - id: runs_volume_daily
+    type: volume
+    time_partitioning: created_at
+    monitored_ids:
+      - ch-prod::default::runs

@@ -1,0 +1,10 @@
+# Create a single volume monitor for runs table running daily at 15th minute since midnight.
+
+monitors:
+  - id: runs_volume_daily
+    type: volume
+    time_partitioning: created_at
+    schedule:
+      daily: 15
+    monitored_ids:
+      - ch-prod::default::runs

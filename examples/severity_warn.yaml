@@ -1,0 +1,9 @@
+# Create a single volume monitor for runs table with severity=WARNING
+
+monitors:
+  - id: runs_volume_warn
+    type: volume
+    time_partitioning: created_at
+    severity: WARNING
+    monitored_ids:
+      - ch-prod::default::runs

@@ -1,0 +1,10 @@
+# Create a single volume monitor for runs table running hourly every 15th minute.
+
+monitors:
+  - id: runs_volume_hourly
+    type: volume
+    time_partitioning: created_at
+    schedule:
+      hourly: 15 # runs at 15th minute of every hour
+    monitored_ids:
+      - ch-prod::default::runs
