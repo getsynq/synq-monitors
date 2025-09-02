@@ -302,7 +302,7 @@ func convertSingleMonitor(
 		} else if schedule.Hourly != nil {
 			proto.Schedule = &pb.MonitorDefinition_Hourly{
 				Hourly: &pb.ScheduleHourly{
-					MinutesSinceMidnight: int32(*schedule.Hourly),
+					MinuteOfHour: int32(*schedule.Hourly),
 				},
 			}
 		}
