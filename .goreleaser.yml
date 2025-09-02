@@ -5,7 +5,7 @@
 builds:
   - id: synq-monitors
     binary: synq-monitors
-    main: ./main.go
+    main: .
     goos:
       - linux
       - darwin
