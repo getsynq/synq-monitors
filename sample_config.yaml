@@ -1,4 +1,4 @@
-config_id: "data-team-pipeline"
+namespace: "data-team-pipeline"
 
 defaults:
   severity: ERROR
