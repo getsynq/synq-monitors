@@ -81,7 +81,7 @@ func TestGenerateMonitorUUIDFromProto(t *testing.T) {
 				Filter: lo.ToPtr("status = 'active'"),
 				Schedule: &pb.MonitorDefinition_Hourly{
 					Hourly: &pb.ScheduleHourly{
-						MinutesSinceMidnight: 30,
+						MinuteOfHour: 30,
 					},
 				},
 				Monitor: &pb.MonitorDefinition_CustomNumeric{

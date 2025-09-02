@@ -4,7 +4,7 @@ go 1.25.0
 
 require (
 	buf.build/gen/go/getsynq/api/grpc/go v1.5.1-20250813150149-5818d3cb4e3c.2
-	buf.build/gen/go/getsynq/api/protocolbuffers/go v1.36.7-20250813150149-5818d3cb4e3c.1
+	buf.build/gen/go/getsynq/api/protocolbuffers/go v1.36.8-20250902132547-0d76f4d49dc1.1
 	github.com/fatih/color v1.18.0
 	github.com/google/uuid v1.6.0
 	github.com/manifoldco/promptui v0.9.0
@@ -13,12 +13,12 @@ require (
 	github.com/stretchr/testify v1.10.0
 	golang.org/x/oauth2 v0.30.0
 	google.golang.org/grpc v1.74.2
-	google.golang.org/protobuf v1.36.7
+	google.golang.org/protobuf v1.36.8
 	gopkg.in/yaml.v3 v3.0.1
 )
 
 require (
-	buf.build/gen/go/bufbuild/protovalidate/protocolbuffers/go v1.36.7-20240508200655-46a4cf4ba109.1 // indirect
+	buf.build/gen/go/bufbuild/protovalidate/protocolbuffers/go v1.36.8-20240508200655-46a4cf4ba109.1 // indirect
 	cloud.google.com/go/compute/metadata v0.7.0 // indirect
 	github.com/chzyer/readline v1.5.1 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
