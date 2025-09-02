@@ -1,0 +1,14 @@
+# Create a custom numeric monitor for runs table with metric aggregation by unique workspaces.
+
+monitors:
+  - id: runs_unique_workspaces
+    type: custom_numeric
+    metric_aggregation: "COUNT(DISTINCT workspace)"
+    time_partitioning: created_at
+    monitored_ids:
+      - ch-prod::default::runs
+    mode:
+      fixed_thresholds:
+        max: 1000
+    filter:
+      created_at > today()
