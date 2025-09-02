@@ -25,6 +25,7 @@ func main() {
 	var printProtobuf bool
 	var clientID string
 	var clientSecret string
+	var autoConfirm bool
 
 	var rootCmd = &cobra.Command{
 		Use:   "monitors-mgmt [yaml-file-path]",
@@ -34,7 +35,7 @@ Shows YAML preview and asks for confirmation before proceeding.`,
 		Args: cobra.ExactArgs(1),
 		Run: func(cmd *cobra.Command, args []string) {
 			filePath := args[0]
-			run(filePath, printProtobuf, clientID, clientSecret)
+			run(filePath, printProtobuf, clientID, clientSecret, autoConfirm)
 		},
 	}
 
@@ -45,13 +46,16 @@ Shows YAML preview and asks for confirmation before proceeding.`,
 	rootCmd.Flags().StringVar(&clientID, "client-id", "", "Synq client ID (overrides .env and environment variables)")
 	rootCmd.Flags().StringVar(&clientSecret, "client-secret", "", "Synq client secret (overrides .env and environment variables)")
 
+	// Add auto-confirm flag
+	rootCmd.Flags().BoolVar(&autoConfirm, "auto-confirm", false, "Automatically confirm all prompts (skip interactive confirmations)")
+
 	if err := rootCmd.Execute(); err != nil {
 		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 		os.Exit(1)
 	}
 }
 
-func run(filePath string, printProtobuf bool, flagClientID, flagClientSecret string) {
+func run(filePath string, printProtobuf bool, flagClientID, flagClientSecret string, autoConfirm bool) {
 	ctx := context.Background()
 
 	host := "developer.synq.io"
@@ -116,23 +120,27 @@ func run(filePath string, printProtobuf bool, flagClientID, flagClientSecret str
 	}
 
 	// Ask for confirmation
-	prompt := promptui.Prompt{
-		Label:     "Is this the correct file to deploy? (y/N)",
-		IsConfirm: true,
-	}
+	if autoConfirm {
+		fmt.Println("\n✅ Auto-confirmed! Processing YAML and converting to protobuf...")
+	} else {
+		prompt := promptui.Prompt{
+			Label:     "Is this the correct file to deploy? (y/N)",
+			IsConfirm: true,
+		}
 
-	result, err := prompt.Run()
-	if err != nil {
-		fmt.Println("❌ Deployment cancelled")
-		return
-	}
+		result, err := prompt.Run()
+		if err != nil {
+			fmt.Println("❌ Deployment cancelled")
+			return
+		}
 
-	if result != "y" && result != "Y" {
-		fmt.Println("❌ Deployment cancelled")
-		return
-	}
+		if result != "y" && result != "Y" {
+			fmt.Println("❌ Deployment cancelled")
+			return
+		}
 
-	fmt.Println("\n✅ Confirmed! Processing YAML and converting to protobuf...")
+		fmt.Println("\n✅ Confirmed! Processing YAML and converting to protobuf...")
+	}
 
 	// Parse and convert
 	protoMonitors, config, err := parse(filePath, workspace, printProtobuf)
@@ -161,18 +169,22 @@ func run(filePath string, printProtobuf bool, flagClientID, flagClientSecret str
 		return
 	}
 
-	prompt = promptui.Prompt{
-		Label:     "Are you sure you want to deploy these monitors? (y/N)",
-		IsConfirm: true,
-	}
-	result, err = prompt.Run()
-	if err != nil {
-		fmt.Println("❌ Deployment cancelled")
-		return
-	}
-	if result != "y" && result != "Y" {
-		fmt.Println("❌ Deployment cancelled")
-		return
+	if !autoConfirm {
+		prompt := promptui.Prompt{
+			Label:     "Are you sure you want to deploy these monitors? (y/N)",
+			IsConfirm: true,
+		}
+		result, err := prompt.Run()
+		if err != nil {
+			fmt.Println("❌ Deployment cancelled")
+			return
+		}
+		if result != "y" && result != "Y" {
+			fmt.Println("❌ Deployment cancelled")
+			return
+		}
+	} else {
+		fmt.Println("✅ Auto-confirmed deployment!")
 	}
 
 	err = mgmtService.DeployMonitors(changesOverview)
