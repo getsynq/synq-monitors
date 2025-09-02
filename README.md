@@ -5,7 +5,7 @@ Deploy custom monitors from YAML configuration files.
 ## Script execution
 
 ```bash
-go run ./.. sample_config.yaml
+go run ./... sample_config.yaml
 ```
 
 ## Installation
