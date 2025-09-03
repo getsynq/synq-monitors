@@ -1,0 +1,45 @@
+# Includes freshness, volume, field stats with anomaly engine (BALANCED sensitivity),
+# and a custom numeric check to ensure revenue is never negative.
+
+namespace: "financial_data"
+
+defaults:
+  severity: ERROR
+
+monitors:
+  # 1) Freshness by month
+  - name: freshness_financial_statement
+    type: freshness
+    monitored_ids:
+      - bq-synq-demo::nyc_taxi::financial_statement
+    time_partitioning: month
+    expression: "month"
+
+  # 2) Volume per month
+  - name: volume_financial_statement
+    type: volume
+    monitored_id: bq-synq-demo::nyc_taxi::financial_statement
+    time_partitioning: month
+
+  # 3) Field stats on key metrics with BALANCED sensitivity
+  - name: stats_financial_statement
+    type: field_stats
+    monitored_id: bq-synq-demo::nyc_taxi::financial_statement
+    time_partitioning: month
+    fields:
+      - total_revenue
+      - total_tips
+    mode:
+      anomaly_engine:
+        sensitivity: BALANCED
+
+  # 4) Custom check: revenue should never be negative
+  - name: custom_financial_statement_revenue_nonnegative
+    type: custom_numeric
+    monitored_ids:
+      - bq-synq-demo::nyc_taxi::financial_statement
+    time_partitioning: month
+    metric_aggregation: "MIN(total_revenue)"
+    mode:
+      fixed_thresholds:
+        min: 0
