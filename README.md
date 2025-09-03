@@ -17,6 +17,11 @@ go build -o monitor-mgmt .
 
 ## Configuration
 
+**API URL Options:**
+
+- `https://developer.synq.io` - Not US production environment
+- `https://api.us.synq.io` - US production environment
+
 The CLI requires Synq API credentials. You can provide them in three ways (in order of priority):
 
 ### Option 1: Command Line Flags (Highest Priority)
