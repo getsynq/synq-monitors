@@ -1,4 +1,4 @@
-# GoReleaser configuration for monitors-mgmt CLI
+# GoReleaser configuration for synq-monitors CLI
 # https://goreleaser.com/
 
 # Build configuration
@@ -54,7 +54,7 @@ changelog:
 release:
   github:
     owner: getsynq
-    name: monitors-mgmt
+    name: synq-monitors
   draft: false
   prerelease: auto
   mode: replace
@@ -62,29 +62,29 @@ release:
   header: |
     ## What's Changed
     
-    Full Changelog: https://github.com/getsynq/monitors-mgmt/compare/{{ .PreviousTag }}...{{ .Tag }}
+    Full Changelog: https://github.com/getsynq/synq-monitors/compare/{{ .PreviousTag }}...{{ .Tag }}
   footer: |
     ## Installation
     
     ### macOS
     ```bash
     # Intel
-    curl -L https://github.com/getsynq/monitors-mgmt/releases/download/{{ .Tag }}/synq-monitors_{{ .Version }}_darwin_amd64.tar.gz | tar -xz
+    curl -L https://github.com/getsynq/synq-monitors/releases/download/{{ .Tag }}/synq-monitors_{{ .Version }}_darwin_amd64.tar.gz | tar -xz
     sudo mv synq-monitors /usr/local/bin/
     
     # Apple Silicon
-    curl -L https://github.com/getsynq/monitors-mgmt/releases/download/{{ .Tag }}/synq-monitors_{{ .Version }}_darwin_arm64.tar.gz | tar -xz
+    curl -L https://github.com/getsynq/synq-monitors/releases/download/{{ .Tag }}/synq-monitors_{{ .Version }}_darwin_arm64.tar.gz | tar -xz
     sudo mv synq-monitors /usr/local/bin/
     ```
     
     ### Linux
     ```bash
     # AMD64
-    curl -L https://github.com/getsynq/monitors-mgmt/releases/download/{{ .Tag }}/synq-monitors_{{ .Version }}_linux_amd64.tar.gz | tar -xz
+    curl -L https://github.com/getsynq/synq-monitors/releases/download/{{ .Tag }}/synq-monitors_{{ .Version }}_linux_amd64.tar.gz | tar -xz
     sudo mv synq-monitors /usr/local/bin/
     
     # ARM64
-    curl -L https://github.com/getsynq/monitors-mgmt/releases/download/{{ .Tag }}/synq-monitors_{{ .Version }}_linux_arm64.tar.gz | tar -xz
+    curl -L https://github.com/getsynq/synq-monitors/releases/download/{{ .Tag }}/synq-monitors_{{ .Version }}_linux_arm64.tar.gz | tar -xz
     sudo mv synq-monitors /usr/local/bin/
     ```
     
@@ -98,7 +98,7 @@ release:
 #     name: homebrew-tap
 #   folder: Formula
 #   description: "Deploy custom monitors from YAML configuration"
-#   homepage: "https://github.com/getsynq/monitors-mgmt"
+#   homepage: "https://github.com/getsynq/synq-monitors"
 #   license: "MIT"
 #   skip_upload: false
 #   test:

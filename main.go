@@ -33,7 +33,7 @@ func main() {
 	var autoConfirm bool
 
 	var rootCmd = &cobra.Command{
-		Use:   "monitors-mgmt [yaml-file-path]",
+		Use:   "synq-monitors [yaml-file-path]",
 		Short: "Deploy custom monitors from YAML configuration",
 		Long: `Deploy custom monitors by parsing YAML configuration and converting to protobuf.
 Shows YAML preview and asks for confirmation before proceeding.`,

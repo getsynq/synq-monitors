@@ -22,7 +22,7 @@ The CLI requires Synq API credentials. You can provide them in three ways (in or
 ### Option 1: Command Line Flags (Highest Priority)
 
 ```bash
-./monitors-mgmt sample_config.yaml --client-id="your_client_id" --client-secret="your_client_secret"
+./synq-monitors sample_config.yaml --client-id="your_client_id" --client-secret="your_client_secret"
 ```
 
 ### Option 2: Environment Variables
@@ -46,7 +46,7 @@ SYNQ_CLIENT_SECRET=your_client_secret
 ## Usage
 
 ```bash
-./monitors-mgmt [yaml-file-path] [flags]
+./synq-monitors [yaml-file-path] [flags]
 ```
 
 ### Available Flags
@@ -68,16 +68,16 @@ SYNQ_CLIENT_SECRET=your_client_secret
 
 ```bash
 # Basic usage
-./monitors-mgmt sample_monitors.yaml
+./synq-monitors sample_monitors.yaml
 
 # With command line credentials
-./monitors-mgmt sample_monitors.yaml --client-id="prod_client" --client-secret="prod_secret"
+./synq-monitors sample_monitors.yaml --client-id="prod_client" --client-secret="prod_secret"
 
 # With protobuf output in JSON format
-./monitors-mgmt sample_monitors.yaml -p
+./synq-monitors sample_monitors.yaml -p
 
 # With auto-confirm (skip all prompts)
-./monitors-mgmt sample_monitors.yaml --auto-confirm
+./synq-monitors sample_monitors.yaml --auto-confirm
 ```
 
 ## YAML Format
