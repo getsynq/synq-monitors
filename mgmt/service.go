@@ -2,7 +2,6 @@ package mgmt
 
 import (
 	"context"
-	"errors"
 	"fmt"
 
 	custommonitorsv1grpc "buf.build/gen/go/getsynq/api/grpc/go/synq/monitors/custom_monitors/v1/custom_monitorsv1grpc"
@@ -37,10 +36,6 @@ func (s *RemoteMgmtService) ConfigChangesOverview(
 	protoMonitors []*pb.MonitorDefinition,
 	configId string,
 ) (*ChangesOverview, error) {
-	if len(protoMonitors) == 0 {
-		return nil, errors.New("no monitors provided")
-	}
-
 	var configIds []string
 	if configId != "" {
 		configIds = []string{configId}
