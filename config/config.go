@@ -12,6 +12,7 @@ import (
 type Credentials struct {
 	ClientID     string
 	ClientSecret string
+	ApiUrl       string
 }
 
 // Loader handles loading configuration from various sources
@@ -20,6 +21,7 @@ type Loader struct {
 	// Command line overrides
 	flagClientID     string
 	flagClientSecret string
+	flagApiUrl       string
 }
 
 // NewLoader creates a new configuration loader
@@ -30,9 +32,10 @@ func NewLoader(envFiles ...string) *Loader {
 }
 
 // SetFlagCredentials sets credentials from command line flags
-func (l *Loader) SetFlagCredentials(clientID, clientSecret string) {
+func (l *Loader) SetFlagCredentials(clientID, clientSecret, apiUrl string) {
 	l.flagClientID = clientID
 	l.flagClientSecret = clientSecret
+	l.flagApiUrl = apiUrl
 }
 
 // LoadCredentials loads client credentials with priority: command line flags > environment variables > .env files
@@ -56,6 +59,12 @@ func (l *Loader) LoadCredentials() (*Credentials, error) {
 		creds.ClientSecret = l.flagClientSecret
 	} else {
 		creds.ClientSecret = os.Getenv("SYNQ_CLIENT_SECRET")
+	}
+
+	if l.flagApiUrl != "" {
+		creds.ApiUrl = l.flagApiUrl
+	} else {
+		creds.ApiUrl = os.Getenv("SYNQ_API_URL")
 	}
 
 	// Validate credentials
@@ -97,6 +106,10 @@ func (l *Loader) validateCredentials(creds *Credentials) error {
 
 	if strings.TrimSpace(creds.ClientSecret) == "" {
 		missing = append(missing, "SYNQ_CLIENT_SECRET")
+	}
+
+	if strings.TrimSpace(creds.ApiUrl) == "" {
+		missing = append(missing, "SYNQ_API_URL")
 	}
 
 	if len(missing) > 0 {

@@ -17,12 +17,17 @@ go build -o monitor-mgmt .
 
 ## Configuration
 
+**API URL Options:**
+
+- `https://developer.synq.io` - Not US production environment
+- `https://api.us.synq.io` - US production environment
+
 The CLI requires Synq API credentials. You can provide them in three ways (in order of priority):
 
 ### Option 1: Command Line Flags (Highest Priority)
 
 ```bash
-./synq-monitors sample_config.yaml --client-id="your_client_id" --client-secret="your_client_secret"
+./synq-monitors sample_config.yaml --client-id="your_client_id" --client-secret="your_client_secret" --api-url="https://developer.synq.io"
 ```
 
 ### Option 2: Environment Variables
@@ -30,6 +35,7 @@ The CLI requires Synq API credentials. You can provide them in three ways (in or
 ```bash
 export SYNQ_CLIENT_ID="your_client_id"
 export SYNQ_CLIENT_SECRET="your_client_secret"
+export SYNQ_API_URL="https://developer.synq.io"
 ```
 
 ### Option 3: .env File
@@ -39,6 +45,7 @@ Create a `.env` file in your project root:
 ```bash
 SYNQ_CLIENT_ID=your_client_id
 SYNQ_CLIENT_SECRET=your_client_secret
+SYNQ_API_URL=https://developer.synq.io
 ```
 
 **Priority Order**: Command line flags > Environment variables > .env files
@@ -53,6 +60,7 @@ SYNQ_CLIENT_SECRET=your_client_secret
 
 - `--client-id string`: Synq client ID (overrides .env and environment variables)
 - `--client-secret string`: Synq client secret (overrides .env and environment variables)
+- `--api-url string`: Synq API URL (overrides .env and environment variables)
 - `-p, --print-protobuf`: Print protobuf messages in JSON format
 - `--auto-confirm`: Automatically confirm all prompts (skip interactive confirmations)
 - `-h, --help`: Show help information
@@ -71,7 +79,7 @@ SYNQ_CLIENT_SECRET=your_client_secret
 ./synq-monitors sample_monitors.yaml
 
 # With command line credentials
-./synq-monitors sample_monitors.yaml --client-id="prod_client" --client-secret="prod_secret"
+./synq-monitors sample_monitors.yaml --client-id="prod_client" --client-secret="prod_secret" --api-url="https://developer.synq.io"
 
 # With protobuf output in JSON format
 ./synq-monitors sample_monitors.yaml -p

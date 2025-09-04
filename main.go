@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/tls"
 	"fmt"
+	"net/url"
 	"os"
 
 	iamv1grpc "buf.build/gen/go/getsynq/api/grpc/go/synq/auth/iam/v1/iamv1grpc"
@@ -30,6 +31,7 @@ func main() {
 	var printProtobuf bool
 	var clientID string
 	var clientSecret string
+	var apiUrl string
 	var autoConfirm bool
 
 	var rootCmd = &cobra.Command{
@@ -40,7 +42,7 @@ Shows YAML preview and asks for confirmation before proceeding.`,
 		Args: cobra.ExactArgs(1),
 		Run: func(cmd *cobra.Command, args []string) {
 			filePath := args[0]
-			run(filePath, printProtobuf, clientID, clientSecret, autoConfirm)
+			run(filePath, printProtobuf, clientID, clientSecret, apiUrl, autoConfirm)
 		},
 	}
 
@@ -50,6 +52,7 @@ Shows YAML preview and asks for confirmation before proceeding.`,
 	// Add credential flags
 	rootCmd.Flags().StringVar(&clientID, "client-id", "", "Synq client ID (overrides .env and environment variables)")
 	rootCmd.Flags().StringVar(&clientSecret, "client-secret", "", "Synq client secret (overrides .env and environment variables)")
+	rootCmd.Flags().StringVar(&apiUrl, "api-url", "", "Synq API URL (overrides .env and environment variables)")
 
 	// Add auto-confirm flag
 	rootCmd.Flags().BoolVar(&autoConfirm, "auto-confirm", false, "Automatically confirm all prompts (skip interactive confirmations)")
@@ -59,25 +62,24 @@ Shows YAML preview and asks for confirmation before proceeding.`,
 	}
 }
 
-func run(filePath string, printProtobuf bool, flagClientID, flagClientSecret string, autoConfirm bool) {
+func run(filePath string, printProtobuf bool, flagClientID, flagClientSecret, flagApiUrl string, autoConfirm bool) {
 	ctx := context.Background()
-
-	host := "developer.synq.io"
-	port := "443"
-	apiUrl := fmt.Sprintf("%s:%s", host, port)
 
 	// Load credentials from .env file, environment variables, or command line flags
 	configLoader := config.NewLoader()
 
 	// Set flag credentials if provided
-	if flagClientID != "" || flagClientSecret != "" {
-		configLoader.SetFlagCredentials(flagClientID, flagClientSecret)
+	if flagClientID != "" || flagClientSecret != "" || flagApiUrl != "" {
+		configLoader.SetFlagCredentials(flagClientID, flagClientSecret, flagApiUrl)
 	}
 
 	creds, err := configLoader.LoadCredentials()
 	if err != nil {
 		exitWithError(fmt.Errorf("❌ Failed to load credentials: %v", err))
 	}
+
+	host, port := getHostAndPort(creds.ApiUrl)
+	apiUrl := fmt.Sprintf("%s:%s", host, port)
 
 	tokenURL := fmt.Sprintf("https://%s/oauth2/token", host)
 
@@ -226,4 +228,23 @@ func parse(filePath, workspace string, printProtobuf bool) ([]*pb.MonitorDefinit
 	fmt.Println("🎉 Deployment preparation complete!")
 
 	return protoMonitors, yamlParser.GetYAMLConfig(), nil
+}
+
+func getHostAndPort(apiUrl string) (string, string) {
+	parsedUrl, err := url.Parse(apiUrl)
+	if err != nil {
+		exitWithError(fmt.Errorf("❌ Failed to parse API URL: %v", err))
+	}
+	port := parsedUrl.Port()
+	if port == "" {
+		switch parsedUrl.Scheme {
+		case "https":
+			port = "443"
+		case "http":
+			port = "80"
+		default:
+			exitWithError(fmt.Errorf("❌ Unsupported protocol: %s, in API URL: %s", parsedUrl.Scheme, apiUrl))
+		}
+	}
+	return parsedUrl.Host, port
 }
