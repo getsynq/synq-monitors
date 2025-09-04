@@ -5,7 +5,7 @@ Deploy custom monitors from YAML configuration files.
 ## Script execution
 
 ```bash
-go run ./... sample_config.yaml
+go run ./... examples/minimal.yaml
 ```
 
 ## Installation
@@ -27,7 +27,7 @@ The CLI requires Synq API credentials. You can provide them in three ways (in or
 ### Option 1: Command Line Flags (Highest Priority)
 
 ```bash
-./synq-monitors sample_config.yaml --client-id="your_client_id" --client-secret="your_client_secret" --api-url="https://developer.synq.io"
+./synq-monitors examples/minimal.yaml --client-id="your_client_id" --client-secret="your_client_secret" --api-url="https://developer.synq.io"
 ```
 
 ### Option 2: Environment Variables
