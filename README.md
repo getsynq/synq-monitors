@@ -10,6 +10,8 @@ go run ./... examples/minimal.yaml
 
 ## Installation
 
+Download the latest release of the built tool: https://github.com/getsynq/synq-monitors/tags.
+
 ```bash
 # Build the CLI
 go build -o monitor-mgmt .
