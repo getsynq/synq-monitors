@@ -235,6 +235,5 @@ monitors:
 
 - `monitored_id` and `monitored_ids` cannot be used together
 - At least one of `monitored_id` or `monitored_ids` must be specified
-- Monitor `id` must be unique across all monitors (across all namespaces)
 - `time_partitioning` is required for all monitors
 - Only one schedule type (`daily` or `hourly`) can be specified per monitor

@@ -23,10 +23,11 @@ func NewUUIDGenerator(workspace string) *UUIDGenerator {
 func (g *UUIDGenerator) GenerateMonitorUUID(monitor *pb.MonitorDefinition) string {
 	fields := []string{
 		monitor.Id,
+		monitor.ConfigId,
 		monitor.MonitoredId.GetSynqPath().GetPath(),
 	}
 
 	// Join fields with a separator
-	input := strings.Join(fields, "|")
+	input := strings.Join(fields, "")
 	return uuid.NewSHA1(g.uuidSeed, []byte(input)).String()
 }
