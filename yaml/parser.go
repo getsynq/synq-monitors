@@ -152,9 +152,27 @@ func convertSingleMonitor(
 	}
 
 	// Set segmentation
-	if yamlMonitor.Segmentation != "" {
+	if yamlMonitor.Segmentation != nil {
+		includeList := []string{}
+		excludeList := []string{}
+		if yamlMonitor.Segmentation.Include != nil {
+			includeList = *yamlMonitor.Segmentation.Include
+		}
+		if yamlMonitor.Segmentation.Exclude != nil {
+			excludeList = *yamlMonitor.Segmentation.Exclude
+		}
+
+		if len(includeList) > 0 && len(excludeList) > 0 {
+			errors = append(errors, ConversionError{
+				Field:   "segmentation",
+				Message: "cannot use segmentation include_list and exclude_list simultaneously",
+				Monitor: yamlMonitor.Name,
+			})
+		}
+
 		proto.Segmentation = &pb.Segmentation{
-			Expression: yamlMonitor.Segmentation,
+			IncludeList: includeList,
+			ExcludeList: excludeList,
 		}
 	}
 
@@ -297,12 +315,14 @@ func convertSingleMonitor(
 			proto.Schedule = &pb.MonitorDefinition_Daily{
 				Daily: &pb.ScheduleDaily{
 					MinutesSinceMidnight: int32(*schedule.Daily),
+					DelayDays:            schedule.Delay,
 				},
 			}
 		} else if schedule.Hourly != nil {
 			proto.Schedule = &pb.MonitorDefinition_Hourly{
 				Hourly: &pb.ScheduleHourly{
 					MinuteOfHour: int32(*schedule.Hourly),
+					DelayHours:   schedule.Delay,
 				},
 			}
 		}
