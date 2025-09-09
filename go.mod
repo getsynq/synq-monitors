@@ -2,10 +2,8 @@ module github.com/getsynq/monitors_mgmt
 
 go 1.25.0
 
-replace buf.build/gen/go/getsynq/api/protocolbuffers/go => ../cloud/gen/go/buf.build/gen/go/getsynq/api/protocolbuffers/go
-
 require (
-	buf.build/gen/go/getsynq/api/grpc/go v1.5.1-20250813150149-5818d3cb4e3c.2
+	buf.build/gen/go/getsynq/api/grpc/go v1.5.1-20250909120007-adf8a34a7c9d.2
 	github.com/fatih/color v1.18.0
 	github.com/google/uuid v1.6.0
 	github.com/manifoldco/promptui v0.9.0
@@ -35,7 +33,7 @@ require (
 )
 
 require (
-	buf.build/gen/go/getsynq/api/protocolbuffers/go v1.36.1-20250813150149-5818d3cb4e3c.1
+	buf.build/gen/go/getsynq/api/protocolbuffers/go v1.36.1-20250909120007-adf8a34a7c9d.1
 	github.com/gkampitakis/go-snaps v0.5.14
 )
 

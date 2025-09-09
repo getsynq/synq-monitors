@@ -1,5 +1,7 @@
 buf.build/gen/go/getsynq/api/grpc/go v1.5.1-20250813150149-5818d3cb4e3c.2 h1:kRwpGE7gOJYev1wVA8+5SmgtHMnYifJmQ13hV3Gl07M=
 buf.build/gen/go/getsynq/api/grpc/go v1.5.1-20250813150149-5818d3cb4e3c.2/go.mod h1:uvTXRhQOaU4GbuX51BLcj3suZB5ZQh9zfTSy7aCaJVI=
+buf.build/gen/go/getsynq/api/grpc/go v1.5.1-20250909120007-adf8a34a7c9d.2 h1:lGFgK6Fubi5J1lHWMft6YdumkfbvYA8WNB2NAM4xwAw=
+buf.build/gen/go/getsynq/api/grpc/go v1.5.1-20250909120007-adf8a34a7c9d.2/go.mod h1:3vrL7nd+3dRbrhI5ACiznsltVJv3HZazuIs+qijmPao=
 cloud.google.com/go/compute/metadata v0.7.0 h1:PBWF+iiAerVNe8UCHxdOt6eHLVc3ydFeOCw78U8ytSU=
 cloud.google.com/go/compute/metadata v0.7.0/go.mod h1:j5MvL9PprKL39t166CoB1uVHfQMs4tFQZZcKwksXUjo=
 github.com/chzyer/logex v1.1.10/go.mod h1:+Ywpsq7O8HXn0nuIou7OrIPyXbp3wmkHB+jjWRnGsAI=
