@@ -1,0 +1,30 @@
+
+[TestYAMLParserSuite/TestExamples - 1]
+{
+ "anomalyEngine": {
+  "sensitivity": "SENSITIVITY_BALANCED"
+ },
+ "daily": {},
+ "id": "cc20c3c7-9533-5ff8-b07d-f935f7a286dc",
+ "monitoredId": {
+  "synqPath": {
+   "path": "ch-prod::default::runs"
+  }
+ },
+ "name": "runs_volume_daily_by_status",
+ "segmentation": {
+  "expression": "run_status",
+  "includeValues": {
+   "values": [
+    "ERROR",
+    "CRITICAL"
+   ]
+  }
+ },
+ "severity": "SEVERITY_ERROR",
+ "timePartitioning": {
+  "expression": "created_at"
+ },
+ "volume": {}
+}
+---

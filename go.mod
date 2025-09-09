@@ -2,7 +2,7 @@ module github.com/getsynq/monitors_mgmt
 
 go 1.25.0
 
-replace buf.build/gen/go/getsynq/api/protocolbuffers/go => ../cloud/proto_public/gen/go/buf.build/gen/go/getsynq/api/protocolbuffers/go
+replace buf.build/gen/go/getsynq/api/protocolbuffers/go => ../cloud/gen/go/buf.build/gen/go/getsynq/api/protocolbuffers/go
 
 require (
 	buf.build/gen/go/getsynq/api/grpc/go v1.5.1-20250813150149-5818d3cb4e3c.2
@@ -34,4 +34,21 @@ require (
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20250811230008-5f3141c8851a // indirect
 )
 
-require buf.build/gen/go/getsynq/api/protocolbuffers/go v1.36.1-20250813150149-5818d3cb4e3c.1
+require (
+	buf.build/gen/go/getsynq/api/protocolbuffers/go v1.36.1-20250813150149-5818d3cb4e3c.1
+	github.com/gkampitakis/go-snaps v0.5.14
+)
+
+require (
+	github.com/gkampitakis/ciinfo v0.3.2 // indirect
+	github.com/gkampitakis/go-diff v1.3.2 // indirect
+	github.com/goccy/go-yaml v1.18.0 // indirect
+	github.com/kr/pretty v0.3.1 // indirect
+	github.com/kr/text v0.2.0 // indirect
+	github.com/maruel/natural v1.1.1 // indirect
+	github.com/rogpeppe/go-internal v1.13.1 // indirect
+	github.com/tidwall/gjson v1.18.0 // indirect
+	github.com/tidwall/match v1.1.1 // indirect
+	github.com/tidwall/pretty v1.2.1 // indirect
+	github.com/tidwall/sjson v1.2.5 // indirect
+)

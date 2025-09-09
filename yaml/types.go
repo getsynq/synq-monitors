@@ -37,8 +37,9 @@ type YAMLMonitor struct {
 }
 
 type YAMLSegmentation struct {
-	Include *[]string `yaml:"include,omitempty,alias=segments"`
-	Exclude *[]string `yaml:"exclude,omitempty"`
+	Expression    string    `yaml:"expression"`
+	IncludeValues *[]string `yaml:"include_values,omitempty"`
+	ExcludeValues *[]string `yaml:"exclude_values,omitempty"`
 }
 
 // YAMLMode represents mode configuration in YAML

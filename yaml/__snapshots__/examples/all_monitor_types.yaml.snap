@@ -1,0 +1,97 @@
+
+[TestYAMLParserSuite/TestExamples - 1]
+{
+ "anomalyEngine": {
+  "sensitivity": "SENSITIVITY_BALANCED"
+ },
+ "configId": "financial_data",
+ "daily": {},
+ "freshness": {
+  "expression": "month"
+ },
+ "id": "614ff05c-176a-5a79-abdf-a7e1d904d24f",
+ "monitoredId": {
+  "synqPath": {
+   "path": "bq-synq-demo::nyc_taxi::financial_statement"
+  }
+ },
+ "name": "freshness_financial_statement",
+ "severity": "SEVERITY_ERROR",
+ "timePartitioning": {
+  "expression": "month"
+ }
+}
+---
+
+[TestYAMLParserSuite/TestExamples - 2]
+{
+ "anomalyEngine": {
+  "sensitivity": "SENSITIVITY_BALANCED"
+ },
+ "configId": "financial_data",
+ "daily": {},
+ "id": "0dbdc387-8445-5aa0-981a-8b4728e0af60",
+ "monitoredId": {
+  "synqPath": {
+   "path": "bq-synq-demo::nyc_taxi::financial_statement"
+  }
+ },
+ "name": "volume_financial_statement",
+ "severity": "SEVERITY_ERROR",
+ "timePartitioning": {
+  "expression": "month"
+ },
+ "volume": {}
+}
+---
+
+[TestYAMLParserSuite/TestExamples - 3]
+{
+ "anomalyEngine": {
+  "sensitivity": "SENSITIVITY_BALANCED"
+ },
+ "configId": "financial_data",
+ "daily": {},
+ "fieldStats": {
+  "fields": [
+   "total_revenue",
+   "total_tips"
+  ]
+ },
+ "id": "f145c74e-6470-50b7-914f-6236204edc0f",
+ "monitoredId": {
+  "synqPath": {
+   "path": "bq-synq-demo::nyc_taxi::financial_statement"
+  }
+ },
+ "name": "stats_financial_statement",
+ "severity": "SEVERITY_ERROR",
+ "timePartitioning": {
+  "expression": "month"
+ }
+}
+---
+
+[TestYAMLParserSuite/TestExamples - 4]
+{
+ "configId": "financial_data",
+ "customNumeric": {
+  "metricAggregation": "MIN(total_revenue)"
+ },
+ "daily": {},
+ "fixedThresholds": {
+  "min": 0
+ },
+ "id": "9fb70d1d-274e-517c-b599-e910086b73c5",
+ "monitoredId": {
+  "synqPath": {
+   "path": "bq-synq-demo::nyc_taxi::financial_statement"
+  }
+ },
+ "name": "custom_financial_statement_revenue_nonnegative",
+ "severity": "SEVERITY_ERROR",
+ "timePartitioning": {
+  "expression": "month"
+ }
+}
+---

@@ -153,26 +153,44 @@ func convertSingleMonitor(
 
 	// Set segmentation
 	if yamlMonitor.Segmentation != nil {
-		includeList := []string{}
-		excludeList := []string{}
-		if yamlMonitor.Segmentation.Include != nil {
-			includeList = *yamlMonitor.Segmentation.Include
-		}
-		if yamlMonitor.Segmentation.Exclude != nil {
-			excludeList = *yamlMonitor.Segmentation.Exclude
-		}
-
-		if len(includeList) > 0 && len(excludeList) > 0 {
+		expression := strings.TrimSpace(yamlMonitor.Segmentation.Expression)
+		if len(expression) == 0 {
 			errors = append(errors, ConversionError{
 				Field:   "segmentation",
-				Message: "cannot use segmentation include_list and exclude_list simultaneously",
+				Message: "segmentation expression is required",
+				Monitor: yamlMonitor.Name,
+			})
+		}
+
+		includeValues := []string{}
+		excludeValues := []string{}
+		if yamlMonitor.Segmentation.IncludeValues != nil {
+			includeValues = *yamlMonitor.Segmentation.IncludeValues
+		}
+		if yamlMonitor.Segmentation.ExcludeValues != nil {
+			excludeValues = *yamlMonitor.Segmentation.ExcludeValues
+		}
+
+		if len(includeValues) > 0 && len(excludeValues) > 0 {
+			errors = append(errors, ConversionError{
+				Field:   "segmentation",
+				Message: "cannot use segmentation include_values and exclude_values simultaneously",
 				Monitor: yamlMonitor.Name,
 			})
 		}
 
 		proto.Segmentation = &pb.Segmentation{
-			IncludeList: includeList,
-			ExcludeList: excludeList,
+			Expression: expression,
+		}
+		if len(includeValues) > 0 {
+			proto.Segmentation.IncludeValues = &pb.ValueList{
+				Values: includeValues,
+			}
+		}
+		if len(excludeValues) > 0 {
+			proto.Segmentation.ExcludeValues = &pb.ValueList{
+				Values: excludeValues,
+			}
 		}
 	}
 
@@ -315,14 +333,14 @@ func convertSingleMonitor(
 			proto.Schedule = &pb.MonitorDefinition_Daily{
 				Daily: &pb.ScheduleDaily{
 					MinutesSinceMidnight: int32(*schedule.Daily),
-					DelayDays:            schedule.Delay,
+					DelayNumDays:         schedule.Delay,
 				},
 			}
 		} else if schedule.Hourly != nil {
 			proto.Schedule = &pb.MonitorDefinition_Hourly{
 				Hourly: &pb.ScheduleHourly{
-					MinuteOfHour: int32(*schedule.Hourly),
-					DelayHours:   schedule.Delay,
+					MinuteOfHour:  int32(*schedule.Hourly),
+					DelayNumHours: schedule.Delay,
 				},
 			}
 		}

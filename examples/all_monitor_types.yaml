@@ -8,7 +8,7 @@ defaults:
 
 monitors:
   # 1) Freshness by month
-  - name: freshness_financial_statement
+  - id: freshness_financial_statement
     type: freshness
     monitored_ids:
       - bq-synq-demo::nyc_taxi::financial_statement
@@ -16,13 +16,13 @@ monitors:
     expression: "month"
 
   # 2) Volume per month
-  - name: volume_financial_statement
+  - id: volume_financial_statement
     type: volume
     monitored_id: bq-synq-demo::nyc_taxi::financial_statement
     time_partitioning: month
 
   # 3) Field stats on key metrics with BALANCED sensitivity
-  - name: stats_financial_statement
+  - id: stats_financial_statement
     type: field_stats
     monitored_id: bq-synq-demo::nyc_taxi::financial_statement
     time_partitioning: month
@@ -34,7 +34,7 @@ monitors:
         sensitivity: BALANCED
 
   # 4) Custom check: revenue should never be negative
-  - name: custom_financial_statement_revenue_nonnegative
+  - id: custom_financial_statement_revenue_nonnegative
     type: custom_numeric
     monitored_ids:
       - bq-synq-demo::nyc_taxi::financial_statement
