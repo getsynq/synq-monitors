@@ -23,7 +23,8 @@ monitors:
     severity: WARNING
     monitored_ids:
       - bq-synq-dwh::petr::kernel_assets__stg_assets
-    segmentation: "country"
+    segmentation:
+      expression: "country"
     filter: "country IN ('US', 'CA')"
 
   - id: stats_on_user_fields

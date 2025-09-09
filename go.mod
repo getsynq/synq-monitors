@@ -3,8 +3,7 @@ module github.com/getsynq/monitors_mgmt
 go 1.25.0
 
 require (
-	buf.build/gen/go/getsynq/api/grpc/go v1.5.1-20250813150149-5818d3cb4e3c.2
-	buf.build/gen/go/getsynq/api/protocolbuffers/go v1.36.8-20250902132547-0d76f4d49dc1.1
+	buf.build/gen/go/getsynq/api/grpc/go v1.5.1-20250909120007-adf8a34a7c9d.2
 	github.com/fatih/color v1.18.0
 	github.com/google/uuid v1.6.0
 	github.com/manifoldco/promptui v0.9.0
@@ -18,7 +17,6 @@ require (
 )
 
 require (
-	buf.build/gen/go/bufbuild/protovalidate/protocolbuffers/go v1.36.8-20240508200655-46a4cf4ba109.1 // indirect
 	cloud.google.com/go/compute/metadata v0.7.0 // indirect
 	github.com/chzyer/readline v1.5.1 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
@@ -31,6 +29,26 @@ require (
 	golang.org/x/net v0.43.0 // indirect
 	golang.org/x/sys v0.35.0 // indirect
 	golang.org/x/text v0.28.0 // indirect
-	google.golang.org/genproto/googleapis/api v0.0.0-20250528174236-200df99c418a // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20250811230008-5f3141c8851a // indirect
+)
+
+require (
+	buf.build/gen/go/getsynq/api/protocolbuffers/go v1.36.1-20250909120007-adf8a34a7c9d.1
+	github.com/gkampitakis/go-snaps v0.5.14
+)
+
+require (
+	buf.build/gen/go/bufbuild/protovalidate/protocolbuffers/go v1.36.1-20250717185734-6c6e0d3c608e.1 // indirect
+	github.com/gkampitakis/ciinfo v0.3.2 // indirect
+	github.com/gkampitakis/go-diff v1.3.2 // indirect
+	github.com/goccy/go-yaml v1.18.0 // indirect
+	github.com/kr/pretty v0.3.1 // indirect
+	github.com/kr/text v0.2.0 // indirect
+	github.com/maruel/natural v1.1.1 // indirect
+	github.com/rogpeppe/go-internal v1.13.1 // indirect
+	github.com/tidwall/gjson v1.18.0 // indirect
+	github.com/tidwall/match v1.1.1 // indirect
+	github.com/tidwall/pretty v1.2.1 // indirect
+	github.com/tidwall/sjson v1.2.5 // indirect
+	google.golang.org/genproto/googleapis/api v0.0.0-20250528174236-200df99c418a // indirect
 )

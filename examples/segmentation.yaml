@@ -4,6 +4,10 @@ monitors:
   - id: runs_volume_daily_by_status
     type: volume
     time_partitioning: created_at
-    segmentation: run_status # segmentation is a SQL expression for data segmentation
+    segmentation:
+      expression: run_status # segmentation is a SQL expression for data segmentation
+      include_values:
+        - ERROR
+        - CRITICAL
     monitored_ids:
       - ch-prod::default::runs

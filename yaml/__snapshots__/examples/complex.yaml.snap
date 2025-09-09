@@ -1,0 +1,134 @@
+
+[TestYAMLParserSuite/TestExamples - 1]
+{
+ "anomalyEngine": {
+  "sensitivity": "SENSITIVITY_BALANCED"
+ },
+ "configId": "data-team-pipeline",
+ "daily": {
+  "minutesSinceMidnight": 120
+ },
+ "freshness": {
+  "expression": "created_at"
+ },
+ "id": "b8f6ad92-c6d6-5ada-b074-58c5e6459d43",
+ "monitoredId": {
+  "synqPath": {
+   "path": "ch-prod::anomalies::corrections_v2"
+  }
+ },
+ "name": "freshness_on_orders",
+ "severity": "SEVERITY_WARNING",
+ "timePartitioning": {
+  "expression": "created_at"
+ }
+}
+---
+
+[TestYAMLParserSuite/TestExamples - 2]
+{
+ "anomalyEngine": {
+  "sensitivity": "SENSITIVITY_BALANCED"
+ },
+ "configId": "data-team-pipeline",
+ "daily": {
+  "minutesSinceMidnight": 120
+ },
+ "freshness": {
+  "expression": "created_at"
+ },
+ "id": "97511b5d-02cb-5198-9ca7-bcf2b83a80bf",
+ "monitoredId": {
+  "synqPath": {
+   "path": "ch-prod::anomalies::external_sqltests"
+  }
+ },
+ "name": "freshness_on_orders",
+ "severity": "SEVERITY_WARNING",
+ "timePartitioning": {
+  "expression": "created_at"
+ }
+}
+---
+
+[TestYAMLParserSuite/TestExamples - 3]
+{
+ "anomalyEngine": {
+  "sensitivity": "SENSITIVITY_BALANCED"
+ },
+ "configId": "data-team-pipeline",
+ "daily": {
+  "minutesSinceMidnight": 120
+ },
+ "filter": "country IN ('US', 'CA')",
+ "id": "77c55553-f60b-58f5-83b8-fe27833a86af",
+ "monitoredId": {
+  "synqPath": {
+   "path": "bq-synq-dwh::petr::kernel_assets__stg_assets"
+  }
+ },
+ "name": "volume_on_logs",
+ "segmentation": {
+  "expression": "country"
+ },
+ "severity": "SEVERITY_WARNING",
+ "timePartitioning": {
+  "expression": "created_at"
+ },
+ "volume": {}
+}
+---
+
+[TestYAMLParserSuite/TestExamples - 4]
+{
+ "anomalyEngine": {
+  "sensitivity": "SENSITIVITY_BALANCED"
+ },
+ "configId": "data-team-pipeline",
+ "daily": {},
+ "fieldStats": {
+  "fields": [
+   "status",
+   "order_date"
+  ]
+ },
+ "id": "1e9ccf4f-b2e1-508c-9876-52fb905ae768",
+ "monitoredId": {
+  "synqPath": {
+   "path": "bq-synq-dwh::test::orders"
+  }
+ },
+ "name": "stats_on_user_fields",
+ "severity": "SEVERITY_ERROR",
+ "timePartitioning": {
+  "expression": "created_at"
+ }
+}
+---
+
+[TestYAMLParserSuite/TestExamples - 5]
+{
+ "configId": "data-team-pipeline",
+ "customNumeric": {
+  "metricAggregation": "COUNT(DISTINCT user_id)"
+ },
+ "daily": {
+  "minutesSinceMidnight": 120
+ },
+ "fixedThresholds": {
+  "max": 10000,
+  "min": 100
+ },
+ "id": "feaeae32-ae1f-5d26-8ec4-6ab648a0ff8c",
+ "monitoredId": {
+  "synqPath": {
+   "path": "bq-synq-dwh::test::orders"
+  }
+ },
+ "name": "custom_numeric_active_users",
+ "severity": "SEVERITY_ERROR",
+ "timePartitioning": {
+  "expression": "order_date"
+ }
+}
+---

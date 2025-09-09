@@ -19,21 +19,27 @@ type YAMLConfig struct {
 
 // YAMLMonitor represents a monitor in YAML format
 type YAMLMonitor struct {
-	Id                string        `yaml:"id"`
-	Name              string        `yaml:"name,omitempty"`
-	Type              string        `yaml:"type"`
-	Expression        string        `yaml:"expression,omitempty"`
-	MetricAggregation string        `yaml:"metric_aggregation,omitempty"`
-	MonitoredIDs      []string      `yaml:"monitored_ids,omitempty"`
-	MonitoredID       string        `yaml:"monitored_id,omitempty"`
-	Fields            []string      `yaml:"fields,omitempty"`
-	Segmentation      string        `yaml:"segmentation,omitempty"`
-	Filter            string        `yaml:"filter,omitempty"`
-	Severity          string        `yaml:"severity,omitempty"`
-	TimePartitioning  string        `yaml:"time_partitioning,omitempty"`
-	Mode              *YAMLMode     `yaml:"mode,omitempty"`
-	Schedule          *YAMLSchedule `yaml:"schedule,omitempty"`
-	ConfigID          string        `yaml:"namespace,omitempty"`
+	Id                string            `yaml:"id"`
+	Name              string            `yaml:"name,omitempty"`
+	Type              string            `yaml:"type"`
+	Expression        string            `yaml:"expression,omitempty"`
+	MetricAggregation string            `yaml:"metric_aggregation,omitempty"`
+	MonitoredIDs      []string          `yaml:"monitored_ids,omitempty"`
+	MonitoredID       string            `yaml:"monitored_id,omitempty"`
+	Fields            []string          `yaml:"fields,omitempty"`
+	Segmentation      *YAMLSegmentation `yaml:"segmentation,omitempty"`
+	Filter            string            `yaml:"filter,omitempty"`
+	Severity          string            `yaml:"severity,omitempty"`
+	TimePartitioning  string            `yaml:"time_partitioning,omitempty"`
+	Mode              *YAMLMode         `yaml:"mode,omitempty"`
+	Schedule          *YAMLSchedule     `yaml:"schedule,omitempty"`
+	ConfigID          string            `yaml:"namespace,omitempty"`
+}
+
+type YAMLSegmentation struct {
+	Expression    string    `yaml:"expression"`
+	IncludeValues *[]string `yaml:"include_values,omitempty"`
+	ExcludeValues *[]string `yaml:"exclude_values,omitempty"`
 }
 
 // YAMLMode represents mode configuration in YAML
@@ -55,8 +61,9 @@ type YAMLFixedThresholds struct {
 
 // YAMLSchedule represents schedule configuration
 type YAMLSchedule struct {
-	Daily  *int `yaml:"daily,omitempty"`  // Hour of day (0-23)
-	Hourly *int `yaml:"hourly,omitempty"` // Minute of hour (0-59)
+	Daily  *int   `yaml:"daily,omitempty"`  // Hour of day (0-23)
+	Hourly *int   `yaml:"hourly,omitempty"` // Minute of hour (0-59)
+	Delay  *int32 `yaml:"delay,omitempty"`  // Number of chosen intervals to delay by. Ignores last `X` intervals.
 }
 
 // ConversionError represents an error during YAML to proto conversion
