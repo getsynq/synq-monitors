@@ -3,6 +3,7 @@ package mgmt
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	custommonitorsv1grpc "buf.build/gen/go/getsynq/api/grpc/go/synq/monitors/custom_monitors/v1/custom_monitorsv1grpc"
 	pb "buf.build/gen/go/getsynq/api/protocolbuffers/go/synq/monitors/custom_monitors/v1"
@@ -106,4 +107,38 @@ func (s *RemoteMgmtService) DeployMonitors(
 	}
 
 	return nil
+}
+
+type ListScope struct {
+	IntegrationId string
+	MonitoredPath string
+	MonitorId     string
+}
+
+func (s *RemoteMgmtService) ListMonitorsForExport(
+	scope *ListScope,
+) ([]*pb.MonitorDefinition, error) {
+	req := &pb.ListMonitorsRequest{
+		Source: []string{"app"},
+	}
+
+	if len(scope.IntegrationId) > 0 {
+		id, _ := strings.CutPrefix(scope.IntegrationId, "synq-")
+		req.IntegrationIds = []string{id}
+	}
+
+	if len(scope.MonitorId) > 0 {
+		id, _ := strings.CutPrefix(scope.MonitorId, "custom-")
+		req.MonitorIds = []string{id}
+	}
+
+	if len(scope.MonitoredPath) > 0 {
+		req.MonitoredAssetPaths = []string{scope.MonitoredPath}
+	}
+
+	resp, err := s.service.ListMonitors(s.ctx, req)
+	if err != nil {
+		return nil, err
+	}
+	return resp.Monitors, nil
 }

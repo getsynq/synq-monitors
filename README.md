@@ -14,6 +14,14 @@ Download the latest release of the built tool: https://github.com/getsynq/synq-m
 
 You can also run the build directly by cloning this repo locally.
 
+Use
+
+```bash
+make
+```
+
+or
+
 ```bash
 # Build the CLI
 go build -o synq-monitors .
@@ -31,7 +39,7 @@ The CLI requires Synq API credentials. You can provide them in three ways (in or
 ### Option 1: Command Line Flags (Highest Priority)
 
 ```bash
-./synq-monitors examples/minimal.yaml --client-id="your_client_id" --client-secret="your_client_secret" --api-url="https://developer.synq.io"
+./synq-monitors deploy examples/minimal.yaml --client-id="your_client_id" --client-secret="your_client_secret" --api-url="https://developer.synq.io"
 ```
 
 ### Option 2: Environment Variables
@@ -56,9 +64,16 @@ SYNQ_API_URL=https://developer.synq.io
 
 ## Usage
 
+### Deploy
+
 ```bash
-./synq-monitors [yaml-file-path] [flags]
+./synq-monitors deploy [yaml-file-path] [flags]
 ```
+
+### Export
+
+```bash
+./synq-monitors export --namespace=[namespace] --monitored=[monitored_path] --integration=[integration_id] --monitor=[monitor_id] [output-file]
 
 ### Available Flags
 
@@ -80,16 +95,16 @@ SYNQ_API_URL=https://developer.synq.io
 
 ```bash
 # Basic usage
-./synq-monitors sample_monitors.yaml
+./synq-monitors deploy sample_monitors.yaml
 
 # With command line credentials
-./synq-monitors sample_monitors.yaml --client-id="prod_client" --client-secret="prod_secret" --api-url="https://developer.synq.io"
+./synq-monitors deploy sample_monitors.yaml --client-id="prod_client" --client-secret="prod_secret" --api-url="https://developer.synq.io"
 
 # With protobuf output in JSON format
-./synq-monitors sample_monitors.yaml -p
+./synq-monitors deploy sample_monitors.yaml -p
 
 # With auto-confirm (skip all prompts)
-./synq-monitors sample_monitors.yaml --auto-confirm
+./synq-monitors deploy sample_monitors.yaml --auto-confirm
 ```
 
 ## YAML Format
