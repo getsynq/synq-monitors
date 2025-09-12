@@ -50,7 +50,7 @@ func (p *YAMLGenerator) generateSingleMonitor(
 		Name:             protoMonitor.Name,
 		ConfigID:         p.configId,
 		Id:               protoMonitor.Id,
-		MonitoredID:      protoMonitor.MonitoredId.GetSynqPath().Path, // TODO(karan): ensure that the API returns path here.
+		MonitoredID:      protoMonitor.MonitoredId.GetSynqPath().Path,
 		TimePartitioning: protoMonitor.GetTimePartitioning().GetExpression(),
 	}
 

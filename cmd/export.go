@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
 
@@ -15,8 +16,10 @@ import (
 )
 
 var (
-	exportCmd_scope     string
-	exportCmd_namespace string
+	exportCmd_integrationId string
+	exportCmd_monitoredPath string
+	exportCmd_monitorId     string
+	exportCmd_namespace     string
 )
 
 var exportCmd = &cobra.Command{
@@ -29,7 +32,9 @@ Optionally provide scope to limit the monitors exported.`,
 }
 
 func init() {
-	exportCmd.Flags().StringVar(&exportCmd_scope, "scope", "", "Scope for limiting the monitors")
+	exportCmd.Flags().StringVar(&exportCmd_integrationId, "integration", "", "Limit exported monitors by integration ID. AND'ed with other scopes.")
+	exportCmd.Flags().StringVar(&exportCmd_monitoredPath, "monitored", "", "Limit exported monitors by monitored asset path. AND'ed with other scopes.")
+	exportCmd.Flags().StringVar(&exportCmd_monitorId, "monitor", "", "Limit exported monitors by monitor ID. AND'ed with other scopes.")
 	exportCmd.Flags().StringVar(&exportCmd_namespace, "namespace", "", "Namespace for generated YAML config")
 
 	rootCmd.AddCommand(exportCmd)
@@ -57,19 +62,23 @@ func exportMonitors(cmd *cobra.Command, args []string) {
 		exitWithError(err)
 	}
 	workspace := iamResponse.Workspace
-	scopeText := ""
-	if len(exportCmd_scope) > 0 {
-		scopeText = fmt.Sprintf(" in scope '%+v'", exportCmd_scope)
-	}
-	fmt.Printf("🔍 Workspace: %s\nLooking for exportable monitors%s\n\n", workspace, scopeText)
+	fmt.Printf("🔍 Workspace: %s\nLooking for exportable monitors\n\n", workspace)
 
 	// Fetch
 	mgmtService := mgmt.NewMgmtRemoteService(ctx, conn)
-	monitors, err := mgmtService.ListMonitorsForExport(exportCmd_scope)
+	monitors, err := mgmtService.ListMonitorsForExport(&mgmt.ListScope{
+		IntegrationId: exportCmd_integrationId,
+		MonitoredPath: exportCmd_monitoredPath,
+		MonitorId:     exportCmd_monitorId,
+	})
 	if err != nil {
 		exitWithError(fmt.Errorf("❌ Error getting monitors: %v", err))
 	}
-	fmt.Println("\n✅ Found %d monitors...", len(monitors))
+	if len(monitors) == 0 {
+		exitWithError(errors.New("❌ No monitors found for the given scope."))
+	}
+
+	fmt.Printf("\n✅ Found %d monitors. Exporting...\n", len(monitors))
 
 	// Convert
 	generator := yaml.NewYAMLGenerator(exportCmd_namespace, monitors)
@@ -84,6 +93,7 @@ func exportMonitors(cmd *cobra.Command, args []string) {
 	if conversionErrors.HasErrors() {
 		exitWithError(fmt.Errorf("❌ Conversion errors found while parsing generated YAML: %s\n", conversionErrors.Error()))
 	}
+	fmt.Println("✅ Parse test completed for generated YAML...")
 
 	// Write to file
 	f, err := os.OpenFile(filePath, os.O_RDWR|os.O_CREATE, 0644)

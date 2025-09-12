@@ -2,8 +2,16 @@ buf.build/gen/go/bufbuild/protovalidate/protocolbuffers/go v1.36.9-2025071718573
 buf.build/gen/go/bufbuild/protovalidate/protocolbuffers/go v1.36.9-20250717185734-6c6e0d3c608e.1/go.mod h1:aY3zbkNan5F+cGm9lITDP6oxJIwu0dn9KjJuJjWaHkg=
 buf.build/gen/go/getsynq/api/grpc/go v1.5.1-20250909120007-adf8a34a7c9d.2 h1:lGFgK6Fubi5J1lHWMft6YdumkfbvYA8WNB2NAM4xwAw=
 buf.build/gen/go/getsynq/api/grpc/go v1.5.1-20250909120007-adf8a34a7c9d.2/go.mod h1:3vrL7nd+3dRbrhI5ACiznsltVJv3HZazuIs+qijmPao=
+buf.build/gen/go/getsynq/api/grpc/go v1.5.1-20250911072340-1dd6ea7da9c7.2 h1:fO0zyn3qBzZnORYKgoxh3pSmdcGrPUsL8q3VDw0M1AA=
+buf.build/gen/go/getsynq/api/grpc/go v1.5.1-20250911072340-1dd6ea7da9c7.2/go.mod h1:l1Ja7uvMqfESaqHnVog2V+Uznd+gGk2zWin/1kX0h7A=
+buf.build/gen/go/getsynq/api/grpc/go v1.5.1-20250912084033-ee79871ecde2.2 h1:x84ykR4MOCwZT4TvEQrEJEq5/9y5gWEtwPptbZHOlLE=
+buf.build/gen/go/getsynq/api/grpc/go v1.5.1-20250912084033-ee79871ecde2.2/go.mod h1:bp47sNluR//d0STQINvd1Vx++SXdJ5Im0pfwy8J5cf4=
 buf.build/gen/go/getsynq/api/protocolbuffers/go v1.36.9-20250909120007-adf8a34a7c9d.1 h1:Ired7/HwdeOYYRN0mfyfpx92be2/CgbBfd4720JTAa4=
 buf.build/gen/go/getsynq/api/protocolbuffers/go v1.36.9-20250909120007-adf8a34a7c9d.1/go.mod h1:z9IATNU0C/Nt4XxGOWr99RTU0KBYM2X/JNP9m+yA9Gk=
+buf.build/gen/go/getsynq/api/protocolbuffers/go v1.36.9-20250911072340-1dd6ea7da9c7.1 h1:V7WJLNYu6QWG0ZPHV2VwkpYNywQSMfpLseu7fNRsd/w=
+buf.build/gen/go/getsynq/api/protocolbuffers/go v1.36.9-20250911072340-1dd6ea7da9c7.1/go.mod h1:z9IATNU0C/Nt4XxGOWr99RTU0KBYM2X/JNP9m+yA9Gk=
+buf.build/gen/go/getsynq/api/protocolbuffers/go v1.36.9-20250912084033-ee79871ecde2.1 h1:vdxyUzdK9tWLuwPrlGZalEJAckJ66vPq3Z5M3x3vaAc=
+buf.build/gen/go/getsynq/api/protocolbuffers/go v1.36.9-20250912084033-ee79871ecde2.1/go.mod h1:z9IATNU0C/Nt4XxGOWr99RTU0KBYM2X/JNP9m+yA9Gk=
 cloud.google.com/go/compute/metadata v0.7.0 h1:PBWF+iiAerVNe8UCHxdOt6eHLVc3ydFeOCw78U8ytSU=
 cloud.google.com/go/compute/metadata v0.7.0/go.mod h1:j5MvL9PprKL39t166CoB1uVHfQMs4tFQZZcKwksXUjo=
 github.com/chzyer/logex v1.1.10/go.mod h1:+Ywpsq7O8HXn0nuIou7OrIPyXbp3wmkHB+jjWRnGsAI=

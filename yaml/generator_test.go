@@ -9,28 +9,26 @@ import (
 	"testing"
 
 	"github.com/getsynq/monitors_mgmt/uuid"
-	"github.com/gkampitakis/go-snaps/snaps"
 	"github.com/stretchr/testify/suite"
-	"google.golang.org/protobuf/encoding/protojson"
 	goyaml "gopkg.in/yaml.v3"
 )
 
-type YAMLParserSuite struct {
+type YAMLGeneratorSuite struct {
 	suite.Suite
 
 	workspace     string
 	uuidGenerator *uuid.UUIDGenerator
 }
 
-func TestYAMLParserSuite(t *testing.T) {
-	workspace := "YAMLParserSuite"
-	suite.Run(t, &YAMLParserSuite{
+func TestYAMLGeneratorSuite(t *testing.T) {
+	workspace := "YAMLGeneratorSuite"
+	suite.Run(t, &YAMLGeneratorSuite{
 		workspace:     workspace,
 		uuidGenerator: uuid.NewUUIDGenerator(workspace),
 	})
 }
 
-func (s *YAMLParserSuite) TestExamples() {
+func (s *YAMLGeneratorSuite) TestExamples() {
 	_, thisfile, _, ok := runtime.Caller(0)
 	s.Require().True(ok)
 	examplesFolder := filepath.Join(filepath.Dir(thisfile), "../examples")
@@ -44,7 +42,7 @@ func (s *YAMLParserSuite) TestExamples() {
 	})
 
 	for _, file := range files {
-		fmt.Printf("Parsing file: %s\n", file)
+		fmt.Printf("Testing file: %s\n", file)
 		yamlContent, err := os.ReadFile(file)
 		s.Require().NoError(err)
 
@@ -59,17 +57,9 @@ func (s *YAMLParserSuite) TestExamples() {
 		protoMonitors, conversionErrors := yamlParser.ConvertToMonitorDefinitions()
 		s.Require().False(conversionErrors.HasErrors(), conversionErrors.Error())
 
-		for _, monitor := range protoMonitors {
-			monitorJson, err := protojson.Marshal(monitor)
-			s.Require().NoError(err)
-
-			snapFileName := filepath.Join("parser", filepath.Base(filepath.Dir(file)), filepath.Base(file))
-			snaps.WithConfig(snaps.Filename(snapFileName)).MatchJSON(
-				s.T(),
-				monitorJson,
-			)
-		}
-
+		generator := NewYAMLGenerator(config.ConfigID, protoMonitors)
+		_, convErrors := generator.GenerateYAML()
+		s.Require().False(convErrors.HasErrors())
 	}
 
 }
