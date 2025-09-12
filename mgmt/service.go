@@ -123,21 +123,13 @@ func (s *RemoteMgmtService) ListMonitorsForExport(
 	}
 
 	if len(scope.IntegrationId) > 0 {
-		if strings.HasPrefix(scope.IntegrationId, "synq-") {
-			id := strings.TrimPrefix(scope.IntegrationId, "synq-")
-			req.IntegrationIds = []string{id}
-		} else {
-			req.IntegrationIds = []string{scope.IntegrationId}
-		}
+		id, _ := strings.CutPrefix(scope.IntegrationId, "synq-")
+		req.IntegrationIds = []string{id}
 	}
 
 	if len(scope.MonitorId) > 0 {
-		if strings.HasPrefix(scope.MonitorId, "custom-") {
-			id := strings.TrimPrefix(scope.MonitorId, "custom-")
-			req.IntegrationIds = []string{id}
-		} else {
-			req.MonitorIds = []string{scope.MonitorId}
-		}
+		id, _ := strings.CutPrefix(scope.MonitorId, "custom-")
+		req.MonitorIds = []string{id}
 	}
 
 	if len(scope.MonitoredPath) > 0 {
