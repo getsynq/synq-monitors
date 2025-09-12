@@ -21,6 +21,12 @@ func NewUUIDGenerator(workspace string) *UUIDGenerator {
 }
 
 func (g *UUIDGenerator) GenerateMonitorUUID(monitor *pb.MonitorDefinition) string {
+	// return monitor.Id if it is a valid UUID
+	parsed, err := uuid.Parse(monitor.Id)
+	if err == nil {
+		return parsed.String()
+	}
+
 	fields := []string{
 		monitor.Id,
 		monitor.ConfigId,
