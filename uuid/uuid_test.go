@@ -10,6 +10,8 @@ import (
 )
 
 func TestGenerateMonitorUUIDFromProto(t *testing.T) {
+	fixedUuid := "47d40726-e0ae-4892-9ba4-b24bda0bb14d"
+
 	tests := []struct {
 		name     string
 		monitor  *pb.MonitorDefinition
@@ -146,12 +148,32 @@ func TestGenerateMonitorUUIDFromProto(t *testing.T) {
 				},
 			},
 		},
+		{
+			name: "monitor with fixed UUID",
+			monitor: &pb.MonitorDefinition{
+				Id: fixedUuid,
+				TimePartitioning: &pb.TimePartitioning{
+					Expression: "daily",
+				},
+				Monitor: &pb.MonitorDefinition_Volume{
+					Volume: &pb.MonitorVolume{},
+				},
+			},
+		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			uuidGenerator := NewUUIDGenerator("synq")
 			uuid := uuidGenerator.GenerateMonitorUUID(tt.monitor)
+
+			// Verify it's not empty
+			assert.NotEmpty(t, uuid)
+
+			// Verify that fixed UUID is retained
+			if tt.monitor.Id == fixedUuid {
+				assert.Equal(t, fixedUuid, uuid)
+			}
 
 			// Verify UUID format
 			assert.Len(t, uuid, 36)
@@ -160,9 +182,6 @@ func TestGenerateMonitorUUIDFromProto(t *testing.T) {
 			// Verify it's deterministic (same input = same output)
 			uuid2 := uuidGenerator.GenerateMonitorUUID(tt.monitor)
 			assert.Equal(t, uuid, uuid2, "UUID should be deterministic")
-
-			// Verify it's not empty
-			assert.NotEmpty(t, uuid)
 
 			t.Logf("Generated UUID: %s", uuid)
 		})
