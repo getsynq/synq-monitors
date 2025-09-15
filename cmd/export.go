@@ -5,6 +5,8 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"slices"
+	"strings"
 
 	iamv1grpc "buf.build/gen/go/getsynq/api/grpc/go/synq/auth/iam/v1/iamv1grpc"
 	iamv1 "buf.build/gen/go/getsynq/api/protocolbuffers/go/synq/auth/iam/v1"
@@ -16,10 +18,12 @@ import (
 )
 
 var (
-	exportCmd_integrationId string
-	exportCmd_monitoredPath string
-	exportCmd_monitorId     string
-	exportCmd_namespace     string
+	exportCmd_namespace      string
+	exportCmd_integrationIds []string
+	exportCmd_monitoredPaths []string
+	exportCmd_monitorIds     []string
+	exportCmd_source         string
+	exportCmd_validSources   = []string{"app", "api", "all"}
 )
 
 var exportCmd = &cobra.Command{
@@ -32,9 +36,10 @@ Optionally provide scope to limit the monitors exported.`,
 }
 
 func init() {
-	exportCmd.Flags().StringVar(&exportCmd_integrationId, "integration", "", "Limit exported monitors by integration ID. AND'ed with other scopes.")
-	exportCmd.Flags().StringVar(&exportCmd_monitoredPath, "monitored", "", "Limit exported monitors by monitored asset path. AND'ed with other scopes.")
-	exportCmd.Flags().StringVar(&exportCmd_monitorId, "monitor", "", "Limit exported monitors by monitor ID. AND'ed with other scopes.")
+	exportCmd.Flags().StringArrayVar(&exportCmd_integrationIds, "integration", []string{}, "Limit exported monitors by integration IDs. AND'ed with other scopes.")
+	exportCmd.Flags().StringArrayVar(&exportCmd_monitoredPaths, "monitored", []string{}, "Limit exported monitors by monitored asset paths. AND'ed with other scopes.")
+	exportCmd.Flags().StringArrayVar(&exportCmd_monitorIds, "monitor", []string{}, "Limit exported monitors by monitor IDs. AND'ed with other scopes.")
+	exportCmd.Flags().StringVar(&exportCmd_source, "source", exportCmd_validSources[0], fmt.Sprintf("Limit exported monitors by source. One of %+v. Defaults to \"%s\". AND'ed with other scopes.", exportCmd_validSources, exportCmd_validSources[0]))
 	exportCmd.Flags().StringVar(&exportCmd_namespace, "namespace", "", "Namespace for generated YAML config")
 
 	rootCmd.AddCommand(exportCmd)
@@ -66,11 +71,7 @@ func exportMonitors(cmd *cobra.Command, args []string) {
 
 	// Fetch
 	mgmtService := mgmt.NewMgmtRemoteService(ctx, conn)
-	monitors, err := mgmtService.ListMonitorsForExport(&mgmt.ListScope{
-		IntegrationId: exportCmd_integrationId,
-		MonitoredPath: exportCmd_monitoredPath,
-		MonitorId:     exportCmd_monitorId,
-	})
+	monitors, err := mgmtService.ListMonitorsForExport(createListScope())
 	if err != nil {
 		exitWithError(fmt.Errorf("❌ Error getting monitors: %v", err))
 	}
@@ -111,4 +112,37 @@ func exportMonitors(cmd *cobra.Command, args []string) {
 	}
 
 	fmt.Println("✅ Export complete!")
+}
+
+func createListScope() *mgmt.ListScope {
+	integrationIds := []string{}
+	for _, integrationId := range exportCmd_integrationIds {
+		integrationIds = append(integrationIds, strings.Split(integrationId, ",")...)
+	}
+
+	monitoredPaths := []string{}
+	for _, monitoredPath := range exportCmd_monitoredPaths {
+		monitoredPaths = append(monitoredPaths, strings.Split(monitoredPath, ",")...)
+	}
+
+	monitorIds := []string{}
+	for _, monitorId := range exportCmd_monitorIds {
+		monitorIds = append(monitorIds, strings.Split(monitorId, ",")...)
+	}
+
+	source := strings.ToLower(exportCmd_source)
+	if !slices.Contains(exportCmd_validSources, source) {
+		exitWithError(fmt.Errorf("❌ Invalid source \"%s\". Must be one of %+v.", source, exportCmd_validSources))
+	}
+	sources := []string{source}
+	if source == "all" {
+		sources = []string{}
+	}
+
+	return &mgmt.ListScope{
+		IntegrationIds: integrationIds,
+		MonitoredPaths: monitoredPaths,
+		MonitorIds:     monitorIds,
+		Sources:        sources,
+	}
 }
