@@ -9,6 +9,7 @@ import (
 	pb "buf.build/gen/go/getsynq/api/protocolbuffers/go/synq/monitors/custom_monitors/v1"
 	"github.com/samber/lo"
 	"google.golang.org/grpc"
+	"google.golang.org/protobuf/encoding/protojson"
 )
 
 type MgmtService interface {
@@ -46,10 +47,16 @@ func (s *RemoteMgmtService) ConfigChangesOverview(
 		ConfigIds: configIds,
 		Monitors:  protoMonitors,
 	}
+	b, _ := protojson.Marshal(req)
+	fmt.Printf("%+v\n", string(b))
+
 	resp, err := s.service.ConfigChangesOverview(s.ctx, req)
 	if err != nil {
 		return nil, err
 	}
+
+	b, _ = protojson.Marshal(resp)
+	fmt.Printf("%+v\n", string(b))
 
 	changesOverview := NewChangesOverview(
 		resp.MonitorsToCreate,
