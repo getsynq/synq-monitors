@@ -110,30 +110,39 @@ func (s *RemoteMgmtService) DeployMonitors(
 }
 
 type ListScope struct {
-	IntegrationId string
-	MonitoredPath string
-	MonitorId     string
+	IntegrationIds []string
+	MonitoredPaths []string
+	MonitorIds     []string
+	Sources        []string
 }
 
 func (s *RemoteMgmtService) ListMonitorsForExport(
 	scope *ListScope,
 ) ([]*pb.MonitorDefinition, error) {
-	req := &pb.ListMonitorsRequest{
-		Source: []string{"app"},
+	req := &pb.ListMonitorsRequest{}
+
+	if len(scope.IntegrationIds) > 0 {
+		ids := lo.Map(scope.IntegrationIds, func(id string, _ int) string {
+			x, _ := strings.CutPrefix(id, "synq-")
+			return x
+		})
+		req.IntegrationIds = ids
 	}
 
-	if len(scope.IntegrationId) > 0 {
-		id, _ := strings.CutPrefix(scope.IntegrationId, "synq-")
-		req.IntegrationIds = []string{id}
+	if len(scope.MonitorIds) > 0 {
+		ids := lo.Map(scope.MonitorIds, func(id string, _ int) string {
+			x, _ := strings.CutPrefix(id, "custom-")
+			return x
+		})
+		req.MonitorIds = ids
 	}
 
-	if len(scope.MonitorId) > 0 {
-		id, _ := strings.CutPrefix(scope.MonitorId, "custom-")
-		req.MonitorIds = []string{id}
+	if len(scope.MonitoredPaths) > 0 {
+		req.MonitoredAssetPaths = scope.MonitoredPaths
 	}
 
-	if len(scope.MonitoredPath) > 0 {
-		req.MonitoredAssetPaths = []string{scope.MonitoredPath}
+	if len(scope.Sources) > 0 {
+		req.Source = scope.Sources
 	}
 
 	resp, err := s.service.ListMonitors(s.ctx, req)
