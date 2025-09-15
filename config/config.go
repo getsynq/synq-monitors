@@ -81,6 +81,7 @@ func (l *Loader) loadEnvFiles() error {
 		// Default to .env in current directory
 		if err := godotenv.Load(); err != nil {
 			// It's okay if .env doesn't exist, just log it
+			fmt.Printf("Error loading .env file %+v", err)
 			return nil
 		}
 		return nil

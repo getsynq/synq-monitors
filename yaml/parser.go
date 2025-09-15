@@ -2,15 +2,12 @@ package yaml
 
 import (
 	"fmt"
-	"os"
 	"strings"
 
 	entitiesv1 "buf.build/gen/go/getsynq/api/protocolbuffers/go/synq/entities/v1"
 	pb "buf.build/gen/go/getsynq/api/protocolbuffers/go/synq/monitors/custom_monitors/v1"
-
 	"github.com/getsynq/monitors_mgmt/uuid"
 	"google.golang.org/protobuf/types/known/wrapperspb"
-	goyaml "gopkg.in/yaml.v3"
 )
 
 type YAMLParser struct {
@@ -18,26 +15,11 @@ type YAMLParser struct {
 	yamlConfig    *YAMLConfig
 }
 
-func NewYAMLParser(filePath string, uuidGenerator *uuid.UUIDGenerator) (*YAMLParser, error) {
-	fmt.Println("🔍 Parsing YAML structure...")
-
-	yamlContent, err := os.ReadFile(filePath)
-	if err != nil {
-		return nil, fmt.Errorf("❌ Error reading file: %v\n", err)
-	}
-
-	var config YAMLConfig
-	err = goyaml.Unmarshal(yamlContent, &config)
-	if err != nil {
-		return nil, fmt.Errorf("❌ YAML parsing failed: %v\n", err)
-	}
-
-	fmt.Println("✅ YAML syntax is valid!")
-
+func NewYAMLParser(config *YAMLConfig, uuidGenerator *uuid.UUIDGenerator) *YAMLParser {
 	return &YAMLParser{
 		uuidGenerator: uuidGenerator,
-		yamlConfig:    &config,
-	}, nil
+		yamlConfig:    config,
+	}
 }
 
 func (p *YAMLParser) GetYAMLConfig() *YAMLConfig {
