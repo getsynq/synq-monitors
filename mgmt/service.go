@@ -9,8 +9,6 @@ import (
 	custommonitorsv1grpc "buf.build/gen/go/getsynq/api/grpc/go/synq/monitors/custom_monitors/v1/custom_monitorsv1grpc"
 	pb "buf.build/gen/go/getsynq/api/protocolbuffers/go/synq/monitors/custom_monitors/v1"
 	"github.com/samber/lo"
-	diff "github.com/yudai/gojsondiff"
-	"github.com/yudai/gojsondiff/formatter"
 	"google.golang.org/grpc"
 )
 
@@ -84,62 +82,7 @@ func (s *RemoteMgmtService) ConfigChangesOverview(
 		}
 	}
 
-	// Determine monitors to delete
-	monitorsToDelete := []*pb.MonitorDefinition{}
-	if len(configId) > 0 {
-		for _, monitorId := range monitorIdsInConfig {
-			if !slices.Contains(lo.Keys(requestedMonitors), monitorId) {
-				monitorsToDelete = append(monitorsToDelete, allFetchedMonitors[monitorId])
-			}
-		}
-	}
-
-	// For all requested monitors check if they are:
-	// * change of ownership (source or config)
-	// * to create
-	// * to update
-	// * unchanged
-	differ := diff.New()
-	deltaFormatter := formatter.NewDeltaFormatter()
-	monitorsToCreate, monitorsUnchanged := []*pb.MonitorDefinition{}, []*pb.MonitorDefinition{}
-	managedByApp, managedByOtherConfigs := []*pb.MonitorDefinition{}, []*pb.MonitorDefinition{}
-	changesOverview := []*pb.ChangeOverview{}
-	for monitorId, monitor := range requestedMonitors {
-		fetchedMonitor := allFetchedMonitors[monitorId]
-		if fetchedMonitor == nil {
-			monitorsToCreate = append(monitorsToCreate, monitor)
-			continue
-		}
-
-		if monitor.Source == pb.MonitorDefinition_SOURCE_APP {
-			managedByApp = append(managedByApp, monitor)
-			continue
-		}
-
-		if monitor.ConfigId != fetchedMonitor.ConfigId {
-			managedByOtherConfigs = append(managedByOtherConfigs, monitor)
-			continue
-		}
-
-		changes, err := generateChangeOverview(differ, deltaFormatter, fetchedMonitor, monitor)
-		if err != nil {
-			return nil, err
-		}
-		if changes.Changes == "" {
-			monitorsUnchanged = append(monitorsUnchanged, monitor)
-		} else {
-			changesOverview = append(changesOverview, changes)
-		}
-	}
-
-	return NewChangesOverview(
-		monitorsToCreate,
-		monitorsToDelete,
-		monitorsUnchanged,
-		managedByApp,
-		changesOverview,
-		configId,
-	), nil
+	return GenerateConfigChangesOverview(configId, protoMonitors, allFetchedMonitors)
 }
 
 func (s *RemoteMgmtService) DeployMonitors(

@@ -5,11 +5,13 @@ import (
 	"errors"
 	"fmt"
 	"reflect"
+	"slices"
 	"strings"
 
 	entitiesv1 "buf.build/gen/go/getsynq/api/protocolbuffers/go/synq/entities/v1"
 	pb "buf.build/gen/go/getsynq/api/protocolbuffers/go/synq/monitors/custom_monitors/v1"
 	"github.com/fatih/color"
+	"github.com/samber/lo"
 	diff "github.com/yudai/gojsondiff"
 	"github.com/yudai/gojsondiff/formatter"
 	"google.golang.org/protobuf/encoding/protojson"
@@ -22,36 +24,81 @@ type ChangesOverview struct {
 	MonitorsManagedByApp         []*pb.MonitorDefinition
 	MonitorsChangesOverview      []*pb.ChangeOverview
 	MonitorsManagedByOtherConfig []*pb.MonitorDefinition
-	HasChanges                   bool
 }
 
-func NewChangesOverview(
-	monitorsToCreate []*pb.MonitorDefinition,
-	monitorsToDelete []*pb.MonitorDefinition,
-	monitorsUnchanged []*pb.MonitorDefinition,
-	monitorsManagedByApp []*pb.MonitorDefinition,
-	monitorsChangesOverview []*pb.ChangeOverview,
-	configId string,
+func (s *ChangesOverview) HasChanges() bool {
+	return len(s.MonitorsToCreate) > 0 || len(s.MonitorsToDelete) > 0 || len(s.MonitorsChangesOverview) > 0
+}
 
-) *ChangesOverview {
-	var toCreate, managedByOtherConfig []*pb.MonitorDefinition
-	for _, monitor := range monitorsToCreate {
+func GenerateConfigChangesOverview(configId string, protoMonitors []*pb.MonitorDefinition, fetchedMonitors map[string]*pb.MonitorDefinition) (*ChangesOverview, error) {
+	// Map incoming data
+	monitorIdsInConfig := []string{}
+	for id, monitor := range fetchedMonitors {
 		if monitor.ConfigId == configId {
-			toCreate = append(toCreate, monitor)
+			monitorIdsInConfig = append(monitorIdsInConfig, id)
+		}
+	}
+	requestedMonitors := map[string]*pb.MonitorDefinition{}
+	for _, monitor := range protoMonitors {
+		requestedMonitors[monitor.Id] = monitor
+	}
+
+	// Determine monitors to delete
+	monitorsToDelete := []*pb.MonitorDefinition{}
+	if len(configId) > 0 {
+		for _, monitorId := range monitorIdsInConfig {
+			if !slices.Contains(lo.Keys(requestedMonitors), monitorId) {
+				monitorsToDelete = append(monitorsToDelete, fetchedMonitors[monitorId])
+			}
+		}
+	}
+
+	// For all requested monitors check if they are:
+	// * change of ownership (source or config)
+	// * to create
+	// * to update
+	// * unchanged
+	differ := diff.New()
+	deltaFormatter := formatter.NewDeltaFormatter()
+	monitorsToCreate, monitorsUnchanged := []*pb.MonitorDefinition{}, []*pb.MonitorDefinition{}
+	managedByApp, managedByOtherConfigs := []*pb.MonitorDefinition{}, []*pb.MonitorDefinition{}
+	changesOverview := []*pb.ChangeOverview{}
+	for monitorId, monitor := range requestedMonitors {
+		fetchedMonitor := fetchedMonitors[monitorId]
+		if fetchedMonitor == nil {
+			monitorsToCreate = append(monitorsToCreate, monitor)
+			continue
+		}
+
+		if fetchedMonitor.Source == pb.MonitorDefinition_SOURCE_APP {
+			managedByApp = append(managedByApp, monitor)
+			continue
+		}
+
+		if monitor.ConfigId != fetchedMonitor.ConfigId {
+			managedByOtherConfigs = append(managedByOtherConfigs, monitor)
+			continue
+		}
+
+		changes, err := generateChangeOverview(differ, deltaFormatter, fetchedMonitor, monitor)
+		if err != nil {
+			return nil, err
+		}
+		if changes.Changes == "" {
+			monitorsUnchanged = append(monitorsUnchanged, monitor)
 		} else {
-			managedByOtherConfig = append(managedByOtherConfig, monitor)
+			changesOverview = append(changesOverview, changes)
 		}
 	}
 
 	return &ChangesOverview{
-		MonitorsToCreate:             toCreate,
+		MonitorsToCreate:             monitorsToCreate,
 		MonitorsToDelete:             monitorsToDelete,
 		MonitorsUnchanged:            monitorsUnchanged,
-		MonitorsManagedByApp:         monitorsManagedByApp,
-		MonitorsChangesOverview:      monitorsChangesOverview,
-		MonitorsManagedByOtherConfig: managedByOtherConfig,
-		HasChanges:                   len(toCreate) > 0 || len(monitorsToDelete) > 0 || len(monitorsChangesOverview) > 0,
-	}
+		MonitorsManagedByApp:         managedByApp,
+		MonitorsManagedByOtherConfig: managedByOtherConfigs,
+		MonitorsChangesOverview:      changesOverview,
+	}, nil
 }
 
 func (s *ChangesOverview) PrettyPrint() {
