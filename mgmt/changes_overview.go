@@ -1,12 +1,18 @@
 package mgmt
 
 import (
+	"encoding/json"
+	"errors"
 	"fmt"
+	"reflect"
 	"strings"
 
 	entitiesv1 "buf.build/gen/go/getsynq/api/protocolbuffers/go/synq/entities/v1"
 	pb "buf.build/gen/go/getsynq/api/protocolbuffers/go/synq/monitors/custom_monitors/v1"
 	"github.com/fatih/color"
+	diff "github.com/yudai/gojsondiff"
+	"github.com/yudai/gojsondiff/formatter"
+	"google.golang.org/protobuf/encoding/protojson"
 )
 
 type ChangesOverview struct {
@@ -230,4 +236,99 @@ func (s *ChangesOverview) formatMonitoredId(id *entitiesv1.Identifier) string {
 	}
 
 	panic("unknown id type")
+}
+
+func generateChangeOverview(
+	differ *diff.Differ,
+	deltaFormatter *formatter.DeltaFormatter,
+	origin *pb.MonitorDefinition,
+	newOverview *pb.MonitorDefinition,
+) (*pb.ChangeOverview, error) {
+	if origin == nil && newOverview == nil {
+		return nil, errors.New("origin and new definition cannot be nil")
+	}
+
+	if origin == nil {
+		return &pb.ChangeOverview{
+			MonitorId:     newOverview.Id,
+			NewDefinition: newOverview,
+		}, nil
+	}
+
+	if newOverview == nil {
+		return &pb.ChangeOverview{
+			MonitorId:        origin.Id,
+			OriginDefinition: origin,
+		}, nil
+	}
+
+	if origin.Id != newOverview.Id {
+		return nil, errors.New("origin and new definition must have the same monitor id")
+	}
+
+	originJson, err := protojson.Marshal(origin)
+	if err != nil {
+		return nil, err
+	}
+	var originMap map[string]interface{}
+	err = json.Unmarshal(originJson, &originMap)
+	if err != nil {
+		return nil, err
+	}
+
+	newOverviewJson, err := protojson.Marshal(newOverview)
+	if err != nil {
+		return nil, err
+	}
+
+	diff, err := differ.Compare(originJson, newOverviewJson)
+	if err != nil {
+		return nil, err
+	}
+
+	changes := ""
+	changesDelta := "{}"
+	if diff.Modified() {
+		asciiFormatter := formatter.NewAsciiFormatter(originMap, formatter.AsciiFormatterConfig{})
+		changesDelta, err = deltaFormatter.Format(diff)
+		if err != nil {
+			return nil, err
+		}
+		changes, err = asciiFormatter.Format(diff)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	return &pb.ChangeOverview{
+		MonitorId:        origin.Id,
+		OriginDefinition: origin,
+		NewDefinition:    newOverview,
+		Changes:          changes,
+		ChangesDeltaJson: changesDelta,
+		ShouldReset:      shouldReset(origin, newOverview),
+	}, nil
+}
+
+func shouldReset(
+	originDef *pb.MonitorDefinition,
+	newDef *pb.MonitorDefinition,
+) bool {
+	if originDef.GetCustomNumeric().GetMetricAggregation() != newDef.GetCustomNumeric().GetMetricAggregation() {
+		return true
+	}
+
+	if reflect.TypeOf(originDef.Schedule) != reflect.TypeOf(newDef.Schedule) {
+		return true
+	}
+
+	if originDef.GetTimePartitioning().GetExpression() != newDef.GetTimePartitioning().GetExpression() {
+		return true
+	}
+
+	if originDef.GetSegmentation().GetExpression() != newDef.GetSegmentation().GetExpression() {
+		return true
+	}
+
+	return false
 }

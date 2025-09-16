@@ -3,13 +3,15 @@ package mgmt
 import (
 	"context"
 	"fmt"
+	"slices"
 	"strings"
 
 	custommonitorsv1grpc "buf.build/gen/go/getsynq/api/grpc/go/synq/monitors/custom_monitors/v1/custom_monitorsv1grpc"
 	pb "buf.build/gen/go/getsynq/api/protocolbuffers/go/synq/monitors/custom_monitors/v1"
 	"github.com/samber/lo"
+	diff "github.com/yudai/gojsondiff"
+	"github.com/yudai/gojsondiff/formatter"
 	"google.golang.org/grpc"
-	"google.golang.org/protobuf/encoding/protojson"
 )
 
 type MgmtService interface {
@@ -38,35 +40,106 @@ func (s *RemoteMgmtService) ConfigChangesOverview(
 	protoMonitors []*pb.MonitorDefinition,
 	configId string,
 ) (*ChangesOverview, error) {
-	var configIds []string
-	if configId != "" {
-		configIds = []string{configId}
+	if len(protoMonitors) == 0 && len(configId) == 0 {
+		return nil, nil
 	}
 
-	req := &pb.ConfigChangesOverviewRequest{
-		ConfigIds: configIds,
-		Monitors:  protoMonitors,
+	requestedMonitors := map[string]*pb.MonitorDefinition{}
+	for _, pm := range protoMonitors {
+		requestedMonitors[pm.Id] = pm
 	}
-	b, _ := protojson.Marshal(req)
-	fmt.Printf("%+v\n", string(b))
+	allFetchedMonitors := map[string]*pb.MonitorDefinition{}
 
-	resp, err := s.service.ConfigChangesOverview(s.ctx, req)
-	if err != nil {
-		return nil, err
+	// Get all monitors in config
+	monitorIdsInConfig := []string{}
+	if len(configId) > 0 {
+		configMonitorsResp, err := s.service.ListConfigsMonitors(s.ctx, &pb.ListConfigsMonitorsRequest{
+			ConfigIds: []string{configId},
+		})
+		if err != nil {
+			return nil, err
+		}
+		for _, m := range configMonitorsResp.Monitors {
+			allFetchedMonitors[m.Id] = m
+			monitorIdsInConfig = append(monitorIdsInConfig, m.Id)
+		}
 	}
 
-	b, _ = protojson.Marshal(resp)
-	fmt.Printf("%+v\n", string(b))
+	// Get requested monitors not in config
+	monitorIdsNotInConfig := []string{}
+	for _, pm := range protoMonitors {
+		if !slices.Contains(monitorIdsInConfig, pm.Id) {
+			monitorIdsNotInConfig = append(monitorIdsNotInConfig, pm.Id)
+		}
+	}
+	if len(monitorIdsNotInConfig) > 0 {
+		monitorsResp, err := s.service.ListMonitors(s.ctx, &pb.ListMonitorsRequest{
+			MonitorIds: monitorIdsNotInConfig,
+		})
+		if err != nil {
+			return nil, err
+		}
+		for _, m := range monitorsResp.Monitors {
+			allFetchedMonitors[m.Id] = m
+		}
+	}
 
-	changesOverview := NewChangesOverview(
-		resp.MonitorsToCreate,
-		resp.MonitorsToDelete,
-		resp.MonitorsUnchanged,
-		resp.MonitorsManagedByApp,
-		resp.MonitorsChangesOverview,
+	// Determine monitors to delete
+	monitorsToDelete := []*pb.MonitorDefinition{}
+	if len(configId) > 0 {
+		for _, monitorId := range monitorIdsInConfig {
+			if !slices.Contains(lo.Keys(requestedMonitors), monitorId) {
+				monitorsToDelete = append(monitorsToDelete, allFetchedMonitors[monitorId])
+			}
+		}
+	}
+
+	// For all requested monitors check if they are:
+	// * change of ownership (source or config)
+	// * to create
+	// * to update
+	// * unchanged
+	differ := diff.New()
+	deltaFormatter := formatter.NewDeltaFormatter()
+	monitorsToCreate, monitorsUnchanged := []*pb.MonitorDefinition{}, []*pb.MonitorDefinition{}
+	managedByApp, managedByOtherConfigs := []*pb.MonitorDefinition{}, []*pb.MonitorDefinition{}
+	changesOverview := []*pb.ChangeOverview{}
+	for monitorId, monitor := range requestedMonitors {
+		fetchedMonitor := allFetchedMonitors[monitorId]
+		if fetchedMonitor == nil {
+			monitorsToCreate = append(monitorsToCreate, monitor)
+			continue
+		}
+
+		if monitor.Source == pb.MonitorDefinition_SOURCE_APP {
+			managedByApp = append(managedByApp, monitor)
+			continue
+		}
+
+		if monitor.ConfigId != fetchedMonitor.ConfigId {
+			managedByOtherConfigs = append(managedByOtherConfigs, monitor)
+			continue
+		}
+
+		changes, err := generateChangeOverview(differ, deltaFormatter, fetchedMonitor, monitor)
+		if err != nil {
+			return nil, err
+		}
+		if changes.Changes == "" {
+			monitorsUnchanged = append(monitorsUnchanged, monitor)
+		} else {
+			changesOverview = append(changesOverview, changes)
+		}
+	}
+
+	return NewChangesOverview(
+		monitorsToCreate,
+		monitorsToDelete,
+		monitorsUnchanged,
+		managedByApp,
+		changesOverview,
 		configId,
-	)
-	return changesOverview, nil
+	), nil
 }
 
 func (s *RemoteMgmtService) DeployMonitors(
@@ -120,10 +193,10 @@ type ListScope struct {
 	IntegrationIds []string
 	MonitoredPaths []string
 	MonitorIds     []string
-	Sources        []string
+	Source         string
 }
 
-func (s *RemoteMgmtService) ListMonitorsForExport(
+func (s *RemoteMgmtService) ListMonitors(
 	scope *ListScope,
 ) ([]*pb.MonitorDefinition, error) {
 	req := &pb.ListMonitorsRequest{}
@@ -148,8 +221,12 @@ func (s *RemoteMgmtService) ListMonitorsForExport(
 		req.MonitoredAssetPaths = scope.MonitoredPaths
 	}
 
-	if len(scope.Sources) > 0 {
-		req.Source = scope.Sources
+	switch scope.Source {
+	case "api":
+		req.Sources = []pb.MonitorDefinition_Source{pb.MonitorDefinition_SOURCE_API}
+	case "app":
+		req.Sources = []pb.MonitorDefinition_Source{pb.MonitorDefinition_SOURCE_APP}
+	case "all":
 	}
 
 	resp, err := s.service.ListMonitors(s.ctx, req)

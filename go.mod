@@ -32,9 +32,14 @@ require (
 )
 
 require (
-	buf.build/gen/go/getsynq/api/grpc/go v1.5.1-20250912084033-ee79871ecde2.2
-	buf.build/gen/go/getsynq/api/protocolbuffers/go v1.36.9-20250912084033-ee79871ecde2.1
+	buf.build/gen/go/getsynq/api/grpc/go v1.5.1-20250916141244-f69653f7454c.2
+	buf.build/gen/go/getsynq/api/protocolbuffers/go v1.36.9-20250916141244-f69653f7454c.1
 	github.com/gkampitakis/go-snaps v0.5.14
+)
+
+require (
+	github.com/sergi/go-diff v1.4.0 // indirect
+	github.com/yudai/golcs v0.0.0-20170316035057-ecda9a501e82 // indirect
 )
 
 require (
@@ -50,5 +55,6 @@ require (
 	github.com/tidwall/match v1.1.1 // indirect
 	github.com/tidwall/pretty v1.2.1 // indirect
 	github.com/tidwall/sjson v1.2.5 // indirect
+	github.com/yudai/gojsondiff v1.0.0
 	google.golang.org/genproto/googleapis/api v0.0.0-20250811230008-5f3141c8851a // indirect
 )
