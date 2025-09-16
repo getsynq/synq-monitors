@@ -3,6 +3,7 @@ package mgmt
 import (
 	"context"
 	"fmt"
+	"slices"
 	"strings"
 
 	custommonitorsv1grpc "buf.build/gen/go/getsynq/api/grpc/go/synq/monitors/custom_monitors/v1/custom_monitorsv1grpc"
@@ -37,29 +38,51 @@ func (s *RemoteMgmtService) ConfigChangesOverview(
 	protoMonitors []*pb.MonitorDefinition,
 	configId string,
 ) (*ChangesOverview, error) {
-	var configIds []string
-	if configId != "" {
-		configIds = []string{configId}
+	if len(protoMonitors) == 0 && len(configId) == 0 {
+		return nil, nil
 	}
 
-	req := &pb.ConfigChangesOverviewRequest{
-		ConfigIds: configIds,
-		Monitors:  protoMonitors,
+	requestedMonitors := map[string]*pb.MonitorDefinition{}
+	for _, pm := range protoMonitors {
+		requestedMonitors[pm.Id] = pm
 	}
-	resp, err := s.service.ConfigChangesOverview(s.ctx, req)
-	if err != nil {
-		return nil, err
+	allFetchedMonitors := map[string]*pb.MonitorDefinition{}
+
+	// Get all monitors in config
+	monitorIdsInConfig := []string{}
+	if len(configId) > 0 {
+		configMonitorsResp, err := s.service.ListConfigsMonitors(s.ctx, &pb.ListConfigsMonitorsRequest{
+			ConfigIds: []string{configId},
+		})
+		if err != nil {
+			return nil, err
+		}
+		for _, m := range configMonitorsResp.Monitors {
+			allFetchedMonitors[m.Id] = m
+			monitorIdsInConfig = append(monitorIdsInConfig, m.Id)
+		}
 	}
 
-	changesOverview := NewChangesOverview(
-		resp.MonitorsToCreate,
-		resp.MonitorsToDelete,
-		resp.MonitorsUnchanged,
-		resp.MonitorsManagedByApp,
-		resp.MonitorsChangesOverview,
-		configId,
-	)
-	return changesOverview, nil
+	// Get requested monitors not in config
+	monitorIdsNotInConfig := []string{}
+	for _, pm := range protoMonitors {
+		if !slices.Contains(monitorIdsInConfig, pm.Id) {
+			monitorIdsNotInConfig = append(monitorIdsNotInConfig, pm.Id)
+		}
+	}
+	if len(monitorIdsNotInConfig) > 0 {
+		monitorsResp, err := s.service.ListMonitors(s.ctx, &pb.ListMonitorsRequest{
+			MonitorIds: monitorIdsNotInConfig,
+		})
+		if err != nil {
+			return nil, err
+		}
+		for _, m := range monitorsResp.Monitors {
+			allFetchedMonitors[m.Id] = m
+		}
+	}
+
+	return GenerateConfigChangesOverview(configId, protoMonitors, allFetchedMonitors)
 }
 
 func (s *RemoteMgmtService) DeployMonitors(
@@ -113,10 +136,10 @@ type ListScope struct {
 	IntegrationIds []string
 	MonitoredPaths []string
 	MonitorIds     []string
-	Sources        []string
+	Source         string
 }
 
-func (s *RemoteMgmtService) ListMonitorsForExport(
+func (s *RemoteMgmtService) ListMonitors(
 	scope *ListScope,
 ) ([]*pb.MonitorDefinition, error) {
 	req := &pb.ListMonitorsRequest{}
@@ -141,8 +164,12 @@ func (s *RemoteMgmtService) ListMonitorsForExport(
 		req.MonitoredAssetPaths = scope.MonitoredPaths
 	}
 
-	if len(scope.Sources) > 0 {
-		req.Source = scope.Sources
+	switch scope.Source {
+	case "api":
+		req.Sources = []pb.MonitorDefinition_Source{pb.MonitorDefinition_SOURCE_API}
+	case "app":
+		req.Sources = []pb.MonitorDefinition_Source{pb.MonitorDefinition_SOURCE_APP}
+	case "all":
 	}
 
 	resp, err := s.service.ListMonitors(s.ctx, req)

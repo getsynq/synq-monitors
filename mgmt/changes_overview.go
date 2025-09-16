@@ -1,12 +1,20 @@
 package mgmt
 
 import (
+	"encoding/json"
+	"errors"
 	"fmt"
+	"reflect"
+	"slices"
 	"strings"
 
 	entitiesv1 "buf.build/gen/go/getsynq/api/protocolbuffers/go/synq/entities/v1"
 	pb "buf.build/gen/go/getsynq/api/protocolbuffers/go/synq/monitors/custom_monitors/v1"
 	"github.com/fatih/color"
+	"github.com/samber/lo"
+	diff "github.com/yudai/gojsondiff"
+	"github.com/yudai/gojsondiff/formatter"
+	"google.golang.org/protobuf/encoding/protojson"
 )
 
 type ChangesOverview struct {
@@ -16,36 +24,81 @@ type ChangesOverview struct {
 	MonitorsManagedByApp         []*pb.MonitorDefinition
 	MonitorsChangesOverview      []*pb.ChangeOverview
 	MonitorsManagedByOtherConfig []*pb.MonitorDefinition
-	HasChanges                   bool
 }
 
-func NewChangesOverview(
-	monitorsToCreate []*pb.MonitorDefinition,
-	monitorsToDelete []*pb.MonitorDefinition,
-	monitorsUnchanged []*pb.MonitorDefinition,
-	monitorsManagedByApp []*pb.MonitorDefinition,
-	monitorsChangesOverview []*pb.ChangeOverview,
-	configId string,
+func (s *ChangesOverview) HasChanges() bool {
+	return len(s.MonitorsToCreate) > 0 || len(s.MonitorsToDelete) > 0 || len(s.MonitorsChangesOverview) > 0
+}
 
-) *ChangesOverview {
-	var toCreate, managedByOtherConfig []*pb.MonitorDefinition
-	for _, monitor := range monitorsToCreate {
+func GenerateConfigChangesOverview(configId string, protoMonitors []*pb.MonitorDefinition, fetchedMonitors map[string]*pb.MonitorDefinition) (*ChangesOverview, error) {
+	// Map incoming data
+	monitorIdsInConfig := []string{}
+	for id, monitor := range fetchedMonitors {
 		if monitor.ConfigId == configId {
-			toCreate = append(toCreate, monitor)
+			monitorIdsInConfig = append(monitorIdsInConfig, id)
+		}
+	}
+	requestedMonitors := map[string]*pb.MonitorDefinition{}
+	for _, monitor := range protoMonitors {
+		requestedMonitors[monitor.Id] = monitor
+	}
+
+	// Determine monitors to delete
+	monitorsToDelete := []*pb.MonitorDefinition{}
+	if len(configId) > 0 {
+		for _, monitorId := range monitorIdsInConfig {
+			if !slices.Contains(lo.Keys(requestedMonitors), monitorId) {
+				monitorsToDelete = append(monitorsToDelete, fetchedMonitors[monitorId])
+			}
+		}
+	}
+
+	// For all requested monitors check if they are:
+	// * change of ownership (source or config)
+	// * to create
+	// * to update
+	// * unchanged
+	differ := diff.New()
+	deltaFormatter := formatter.NewDeltaFormatter()
+	monitorsToCreate, monitorsUnchanged := []*pb.MonitorDefinition{}, []*pb.MonitorDefinition{}
+	managedByApp, managedByOtherConfigs := []*pb.MonitorDefinition{}, []*pb.MonitorDefinition{}
+	changesOverview := []*pb.ChangeOverview{}
+	for monitorId, monitor := range requestedMonitors {
+		fetchedMonitor := fetchedMonitors[monitorId]
+		if fetchedMonitor == nil {
+			monitorsToCreate = append(monitorsToCreate, monitor)
+			continue
+		}
+
+		if fetchedMonitor.Source == pb.MonitorDefinition_SOURCE_APP {
+			managedByApp = append(managedByApp, monitor)
+			continue
+		}
+
+		if monitor.ConfigId != fetchedMonitor.ConfigId {
+			managedByOtherConfigs = append(managedByOtherConfigs, monitor)
+			continue
+		}
+
+		changes, err := generateChangeOverview(differ, deltaFormatter, fetchedMonitor, monitor)
+		if err != nil {
+			return nil, err
+		}
+		if changes.Changes == "" {
+			monitorsUnchanged = append(monitorsUnchanged, monitor)
 		} else {
-			managedByOtherConfig = append(managedByOtherConfig, monitor)
+			changesOverview = append(changesOverview, changes)
 		}
 	}
 
 	return &ChangesOverview{
-		MonitorsToCreate:             toCreate,
+		MonitorsToCreate:             monitorsToCreate,
 		MonitorsToDelete:             monitorsToDelete,
 		MonitorsUnchanged:            monitorsUnchanged,
-		MonitorsManagedByApp:         monitorsManagedByApp,
-		MonitorsChangesOverview:      monitorsChangesOverview,
-		MonitorsManagedByOtherConfig: managedByOtherConfig,
-		HasChanges:                   len(toCreate) > 0 || len(monitorsToDelete) > 0 || len(monitorsChangesOverview) > 0,
-	}
+		MonitorsManagedByApp:         managedByApp,
+		MonitorsManagedByOtherConfig: managedByOtherConfigs,
+		MonitorsChangesOverview:      changesOverview,
+	}, nil
 }
 
 func (s *ChangesOverview) PrettyPrint() {
@@ -230,4 +283,99 @@ func (s *ChangesOverview) formatMonitoredId(id *entitiesv1.Identifier) string {
 	}
 
 	panic("unknown id type")
+}
+
+func generateChangeOverview(
+	differ *diff.Differ,
+	deltaFormatter *formatter.DeltaFormatter,
+	origin *pb.MonitorDefinition,
+	newOverview *pb.MonitorDefinition,
+) (*pb.ChangeOverview, error) {
+	if origin == nil && newOverview == nil {
+		return nil, errors.New("origin and new definition cannot be nil")
+	}
+
+	if origin == nil {
+		return &pb.ChangeOverview{
+			MonitorId:     newOverview.Id,
+			NewDefinition: newOverview,
+		}, nil
+	}
+
+	if newOverview == nil {
+		return &pb.ChangeOverview{
+			MonitorId:        origin.Id,
+			OriginDefinition: origin,
+		}, nil
+	}
+
+	if origin.Id != newOverview.Id {
+		return nil, errors.New("origin and new definition must have the same monitor id")
+	}
+
+	originJson, err := protojson.Marshal(origin)
+	if err != nil {
+		return nil, err
+	}
+	var originMap map[string]interface{}
+	err = json.Unmarshal(originJson, &originMap)
+	if err != nil {
+		return nil, err
+	}
+
+	newOverviewJson, err := protojson.Marshal(newOverview)
+	if err != nil {
+		return nil, err
+	}
+
+	diff, err := differ.Compare(originJson, newOverviewJson)
+	if err != nil {
+		return nil, err
+	}
+
+	changes := ""
+	changesDelta := "{}"
+	if diff.Modified() {
+		asciiFormatter := formatter.NewAsciiFormatter(originMap, formatter.AsciiFormatterConfig{})
+		changesDelta, err = deltaFormatter.Format(diff)
+		if err != nil {
+			return nil, err
+		}
+		changes, err = asciiFormatter.Format(diff)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	return &pb.ChangeOverview{
+		MonitorId:        origin.Id,
+		OriginDefinition: origin,
+		NewDefinition:    newOverview,
+		Changes:          changes,
+		ChangesDeltaJson: changesDelta,
+		ShouldReset:      shouldReset(origin, newOverview),
+	}, nil
+}
+
+func shouldReset(
+	originDef *pb.MonitorDefinition,
+	newDef *pb.MonitorDefinition,
+) bool {
+	if originDef.GetCustomNumeric().GetMetricAggregation() != newDef.GetCustomNumeric().GetMetricAggregation() {
+		return true
+	}
+
+	if reflect.TypeOf(originDef.Schedule) != reflect.TypeOf(newDef.Schedule) {
+		return true
+	}
+
+	if originDef.GetTimePartitioning().GetExpression() != newDef.GetTimePartitioning().GetExpression() {
+		return true
+	}
+
+	if originDef.GetSegmentation().GetExpression() != newDef.GetSegmentation().GetExpression() {
+		return true
+	}
+
+	return false
 }

@@ -116,7 +116,7 @@ func deployFromYaml(cmd *cobra.Command, args []string) {
 
 	changesOverview.PrettyPrint()
 
-	if !changesOverview.HasChanges {
+	if !changesOverview.HasChanges() {
 		return
 	}
 

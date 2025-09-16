@@ -71,7 +71,7 @@ func exportMonitors(cmd *cobra.Command, args []string) {
 
 	// Fetch
 	mgmtService := mgmt.NewMgmtRemoteService(ctx, conn)
-	monitors, err := mgmtService.ListMonitorsForExport(createListScope())
+	monitors, err := mgmtService.ListMonitors(createListScope())
 	if err != nil {
 		exitWithError(fmt.Errorf("❌ Error getting monitors: %v", err))
 	}
@@ -134,15 +134,11 @@ func createListScope() *mgmt.ListScope {
 	if !slices.Contains(exportCmd_validSources, source) {
 		exitWithError(fmt.Errorf("❌ Invalid source \"%s\". Must be one of %+v.", source, exportCmd_validSources))
 	}
-	sources := []string{source}
-	if source == "all" {
-		sources = []string{}
-	}
 
 	return &mgmt.ListScope{
 		IntegrationIds: integrationIds,
 		MonitoredPaths: monitoredPaths,
 		MonitorIds:     monitorIds,
-		Sources:        sources,
+		Source:         exportCmd_source,
 	}
 }
