@@ -180,7 +180,7 @@ monitors:
       anomaly_engine:
         sensitivity: BALANCED
     schedule:
-      daily: 0
+      daily: 0  # midnight (0 minutes since midnight)
 
   - name: custom_numeric_active_users
     time_partitioning: registered_at
@@ -193,7 +193,7 @@ monitors:
         min: 100
         max: 10000
     schedule:
-      hourly: 15
+      hourly: 15  # 15 minutes past each hour
 ```
 
 ## Monitor Types
@@ -208,7 +208,7 @@ monitors:
 - **segmentation**: Column to segment by
 - **filter**: SQL filter expression
 - **mode**: `anomaly_engine` or `fixed_thresholds`
-- **schedule**: `daily` (hour 0-23) or `hourly` (minute 0-59)
+- **schedule**: `daily` (minutes since midnight 0-1439) or `hourly` (minute 0-59)
 
 ## Available YAML Fields
 
@@ -224,45 +224,56 @@ monitors:
 
 | Field                        | Type   | Required | Default                    | Description                          |
 | ---------------------------- | ------ | -------- | -------------------------- | ------------------------------------ |
-| `defaults.severity`          | string | ❌       | `ERROR`                    | Default severity level for monitors  |
+| `defaults.severity`          | string | ❌       | `ERROR`                    | Default severity level for monitors. Possible values: `WARNING`, `ERROR` |
 | `defaults.time_partitioning` | string | ❌       | -                          | Default time partitioning expression |
-| `defaults.schedule`          | object | ❌       | `daily: 0`                 | Default schedule configuration       |
-| `defaults.mode`              | object | ❌       | `anomaly_engine: balanced` | Default detection mode               |
+| `defaults.schedule`          | object | ❌       | `daily: 0` (midnight)      | Default schedule configuration       |
+| `defaults.mode`              | object | ❌       | `anomaly_engine.sensitivity: BALANCED` | Default detection mode               |
 
 ### Monitor Fields
 
 | Field                | Type          | Required | Default                        | Description                                                            |
 | -------------------- | ------------- | -------- | ------------------------------ | ---------------------------------------------------------------------- |
 | `id`                 | string        | ✅       | -                              | Unique identifier for the monitor                                      |
-| `name`               | string        | ❌       | `{id}`                         | Human-readable monitor name                                            |
-| `type`               | string        | ✅       | -                              | Monitor type: `freshness`, `volume`, `custom_numeric`, `field_stats`   |
+| `name`               | string        | ❌       | `{id}`                         | Human-readable monitor name (defaults to monitor id)                  |
+| `type`               | string        | ✅       | -                              | Monitor type. Possible values: `freshness`, `volume`, `custom_numeric`, `field_stats` |
 | `expression`         | string        | ❌       | -                              | **Required for `freshness` monitors** - SQL expression to evaluate     |
 | `metric_aggregation` | string        | ❌       | -                              | **Required for `custom_numeric` monitors** - Aggregation function      |
 | `monitored_ids`      | array[string] | ✅❌     | -                              | Array of monitored entity IDs (mutually exclusive with `monitored_id`) |
 | `monitored_id`       | string        | ❌✅     | -                              | Single monitored entity ID (mutually exclusive with `monitored_ids`)   |
 | `fields`             | array[string] | ❌       | -                              | **Required for `field_stats` monitors** - Fields to analyze            |
-| `segmentation`       | string        | ❌       | -                              | SQL expression for data segmentation                                   |
+| `segmentation`       | object        | ❌       | -                              | Segmentation configuration for the monitor                             |
 | `filter`             | string        | ❌       | -                              | SQL WHERE clause for filtering data                                    |
-| `severity`           | string        | ❌       | `{defaults.severity}`          | Monitor severity: `WARNING`, `ERROR`                                   |
-| `time_partitioning`  | string        | ✅       | `{defaults.time_partitioning}` | Time partitioning expression                                           |
+| `severity`           | string        | ❌       | `{defaults.severity}`          | Monitor severity level. Possible values: `WARNING`, `ERROR`           |
+| `time_partitioning`  | string        | ❌       | `{defaults.time_partitioning}` | Time partitioning expression                                           |
 | `mode`               | object        | ❌       | `{defaults.mode}`              | Detection mode configuration                                           |
 | `schedule`           | object        | ❌       | `{defaults.schedule}`          | Schedule configuration                                                 |
 | `namespace`          | string        | ❌       | `{namespace}`                  | Override default namespace ID                                          |
 
+### Segmentation Configuration
+
+| Field                         | Type           | Required | Default | Description                                        |
+| ----------------------------- | -------------- | -------- | ------- | -------------------------------------------------- |
+| `segmentation.expression`     | string         | ✅       | -       | SQL expression for data segmentation column        |
+| `segmentation.include_values` | array[string]  | ❌       | -       | Specific values to include in segmentation         |
+| `segmentation.exclude_values` | array[string]  | ❌       | -       | Specific values to exclude from segmentation       |
+
 ### Mode Configuration
 
-| Field                             | Type    | Required | Default    | Description                                         |
-| --------------------------------- | ------- | -------- | ---------- | --------------------------------------------------- |
-| `mode.anomaly_engine.sensitivity` | string  | ❌       | `BALANCED` | Sensitivity level: `PRECISE`, `BALANCED`, `RELAXED` |
-| `mode.fixed_thresholds.min`       | float64 | ❌       | -          | Minimum threshold value                             |
-| `mode.fixed_thresholds.max`       | float64 | ❌       | -          | Maximum threshold value                             |
+| Field                             | Type    | Required | Default | Description                                         |
+| --------------------------------- | ------- | -------- | ------- | --------------------------------------------------- |
+| `mode.anomaly_engine.sensitivity` | string  | ❌       | `BALANCED` | Sensitivity level for anomaly detection. Possible values: `PRECISE`, `BALANCED`, `RELAXED` |
+| `mode.fixed_thresholds.min`       | float64 | ❌       | -       | Minimum threshold value                             |
+| `mode.fixed_thresholds.max`       | float64 | ❌       | -       | Maximum threshold value                             |
+
+**Note:** Only one of `anomaly_engine` or `fixed_thresholds` should be specified per mode.
 
 ### Schedule Configuration
 
-| Field             | Type | Required | Default | Description                                         |
-| ----------------- | ---- | -------- | ------- | --------------------------------------------------- |
-| `schedule.daily`  | int  | ❌       | `0`     | Minutes since midnigth (0-1439) for daily execution |
-| `schedule.hourly` | int  | ❌       | -       | Minute of hour (0-59) for hourly execution          |
+| Field             | Type  | Required | Default | Description                                                     |
+| ----------------- | ----- | -------- | ------- | --------------------------------------------------------------- |
+| `schedule.daily`  | int   | ❌       | -       | Minutes since midnight (0-1439) for daily execution             |
+| `schedule.hourly` | int   | ❌       | -       | Minute of hour (0-59) for hourly execution                      |
+| `schedule.delay`  | int32 | ❌       | -       | Number of intervals to delay by (ignores last X intervals)      |
 
 **Note:** Only one of `daily` or `hourly` should be specified per schedule.
 
@@ -290,7 +301,37 @@ monitors:
 
 ### Validation Rules
 
-- `monitored_id` and `monitored_ids` cannot be used together
-- At least one of `monitored_id` or `monitored_ids` must be specified
-- `time_partitioning` is required for all monitors
+- `monitored_id` and `monitored_ids` cannot be used together (mutually exclusive)
+- Either `monitored_id` or `monitored_ids` should be specified for most monitor types
 - Only one schedule type (`daily` or `hourly`) can be specified per monitor
+- Only one mode type (`anomaly_engine` or `fixed_thresholds`) can be specified per monitor
+- `segmentation.expression` is required if segmentation is configured
+- `schedule.delay` can be used with either `daily` or `hourly` schedules
+- `filter` should be a SQL WHERE clause string (without the WHERE keyword)
+
+**Note:** Some example files may show filter as a YAML object, but it should be a quoted string containing the SQL condition.
+
+### Data Types Reference
+
+#### YAMLConfig (Root Configuration)
+- **Fields**: `namespace`, `defaults`, `monitors`
+- **Purpose**: Root structure for YAML configuration files
+
+#### YAMLMonitor 
+- **Purpose**: Individual monitor definition within the monitors array
+- **Required Fields**: `id`, `type`
+- **Optional Fields**: All others, with specific requirements based on monitor type
+
+#### YAMLSegmentation
+- **Purpose**: Configure data segmentation for monitors
+- **Required Fields**: `expression`
+- **Optional Fields**: `include_values`, `exclude_values`
+
+#### YAMLMode
+- **Purpose**: Configure detection mode (anomaly detection or fixed thresholds)
+- **Mutually Exclusive**: `anomaly_engine` OR `fixed_thresholds`
+
+#### YAMLSchedule
+- **Purpose**: Configure monitor execution schedule
+- **Mutually Exclusive**: `daily` OR `hourly`
+- **Optional**: `delay` (can be used with either)
