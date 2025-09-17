@@ -7,14 +7,14 @@ import (
 
 // YAMLConfig represents the YAML file structure
 type YAMLConfig struct {
-	ConfigID string `yaml:"namespace,omitempty"`
+	ConfigID string `yaml:"namespace"`
 	Defaults struct {
 		Severity         string        `yaml:"severity,omitempty"`
 		TimePartitioning string        `yaml:"time_partitioning,omitempty"`
 		Schedule         *YAMLSchedule `yaml:"schedule,omitempty"` // default: daily at midnight
 		Mode             *YAMLMode     `yaml:"mode,omitempty"`
-	} `yaml:"default,omitempty"`
-	Monitors []YAMLMonitor `yaml:"monitors,omitempty"`
+	} `yaml:"defaults"`
+	Monitors []YAMLMonitor `yaml:"monitors"`
 }
 
 // YAMLMonitor represents a monitor in YAML format
