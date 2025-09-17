@@ -161,7 +161,7 @@ func (s *MgmtServiceTestSuite) TestConfigChangesOverview() {
 
 		// Should have 1 app-managed monitor
 		s.Len(changes.MonitorsManagedByApp, 1)
-		s.Equal(appMonitor.Id, changes.MonitorsManagedByApp[0].Id)
+		s.Equal(appMonitor.Id, changes.MonitorsManagedByApp[0])
 
 		// Should have 1 monitor to create
 		s.Len(changes.MonitorsToCreate, 1)
@@ -183,7 +183,7 @@ func (s *MgmtServiceTestSuite) TestConfigChangesOverview() {
 
 		// Should have 1 monitor managed by other configs
 		s.Len(changes.MonitorsManagedByOtherConfig, 1)
-		s.Equal(anotherConfigMonitor.Id, changes.MonitorsManagedByOtherConfig[0].Id)
+		s.Equal(anotherConfigMonitor.Id, changes.MonitorsManagedByOtherConfig[0])
 	})
 
 	s.Run("empty_request_no_existing_monitors", func() {

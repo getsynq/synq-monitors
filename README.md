@@ -69,13 +69,7 @@ SYNQ_API_URL=https://developer.synq.io
 ```bash
 ./synq-monitors deploy [yaml-file-path] [flags]
 ```
-
-### Export
-
-```bash
-./synq-monitors export --namespace=[namespace] --monitored=[monitored_path] --integration=[integration_id] --monitor=[monitor_id] [output-file]
-
-### Available Flags
+#### Available Flags
 
 - `--client-id string`: Synq client ID (overrides .env and environment variables)
 - `--client-secret string`: Synq client secret (overrides .env and environment variables)
@@ -84,14 +78,14 @@ SYNQ_API_URL=https://developer.synq.io
 - `--auto-confirm`: Automatically confirm all prompts (skip interactive confirmations)
 - `-h, --help`: Show help information
 
-### How it works
+#### How it works
 
 1. **Preview**: Shows first 20 lines of YAML file
 2. **Confirm**: Asks for confirmation with `y/N` prompt
 3. **Convert**: Parses YAML and converts to protobuf MonitorDefinitions
 4. **Display**: Shows configuration summary and protobuf JSON output
 
-### Examples
+#### Examples
 
 ```bash
 # Basic usage
@@ -106,6 +100,50 @@ SYNQ_API_URL=https://developer.synq.io
 # With auto-confirm (skip all prompts)
 ./synq-monitors deploy sample_monitors.yaml --auto-confirm
 ```
+
+### Export
+
+```bash
+./synq-monitors export [flags] [output-file]
+```
+
+#### Available Flags
+
+- `-h, --help`: Show help information
+- `--client-id string`: Synq client ID (overrides .env and environment variables)
+- `--client-secret string`: Synq client secret (overrides .env and environment variables)
+- `--api-url string`: Synq API URL (overrides .env and environment variables)
+- `--namespace string`: Namespace for the config to be exported to. Ensure this is a unique namespace for your config.
+- `--integration string`: Integration scope. Limit exported monitors by integration IDs. AND'ed with other scopes.
+- `--monitored string`: Monitored asset scope. Limit exported monitors by monitored asset paths. AND'ed with other scopes.
+- `--monitor string`: Monitor scope. Limit exported monitors by monitor IDs. AND'ed with other scopes.
+- `--source string`: Source scope. Limit exported monitors by source. One of ["app", "api", "all"]. Defaults to "app". AND'ed with other scopes.
+
+#### How it works
+
+Select existing monitors and export them to a YAML file. 
+
+1. **Fetch**: Monitors are fetched based on provided scopes.
+2. **Validate**: Exported monitors are validated for parsable code.
+
+The output file should not already exist.
+
+#### Examples
+
+```bash
+# Basic usage
+./synq-monitors export --namespace=all_app_monitors generated/all_app_monitors.yaml
+
+# With command line credentials
+./synq-monitors export --namespace=all_app_monitors --client-id="prod_client" --client-secret="prod_secret" --api-url="https://developer.synq.io" generated/all_app_monitors.yaml
+
+# Export monitors on a single table
+./synq-monitors export --namespace=runs_table_monitors --monitored="runs-table-path" generated/runs_table_monitors.yaml
+
+# Export monitors on a multiple tables
+./synq-monitors export --namespace=runs_monitors --monitored="runs-table-path" --monitored="runs-results-path" generated/runs_table_monitors.yaml
+```
+
 
 ## YAML Format
 
