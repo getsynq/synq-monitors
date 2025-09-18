@@ -318,7 +318,7 @@ func (s *MgmtServiceTestSuite) TestConfigChangesOverview() {
 			Severity: pb.Severity_SEVERITY_WARNING,
 			Source:   pb.MonitorDefinition_SOURCE_API,
 		}
-		changes, err := GenerateConfigChangesOverview(configId, []*pb.MonitorDefinition{{
+		changes, err := GenerateConfigChangesOverview("", []*pb.MonitorDefinition{{
 			Name: "named_monitor",
 			Id:   uuid.NewString(),
 			MonitoredId: &entitiesv1.Identifier{
