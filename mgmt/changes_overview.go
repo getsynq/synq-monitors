@@ -27,7 +27,7 @@ type ChangesOverview struct {
 }
 
 func (s *ChangesOverview) HasChanges() bool {
-	return len(s.MonitorsToCreate)+len(s.MonitorsToDelete)+len(s.MonitorsChangesOverview)+len(s.MonitorsManagedByApp) > 0
+	return len(s.MonitorsToCreate)+len(s.MonitorsToDelete)+len(s.MonitorsChangesOverview)+len(s.MonitorsManagedByApp)+len(s.MonitorsManagedByOtherConfig) > 0
 }
 
 func (s *ChangesOverview) GetBreakingChanges() string {
