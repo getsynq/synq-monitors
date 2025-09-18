@@ -212,6 +212,42 @@ func (s *MgmtServiceTestSuite) TestConfigChangesOverview() {
 		s.Len(changes.MonitorsManagedByOtherConfig, 0)
 	})
 
+	s.Run("empty_request_with_monitors_global_config", func() {
+		monitor := &pb.MonitorDefinition{
+			Name: "global_monitor",
+			Id:   uuid.NewString(),
+			MonitoredId: &entitiesv1.Identifier{
+				Id: &entitiesv1.Identifier_SynqPath{
+					SynqPath: &entitiesv1.SynqPathIdentifier{
+						Path: "mysql-host::schema::table",
+					},
+				},
+			},
+			Mode: &pb.MonitorDefinition_AnomalyEngine{
+				AnomalyEngine: &pb.ModeAnomalyEngine{
+					Sensitivity: pb.Sensitivity_SENSITIVITY_BALANCED,
+				},
+			},
+			Severity: pb.Severity_SEVERITY_WARNING,
+			Source:   pb.MonitorDefinition_SOURCE_API,
+		}
+
+		changes, err := GenerateConfigChangesOverview("", []*pb.MonitorDefinition{}, map[string]*pb.MonitorDefinition{
+			monitor.Id: monitor,
+		})
+		s.Require().NoError(err)
+		s.Require().NotNil(changes)
+		s.Require().True(changes.HasChanges())
+		s.Len(changes.MonitorsManagedByApp, 0)
+		s.Len(changes.MonitorsToCreate, 0)
+		s.Len(changes.MonitorsToDelete, 1)
+		s.Equal(monitor.Id, changes.MonitorsToDelete[0].Id)
+		s.Len(changes.MonitorsChangesOverview, 0)
+		s.Len(changes.MonitorsUnchanged, 0)
+		s.Len(changes.MonitorsManagedByApp, 0)
+		s.Len(changes.MonitorsManagedByOtherConfig, 0)
+	})
+
 	s.Run("empty_request_with_monitors", func() {
 		changes, err := GenerateConfigChangesOverview(configId, []*pb.MonitorDefinition{}, map[string]*pb.MonitorDefinition{
 			existingMonitor.Id: existingMonitor,
