@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/url"
 	"os"
+	"strings"
 
 	iamv1grpc "buf.build/gen/go/getsynq/api/grpc/go/synq/auth/iam/v1/iamv1grpc"
 	iamv1 "buf.build/gen/go/getsynq/api/protocolbuffers/go/synq/auth/iam/v1"
@@ -120,17 +121,17 @@ func deployFromYaml(cmd *cobra.Command, args []string) {
 		return
 	}
 
+	if breakingChanges := changesOverview.GetBreakingChanges(); len(breakingChanges) > 0 {
+		exitWithError(fmt.Errorf("%+v\n❌ Breaking changes detected! Please resolve the issues and try again.", breakingChanges))
+		return
+	}
+
 	if !deployCmd_autoConfirm {
 		prompt := promptui.Prompt{
 			Label:     "Are you sure you want to deploy these monitors? (y/N)",
 			IsConfirm: true,
 		}
-		result, err := prompt.Run()
-		if err != nil {
-			fmt.Println("❌ Deployment cancelled")
-			return
-		}
-		if result != "y" && result != "Y" {
+		if result, err := prompt.Run(); err != nil || strings.ToLower(result) != "y" {
 			fmt.Println("❌ Deployment cancelled")
 			return
 		}

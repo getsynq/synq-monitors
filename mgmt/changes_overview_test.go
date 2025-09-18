@@ -6,6 +6,7 @@ import (
 	entitiesv1 "buf.build/gen/go/getsynq/api/protocolbuffers/go/synq/entities/v1"
 	pb "buf.build/gen/go/getsynq/api/protocolbuffers/go/synq/monitors/custom_monitors/v1"
 	"github.com/google/uuid"
+	"github.com/samber/lo"
 	"github.com/stretchr/testify/suite"
 )
 
@@ -16,6 +17,8 @@ type MgmtServiceTestSuite struct {
 func TestMgmtServiceTestSuite(t *testing.T) {
 	suite.Run(t, &MgmtServiceTestSuite{})
 }
+
+// TODO(karan): Add tests for deletion
 
 func (s *MgmtServiceTestSuite) TestConfigChangesOverview() {
 	configId := "config-id"
@@ -161,18 +164,31 @@ func (s *MgmtServiceTestSuite) TestConfigChangesOverview() {
 
 		// Should have 1 app-managed monitor
 		s.Len(changes.MonitorsManagedByApp, 1)
-		s.Equal(appMonitor.Id, changes.MonitorsManagedByApp[0].Id)
+		s.Equal(appMonitor.Id, changes.MonitorsManagedByApp[0])
+
+		// Should have 1 monitor managed by other configs
+		s.Len(changes.MonitorsManagedByOtherConfig, 1)
+		s.Equal(changes.MonitorsManagedByOtherConfig[anotherConfigMonitor.Id], anotherConfigId)
+		s.NotEmpty(changes.GetBreakingChanges())
 
 		// Should have 1 monitor to create
 		s.Len(changes.MonitorsToCreate, 1)
 		s.Equal("new-monitor-id", changes.MonitorsToCreate[0].Id)
 
-		// Should have 1 monitor with changes
-		s.Len(changes.MonitorsChangesOverview, 1)
-		s.Equal(existingMonitor.Id, changes.MonitorsChangesOverview[0].OriginDefinition.Id)
-		s.Equal(existingMonitor.Id, changes.MonitorsChangesOverview[0].NewDefinition.Id)
-		s.NotEmpty(changes.MonitorsChangesOverview[0].Changes)
-		s.NotEqual("{}", changes.MonitorsChangesOverview[0].ChangesDeltaJson)
+		// Should have 3 monitor with changes
+		s.Len(changes.MonitorsChangesOverview, 2)
+		changedMonitorIds := lo.Map(changes.MonitorsChangesOverview, func(m *pb.ChangeOverview, _ int) string { return m.MonitorId })
+		s.Contains(changedMonitorIds, existingMonitor.Id)
+		s.Contains(changedMonitorIds, appMonitor.Id)
+
+		for _, change := range changes.MonitorsChangesOverview {
+			if change.MonitorId == existingMonitor.Id {
+				s.Equal(existingMonitor.Id, change.OriginDefinition.Id)
+				s.Equal(existingMonitor.Id, change.NewDefinition.Id)
+				s.NotEmpty(change.Changes)
+				s.NotEqual("{}", change.ChangesDeltaJson)
+			}
+		}
 
 		// Should have 2 monitor to delete
 		s.Len(changes.MonitorsToDelete, 1)
@@ -180,10 +196,6 @@ func (s *MgmtServiceTestSuite) TestConfigChangesOverview() {
 
 		// Should have 0 monitors unchanged
 		s.Len(changes.MonitorsUnchanged, 0)
-
-		// Should have 1 monitor managed by other configs
-		s.Len(changes.MonitorsManagedByOtherConfig, 1)
-		s.Equal(anotherConfigMonitor.Id, changes.MonitorsManagedByOtherConfig[0].Id)
 	})
 
 	s.Run("empty_request_no_existing_monitors", func() {

@@ -18,16 +18,31 @@ import (
 )
 
 type ChangesOverview struct {
+	MonitorsUnchanged            []*pb.MonitorDefinition
 	MonitorsToCreate             []*pb.MonitorDefinition
 	MonitorsToDelete             []*pb.MonitorDefinition
-	MonitorsUnchanged            []*pb.MonitorDefinition
-	MonitorsManagedByApp         []*pb.MonitorDefinition
+	MonitorsManagedByApp         []string
+	MonitorsManagedByOtherConfig map[string]string
 	MonitorsChangesOverview      []*pb.ChangeOverview
-	MonitorsManagedByOtherConfig []*pb.MonitorDefinition
 }
 
 func (s *ChangesOverview) HasChanges() bool {
-	return len(s.MonitorsToCreate) > 0 || len(s.MonitorsToDelete) > 0 || len(s.MonitorsChangesOverview) > 0
+	return len(s.MonitorsToCreate)+len(s.MonitorsToDelete)+len(s.MonitorsChangesOverview)+len(s.MonitorsManagedByApp)+len(s.MonitorsManagedByOtherConfig) > 0
+}
+
+func (s *ChangesOverview) GetBreakingChanges() string {
+	breakingChanges := []string{}
+	if len(s.MonitorsManagedByOtherConfig) > 0 {
+		breakingChanges = append(breakingChanges, fmt.Sprintf("  🚫 %d monitors managed by other configs.", len(s.MonitorsManagedByOtherConfig)))
+	}
+	for monitorId, configId := range s.MonitorsManagedByOtherConfig {
+		namespaceStr := "default"
+		if len(configId) > 0 {
+			namespaceStr = configId
+		}
+		breakingChanges = append(breakingChanges, fmt.Sprintf("     - Monitor ID: %s, Managed by namespace: %s", monitorId, namespaceStr))
+	}
+	return strings.Join(breakingChanges, "\n")
 }
 
 func GenerateConfigChangesOverview(configId string, protoMonitors []*pb.MonitorDefinition, fetchedMonitors map[string]*pb.MonitorDefinition) (*ChangesOverview, error) {
@@ -61,22 +76,22 @@ func GenerateConfigChangesOverview(configId string, protoMonitors []*pb.MonitorD
 	differ := diff.New()
 	deltaFormatter := formatter.NewDeltaFormatter()
 	monitorsToCreate, monitorsUnchanged := []*pb.MonitorDefinition{}, []*pb.MonitorDefinition{}
-	managedByApp, managedByOtherConfigs := []*pb.MonitorDefinition{}, []*pb.MonitorDefinition{}
+	managedByApp, managedByOtherConfigs := []string{}, map[string]string{}
 	changesOverview := []*pb.ChangeOverview{}
 	for monitorId, monitor := range requestedMonitors {
 		fetchedMonitor := fetchedMonitors[monitorId]
+		monitor.Source = pb.MonitorDefinition_SOURCE_API
 		if fetchedMonitor == nil {
 			monitorsToCreate = append(monitorsToCreate, monitor)
 			continue
 		}
 
 		if fetchedMonitor.Source == pb.MonitorDefinition_SOURCE_APP {
-			managedByApp = append(managedByApp, monitor)
-			continue
+			managedByApp = append(managedByApp, monitor.Id)
 		}
 
-		if monitor.ConfigId != fetchedMonitor.ConfigId {
-			managedByOtherConfigs = append(managedByOtherConfigs, monitor)
+		if fetchedMonitor.Source == pb.MonitorDefinition_SOURCE_API && monitor.ConfigId != fetchedMonitor.ConfigId {
+			managedByOtherConfigs[monitor.Id] = fetchedMonitor.ConfigId
 			continue
 		}
 
@@ -129,10 +144,10 @@ func (s *ChangesOverview) PrettyPrint() {
 		blue.Printf("  = %d monitors unchanged\n", len(s.MonitorsUnchanged))
 	}
 	if len(s.MonitorsManagedByApp) > 0 {
-		gray.Printf("  ⚠ %d monitors managed by app (skipped)\n", len(s.MonitorsManagedByApp))
+		gray.Printf("  ⚠ %d monitors managed by app that will now be managed by given config\n", len(s.MonitorsManagedByApp))
 	}
 	if len(s.MonitorsManagedByOtherConfig) > 0 {
-		gray.Printf("  ⚠ %d monitors managed by other config\n", len(s.MonitorsManagedByOtherConfig))
+		red.Printf("  🚫 %d monitors managed by other configs\n", len(s.MonitorsManagedByOtherConfig))
 	}
 
 	if totalChanges == 0 {
@@ -187,6 +202,11 @@ func (s *ChangesOverview) PrettyPrint() {
 				red.Printf("       🔄 RESET REQUIRED\n")
 			}
 
+			// Show change of ownership
+			if slices.Contains(s.MonitorsManagedByApp, change.MonitorId) {
+				red.Printf("       🔄 Management transfer from App\n")
+			}
+
 			if change.Changes != "" {
 				// Indent the diff output
 				lines := strings.Split(change.Changes, "\n")
@@ -213,34 +233,6 @@ func (s *ChangesOverview) PrettyPrint() {
 			fmt.Printf("  %d. ", i+1)
 			blue.Printf("%s", monitor.Name)
 			fmt.Printf(" (%s)\n", s.getMonitorType(monitor))
-			if monitor.MonitoredId != nil {
-				gray.Printf("     → Monitored: %s\n", s.formatMonitoredId(monitor.MonitoredId))
-			}
-		}
-	}
-
-	// Monitors managed by other config
-	if len(s.MonitorsManagedByOtherConfig) > 0 {
-		fmt.Println()
-		gray.Println("⚠️  Monitors Managed by Other Config:")
-		for i, monitor := range s.MonitorsManagedByOtherConfig {
-			fmt.Printf("  %d. ", i+1)
-			gray.Printf("%s", monitor.Name)
-			fmt.Printf(" (%s) - managed externally\n", s.getMonitorType(monitor))
-			if monitor.MonitoredId != nil {
-				gray.Printf("     → Monitored: %s\n", s.formatMonitoredId(monitor.MonitoredId))
-			}
-		}
-	}
-
-	// App-managed monitors (warnings)
-	if len(s.MonitorsManagedByApp) > 0 {
-		fmt.Println()
-		gray.Println("⚠️  Monitors Managed by App (Skipped):")
-		for i, monitor := range s.MonitorsManagedByApp {
-			fmt.Printf("  %d. ", i+1)
-			gray.Printf("%s", monitor.Name)
-			fmt.Printf(" (%s) - managed externally\n", s.getMonitorType(monitor))
 			if monitor.MonitoredId != nil {
 				gray.Printf("     → Monitored: %s\n", s.formatMonitoredId(monitor.MonitoredId))
 			}

@@ -11,16 +11,16 @@ type YAMLConfig struct {
 	Defaults struct {
 		Severity         string        `yaml:"severity,omitempty"`
 		TimePartitioning string        `yaml:"time_partitioning,omitempty"`
-		Schedule         *YAMLSchedule `yaml:"schedule,omitempty"`
+		Schedule         *YAMLSchedule `yaml:"schedule,omitempty"` // default: daily at midnight
 		Mode             *YAMLMode     `yaml:"mode,omitempty"`
-	} `yaml:"defaults"`
+	} `yaml:"defaults,omitempty"`
 	Monitors []YAMLMonitor `yaml:"monitors"`
 }
 
 // YAMLMonitor represents a monitor in YAML format
 type YAMLMonitor struct {
 	Id                string            `yaml:"id"`
-	Name              string            `yaml:"name,omitempty"`
+	Name              string            `yaml:"name,omitempty"` //default: `{id}`
 	Type              string            `yaml:"type"`
 	Expression        string            `yaml:"expression,omitempty"`
 	MetricAggregation string            `yaml:"metric_aggregation,omitempty"`
@@ -33,7 +33,7 @@ type YAMLMonitor struct {
 	TimePartitioning  string            `yaml:"time_partitioning,omitempty"`
 	Mode              *YAMLMode         `yaml:"mode,omitempty"`
 	Schedule          *YAMLSchedule     `yaml:"schedule,omitempty"`
-	ConfigID          string            `yaml:"namespace,omitempty"`
+	ConfigID          string            `yaml:"-"`
 }
 
 type YAMLSegmentation struct {
@@ -50,6 +50,7 @@ type YAMLMode struct {
 
 // YAMLAnomalyEngine represents anomaly engine configuration
 type YAMLAnomalyEngine struct {
+	// default: BALANCED
 	Sensitivity string `yaml:"sensitivity"`
 }
 
@@ -61,7 +62,7 @@ type YAMLFixedThresholds struct {
 
 // YAMLSchedule represents schedule configuration
 type YAMLSchedule struct {
-	Daily  *int   `yaml:"daily,omitempty"`  // Hour of day (0-23)
+	Daily  *int   `yaml:"daily,omitempty"`  // Minutes since midnight (0-1439)
 	Hourly *int   `yaml:"hourly,omitempty"` // Minute of hour (0-59)
 	Delay  *int32 `yaml:"delay,omitempty"`  // Number of chosen intervals to delay by. Ignores last `X` intervals.
 }

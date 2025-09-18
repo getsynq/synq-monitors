@@ -2,9 +2,9 @@ package cmd
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"os"
+	"path/filepath"
 	"slices"
 	"strings"
 
@@ -47,11 +47,16 @@ func init() {
 
 func exportMonitors(cmd *cobra.Command, args []string) {
 	ctx := context.Background()
-	filePath := args[0]
+	yamlFilePath := args[0]
 
 	// Check if file exists
-	if _, err := os.Stat(filePath); !os.IsNotExist(err) {
-		exitWithError(fmt.Errorf("❌ Error: File '%s' exists. Please provide a fresh path or remove the existing file before exporting.\n", filePath))
+	if _, err := os.Stat(yamlFilePath); !os.IsNotExist(err) {
+		exitWithError(fmt.Errorf("❌ Error: File '%s' exists. Please provide a fresh path or remove the existing file before exporting.\n", yamlFilePath))
+	}
+
+	// Create file directory if it does not exist
+	if err := os.MkdirAll(filepath.Dir(yamlFilePath), 0770); err != nil {
+		exitWithError(fmt.Errorf("❌ Error: Unable to create directory for export file '%s'.\n", yamlFilePath))
 	}
 
 	conn, err := connectToApi(ctx)
@@ -76,7 +81,7 @@ func exportMonitors(cmd *cobra.Command, args []string) {
 		exitWithError(fmt.Errorf("❌ Error getting monitors: %v", err))
 	}
 	if len(monitors) == 0 {
-		exitWithError(errors.New("❌ No monitors found for the given scope."))
+		exitWithError(fmt.Errorf("❌ No monitors found for the given scope: %+v", exportScopeStr()))
 	}
 
 	fmt.Printf("\n✅ Found %d monitors. Exporting...\n", len(monitors))
@@ -97,7 +102,7 @@ func exportMonitors(cmd *cobra.Command, args []string) {
 	fmt.Println("✅ Parse test completed for generated YAML...")
 
 	// Write to file
-	f, err := os.OpenFile(filePath, os.O_RDWR|os.O_CREATE, 0644)
+	f, err := os.OpenFile(yamlFilePath, os.O_RDWR|os.O_CREATE, 0644)
 	if err != nil {
 		exitWithError(err)
 	}
@@ -141,4 +146,18 @@ func createListScope() *mgmt.ListScope {
 		MonitorIds:     monitorIds,
 		Source:         exportCmd_source,
 	}
+}
+
+func exportScopeStr() string {
+	scope := "source=" + exportCmd_source
+	if len(exportCmd_integrationIds) > 0 {
+		scope += fmt.Sprintf(", integration=%+v", exportCmd_integrationIds)
+	}
+	if len(exportCmd_monitoredPaths) > 0 {
+		scope += fmt.Sprintf(", monitored=%+v", exportCmd_monitoredPaths)
+	}
+	if len(exportCmd_monitorIds) > 0 {
+		scope += fmt.Sprintf(", monitor=%+v", exportCmd_monitorIds)
+	}
+	return scope
 }
