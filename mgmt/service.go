@@ -50,17 +50,16 @@ func (s *RemoteMgmtService) ConfigChangesOverview(
 
 	// Get all monitors in config
 	monitorIdsInConfig := []string{}
-	if len(configId) > 0 {
-		configMonitorsResp, err := s.service.ListConfigsMonitors(s.ctx, &pb.ListConfigsMonitorsRequest{
-			ConfigIds: []string{configId},
-		})
-		if err != nil {
-			return nil, err
-		}
-		for _, m := range configMonitorsResp.Monitors {
-			allFetchedMonitors[m.Id] = m
-			monitorIdsInConfig = append(monitorIdsInConfig, m.Id)
-		}
+	configMonitorsResp, err := s.service.ListMonitors(s.ctx, &pb.ListMonitorsRequest{
+		ConfigIds: []string{configId},
+		Sources:   []pb.MonitorDefinition_Source{pb.MonitorDefinition_SOURCE_API},
+	})
+	if err != nil {
+		return nil, err
+	}
+	for _, m := range configMonitorsResp.Monitors {
+		allFetchedMonitors[m.Id] = m
+		monitorIdsInConfig = append(monitorIdsInConfig, m.Id)
 	}
 
 	// Get requested monitors not in config

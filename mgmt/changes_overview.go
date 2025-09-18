@@ -60,11 +60,9 @@ func GenerateConfigChangesOverview(configId string, protoMonitors []*pb.MonitorD
 
 	// Determine monitors to delete
 	monitorsToDelete := []*pb.MonitorDefinition{}
-	if len(configId) > 0 {
-		for _, monitorId := range monitorIdsInConfig {
-			if !slices.Contains(lo.Keys(requestedMonitors), monitorId) {
-				monitorsToDelete = append(monitorsToDelete, fetchedMonitors[monitorId])
-			}
+	for _, monitorId := range monitorIdsInConfig {
+		if !slices.Contains(lo.Keys(requestedMonitors), monitorId) {
+			monitorsToDelete = append(monitorsToDelete, fetchedMonitors[monitorId])
 		}
 	}
 
