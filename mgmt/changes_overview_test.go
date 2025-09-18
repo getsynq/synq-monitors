@@ -18,6 +18,8 @@ func TestMgmtServiceTestSuite(t *testing.T) {
 	suite.Run(t, &MgmtServiceTestSuite{})
 }
 
+// TODO(karan): Add tests for deletion
+
 func (s *MgmtServiceTestSuite) TestConfigChangesOverview() {
 	configId := "config-id"
 

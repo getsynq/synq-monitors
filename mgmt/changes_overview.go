@@ -36,7 +36,11 @@ func (s *ChangesOverview) GetBreakingChanges() string {
 		breakingChanges = append(breakingChanges, fmt.Sprintf("  🚫 %d monitors managed by other configs.", len(s.MonitorsManagedByOtherConfig)))
 	}
 	for monitorId, configId := range s.MonitorsManagedByOtherConfig {
-		breakingChanges = append(breakingChanges, fmt.Sprintf("     - Monitor ID: %s, Managed by: %s", monitorId, configId))
+		namespaceStr := "default"
+		if len(configId) > 0 {
+			namespaceStr = configId
+		}
+		breakingChanges = append(breakingChanges, fmt.Sprintf("     - Monitor ID: %s, Managed by namespace: %s", monitorId, namespaceStr))
 	}
 	return strings.Join(breakingChanges, "\n")
 }
