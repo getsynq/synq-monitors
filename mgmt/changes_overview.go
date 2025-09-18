@@ -22,12 +22,23 @@ type ChangesOverview struct {
 	MonitorsToCreate             []*pb.MonitorDefinition
 	MonitorsToDelete             []*pb.MonitorDefinition
 	MonitorsManagedByApp         []string
-	MonitorsManagedByOtherConfig []string
+	MonitorsManagedByOtherConfig map[string]string
 	MonitorsChangesOverview      []*pb.ChangeOverview
 }
 
 func (s *ChangesOverview) HasChanges() bool {
-	return len(s.MonitorsToCreate)+len(s.MonitorsToDelete)+len(s.MonitorsChangesOverview)+len(s.MonitorsManagedByApp)+len(s.MonitorsManagedByOtherConfig) > 0
+	return len(s.MonitorsToCreate)+len(s.MonitorsToDelete)+len(s.MonitorsChangesOverview)+len(s.MonitorsManagedByApp) > 0
+}
+
+func (s *ChangesOverview) GetBreakingChanges() string {
+	breakingChanges := []string{}
+	if len(s.MonitorsManagedByOtherConfig) > 0 {
+		breakingChanges = append(breakingChanges, fmt.Sprintf("  🚫 %d monitors managed by other configs.", len(s.MonitorsManagedByOtherConfig)))
+	}
+	for monitorId, configId := range s.MonitorsManagedByOtherConfig {
+		breakingChanges = append(breakingChanges, fmt.Sprintf("     - Monitor ID: %s, Managed by: %s", monitorId, configId))
+	}
+	return strings.Join(breakingChanges, "\n")
 }
 
 func GenerateConfigChangesOverview(configId string, protoMonitors []*pb.MonitorDefinition, fetchedMonitors map[string]*pb.MonitorDefinition) (*ChangesOverview, error) {
@@ -61,10 +72,11 @@ func GenerateConfigChangesOverview(configId string, protoMonitors []*pb.MonitorD
 	differ := diff.New()
 	deltaFormatter := formatter.NewDeltaFormatter()
 	monitorsToCreate, monitorsUnchanged := []*pb.MonitorDefinition{}, []*pb.MonitorDefinition{}
-	managedByApp, managedByOtherConfigs := []string{}, []string{}
+	managedByApp, managedByOtherConfigs := []string{}, map[string]string{}
 	changesOverview := []*pb.ChangeOverview{}
 	for monitorId, monitor := range requestedMonitors {
 		fetchedMonitor := fetchedMonitors[monitorId]
+		monitor.Source = pb.MonitorDefinition_SOURCE_API
 		if fetchedMonitor == nil {
 			monitorsToCreate = append(monitorsToCreate, monitor)
 			continue
@@ -74,8 +86,9 @@ func GenerateConfigChangesOverview(configId string, protoMonitors []*pb.MonitorD
 			managedByApp = append(managedByApp, monitor.Id)
 		}
 
-		if len(fetchedMonitor.ConfigId) > 0 && monitor.ConfigId != fetchedMonitor.ConfigId {
-			managedByOtherConfigs = append(managedByOtherConfigs, monitor.Id)
+		if fetchedMonitor.Source == pb.MonitorDefinition_SOURCE_API && monitor.ConfigId != fetchedMonitor.ConfigId {
+			managedByOtherConfigs[monitor.Id] = fetchedMonitor.ConfigId
+			continue
 		}
 
 		changes, err := generateChangeOverview(differ, deltaFormatter, fetchedMonitor, monitor)
@@ -130,7 +143,7 @@ func (s *ChangesOverview) PrettyPrint() {
 		gray.Printf("  ⚠ %d monitors managed by app that will now be managed by given config\n", len(s.MonitorsManagedByApp))
 	}
 	if len(s.MonitorsManagedByOtherConfig) > 0 {
-		gray.Printf("  ⚠ %d monitors managed by other configs that will now be managed by given config\n", len(s.MonitorsManagedByOtherConfig))
+		red.Printf("  🚫 %d monitors managed by other configs\n", len(s.MonitorsManagedByOtherConfig))
 	}
 
 	if totalChanges == 0 {
@@ -188,9 +201,6 @@ func (s *ChangesOverview) PrettyPrint() {
 			// Show change of ownership
 			if slices.Contains(s.MonitorsManagedByApp, change.MonitorId) {
 				red.Printf("       🔄 Management transfer from App\n")
-			}
-			if slices.Contains(s.MonitorsManagedByOtherConfig, change.MonitorId) {
-				red.Printf("       🔄 Management transfer from another config\n")
 			}
 
 			if change.Changes != "" {

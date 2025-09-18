@@ -166,7 +166,7 @@ func (s *MgmtServiceTestSuite) TestConfigChangesOverview() {
 
 		// Should have 1 monitor managed by other configs
 		s.Len(changes.MonitorsManagedByOtherConfig, 1)
-		s.Equal(anotherConfigMonitor.Id, changes.MonitorsManagedByOtherConfig[0])
+		s.Equal(changes.MonitorsManagedByOtherConfig[anotherConfigMonitor.Id], anotherConfigId)
 
 		// Should have 1 monitor to create
 		s.Len(changes.MonitorsToCreate, 1)

@@ -121,6 +121,11 @@ func deployFromYaml(cmd *cobra.Command, args []string) {
 		return
 	}
 
+	if breakingChanges := changesOverview.GetBreakingChanges(); len(breakingChanges) > 0 {
+		exitWithError(fmt.Errorf("%+v\n❌ Breaking changes detected! Please resolve the issues and try again.", breakingChanges))
+		return
+	}
+
 	if !deployCmd_autoConfirm {
 		prompt := promptui.Prompt{
 			Label:     "Are you sure you want to deploy these monitors? (y/N)",

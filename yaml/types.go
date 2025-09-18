@@ -13,7 +13,7 @@ type YAMLConfig struct {
 		TimePartitioning string        `yaml:"time_partitioning,omitempty"`
 		Schedule         *YAMLSchedule `yaml:"schedule,omitempty"` // default: daily at midnight
 		Mode             *YAMLMode     `yaml:"mode,omitempty"`
-	} `yaml:"defaults"`
+	} `yaml:"defaults,omitempty"`
 	Monitors []YAMLMonitor `yaml:"monitors"`
 }
 
@@ -33,7 +33,7 @@ type YAMLMonitor struct {
 	TimePartitioning  string            `yaml:"time_partitioning,omitempty"`
 	Mode              *YAMLMode         `yaml:"mode,omitempty"`
 	Schedule          *YAMLSchedule     `yaml:"schedule,omitempty"`
-	ConfigID          string            `yaml:"namespace,omitempty"`
+	ConfigID          string            `yaml:"-"`
 }
 
 type YAMLSegmentation struct {
