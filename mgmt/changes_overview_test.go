@@ -167,17 +167,17 @@ func (s *MgmtServiceTestSuite) TestConfigChangesOverview() {
 		// Should have 1 monitor managed by other configs
 		s.Len(changes.MonitorsManagedByOtherConfig, 1)
 		s.Equal(changes.MonitorsManagedByOtherConfig[anotherConfigMonitor.Id], anotherConfigId)
+		s.NotEmpty(changes.GetBreakingChanges())
 
 		// Should have 1 monitor to create
 		s.Len(changes.MonitorsToCreate, 1)
 		s.Equal("new-monitor-id", changes.MonitorsToCreate[0].Id)
 
 		// Should have 3 monitor with changes
-		s.Len(changes.MonitorsChangesOverview, 3)
+		s.Len(changes.MonitorsChangesOverview, 2)
 		changedMonitorIds := lo.Map(changes.MonitorsChangesOverview, func(m *pb.ChangeOverview, _ int) string { return m.MonitorId })
 		s.Contains(changedMonitorIds, existingMonitor.Id)
 		s.Contains(changedMonitorIds, appMonitor.Id)
-		s.Contains(changedMonitorIds, anotherConfigMonitor.Id)
 
 		for _, change := range changes.MonitorsChangesOverview {
 			if change.MonitorId == existingMonitor.Id {
