@@ -38,10 +38,6 @@ func (s *RemoteMgmtService) ConfigChangesOverview(
 	protoMonitors []*pb.MonitorDefinition,
 	configId string,
 ) (*ChangesOverview, error) {
-	if len(protoMonitors) == 0 && len(configId) == 0 {
-		return nil, nil
-	}
-
 	requestedMonitors := map[string]*pb.MonitorDefinition{}
 	for _, pm := range protoMonitors {
 		requestedMonitors[pm.Id] = pm
