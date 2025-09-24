@@ -47,11 +47,11 @@ func (s *YAMLGeneratorSuite) TestExamples() {
 		yamlContent, err := os.ReadFile(file)
 		s.Require().NoError(err)
 
-		var config YAMLConfig
+		var config *YAMLConfig
 		err = goyaml.Unmarshal(yamlContent, &config)
 		s.Require().NoError(err)
 
-		yamlParser := NewYAMLParser(&config, s.uuidGenerator)
+		yamlParser := NewYAMLParser(config, s.uuidGenerator)
 		s.Require().NoError(err)
 
 		// Convert to protobuf

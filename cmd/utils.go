@@ -84,6 +84,6 @@ func PrintMonitorDefs(monitorDefs []*pb.MonitorDefinition) {
 }
 
 func exitWithError(err error) {
-	fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+	fmt.Fprintf(os.Stderr, "%v\n", err)
 	os.Exit(1)
 }

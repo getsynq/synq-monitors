@@ -11,9 +11,11 @@ import (
 	iamv1 "buf.build/gen/go/getsynq/api/protocolbuffers/go/synq/auth/iam/v1"
 	pb "buf.build/gen/go/getsynq/api/protocolbuffers/go/synq/monitors/custom_monitors/v1"
 	"github.com/getsynq/monitors_mgmt/mgmt"
+	"github.com/getsynq/monitors_mgmt/paths"
 	"github.com/getsynq/monitors_mgmt/uuid"
 	"github.com/getsynq/monitors_mgmt/yaml"
 	"github.com/manifoldco/promptui"
+	"github.com/samber/lo"
 	"github.com/spf13/cobra"
 	goyaml "gopkg.in/yaml.v3"
 )
@@ -94,8 +96,16 @@ func deployFromYaml(cmd *cobra.Command, args []string) {
 		fmt.Println("\n✅ Confirmed! Processing YAML and converting to protobuf...")
 	}
 
-	// Parse and convert
-	protoMonitors, config, err := parse(filePath, workspace, deployCmd_printProtobuf)
+	// parse
+	yamlParser, err := parse(filePath, workspace, deployCmd_printProtobuf)
+	if err != nil {
+		exitWithError(err)
+	}
+	config := yamlParser.GetYAMLConfig()
+
+	// resolve monitored entities
+	pathsConverter := paths.NewPathConverter(ctx, conn)
+	config, err = resolve(pathsConverter, config)
 	if err != nil {
 		exitWithError(err)
 	}
@@ -110,6 +120,13 @@ func deployFromYaml(cmd *cobra.Command, args []string) {
 	// mgmtService := mgmt.NewMgmtLocalService(ctx, localPostgresConn, workspace)
 	mgmtService := mgmt.NewMgmtRemoteService(ctx, conn)
 
+	// convert
+	protoMonitors, err := convert(yamlParser, deployCmd_printProtobuf)
+	if err != nil {
+		exitWithError(err)
+	}
+
+	// Calculate delta
 	changesOverview, err := mgmtService.ConfigChangesOverview(protoMonitors, config.ConfigID)
 	if err != nil {
 		exitWithError(fmt.Errorf("❌ Error getting config changes overview: %v", err))
@@ -147,27 +164,67 @@ func deployFromYaml(cmd *cobra.Command, args []string) {
 	fmt.Println("✅ Deployment complete!")
 }
 
-func parse(filePath, workspace string, printProtobuf bool) ([]*pb.MonitorDefinition, *yaml.YAMLConfig, error) {
+func parse(filePath, workspace string, printProtobuf bool) (*yaml.YAMLParser, error) {
 	// Read YAML file
 	fmt.Println("🔍 Parsing YAML structure...")
 	yamlContent, err := os.ReadFile(filePath)
 	if err != nil {
-		return nil, nil, fmt.Errorf("❌ Error reading file: %v\n", err)
+		return nil, fmt.Errorf("❌ Error reading file: %v\n", err)
 	}
 
 	var config yaml.YAMLConfig
 	err = goyaml.Unmarshal(yamlContent, &config)
 	if err != nil {
-		return nil, nil, fmt.Errorf("❌ YAML parsing failed: %v\n", err)
+		return nil, fmt.Errorf("❌ YAML parsing failed: %v\n", err)
 	}
 	fmt.Println("✅ YAML syntax is valid!")
 
+	return yaml.NewYAMLParser(&config, uuid.NewUUIDGenerator(workspace)), nil
+}
+
+func resolve(pathsConverter paths.PathConverter, config *yaml.YAMLConfig) (*yaml.YAMLConfig, error) {
+	fmt.Println("\n🔍 Resolving monitored entities...")
+	pathsToConvert := []string{}
+	for _, monitor := range config.Monitors {
+		if len(monitor.MonitoredID) > 0 {
+			pathsToConvert = append(pathsToConvert, monitor.MonitoredID)
+		} else {
+			pathsToConvert = append(pathsToConvert, monitor.MonitoredIDs...)
+		}
+	}
+	pathsToConvert = lo.Uniq(pathsToConvert)
+
+	resolvedPaths, err := pathsConverter.SimpleToPath(pathsToConvert)
+	if err != nil && err.HasErrors() {
+		return config, fmt.Errorf(err.Error())
+	}
+
+	// set resolved paths back to config
+	for _, monitor := range config.Monitors {
+		if len(monitor.MonitoredID) > 0 {
+			if path, ok := resolvedPaths[monitor.MonitoredID]; ok && len(path) > 0 {
+				monitor.MonitoredID = path
+			}
+		} else {
+			for i, monitoredId := range monitor.MonitoredIDs {
+				if path, ok := resolvedPaths[monitoredId]; ok && len(path) > 0 {
+					monitor.MonitoredIDs[i] = path
+				}
+			}
+		}
+	}
+
+	fmt.Println("✅ Monitored entities resolved!")
+
+	return config, nil
+}
+
+func convert(yamlParser *yaml.YAMLParser, printProtobuf bool) ([]*pb.MonitorDefinition, error) {
 	// Convert to protobuf
-	yamlParser := yaml.NewYAMLParser(&config, uuid.NewUUIDGenerator(workspace))
 	fmt.Println("\n🔄 Converting to protobuf format...")
 	protoMonitors, conversionErrors := yamlParser.ConvertToMonitorDefinitions()
 	if conversionErrors.HasErrors() {
-		return nil, nil, fmt.Errorf("❌ Conversion errors found: %s\n", conversionErrors.Error())
+		return nil, fmt.Errorf("❌ Conversion errors found: %s\n", conversionErrors.Error())
 	}
 
 	fmt.Printf("✅ Successfully converted to %d protobuf MonitorDefinition(s)\n", len(protoMonitors))
@@ -181,7 +238,7 @@ func parse(filePath, workspace string, printProtobuf bool) ([]*pb.MonitorDefinit
 
 	fmt.Println("🎉 Deployment preparation complete!")
 
-	return protoMonitors, yamlParser.GetYAMLConfig(), nil
+	return protoMonitors, nil
 }
 
 func getHostAndPort(apiUrl string) (string, string) {
