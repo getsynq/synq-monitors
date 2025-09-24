@@ -72,7 +72,7 @@ func (p *YAMLParser) ConvertToMonitorDefinitions() ([]*pb.MonitorDefinition, Con
 		}
 
 		monitoredIds = lo.Map(monitoredIds, func(monitoredID string, _ int) string {
-			return handleMonitorID(monitoredID)
+			return monitorIdWithColons(monitoredID)
 		})
 
 		for _, monitoredID := range monitoredIds {
@@ -89,9 +89,12 @@ func (p *YAMLParser) ConvertToMonitorDefinitions() ([]*pb.MonitorDefinition, Con
 	return protoMonitors, errors
 }
 
-func handleMonitorID(monitorId string) string {
-	// replace all dots to colons
+func monitorIdWithColons(monitorId string) string {
 	return strings.ReplaceAll(monitorId, ".", "::")
+}
+
+func monitorIdWithDots(monitorId string) string {
+	return strings.ReplaceAll(monitorId, "::", ".")
 }
 
 // convertSingleMonitor converts a single YAML monitor to proto for a specific monitored ID
