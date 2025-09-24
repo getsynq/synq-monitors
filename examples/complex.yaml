@@ -15,14 +15,14 @@ monitors:
     expression: "created_at"
     severity: WARNING
     monitored_ids:
-      - ch-prod::anomalies::corrections_v2
-      - ch-prod::anomalies::external_sqltests
+      - ch-prod.anomalies.corrections_v2
+      - ch-prod.anomalies.external_sqltests
 
   - id: volume_on_logs
     type: volume
     severity: WARNING
     monitored_ids:
-      - bq-synq-dwh::petr::kernel_assets__stg_assets
+      - bq-synq-dwh.petr.kernel_assets__stg_assets
     segmentation:
       expression: "country"
     filter: "country IN ('US', 'CA')"
@@ -33,7 +33,7 @@ monitors:
       - status
       - order_date
     monitored_ids:
-      - bq-synq-dwh::test::orders
+      - bq-synq-dwh.test.orders
     mode:
       anomaly_engine:
         sensitivity: BALANCED
@@ -45,7 +45,7 @@ monitors:
     metric_aggregation: "COUNT(DISTINCT user_id)"
     time_partitioning: "order_date"
     monitored_ids:
-      - bq-synq-dwh::test::orders
+      - bq-synq-dwh.test.orders
     mode:
       fixed_thresholds:
         min: 100

@@ -6,9 +6,8 @@ monitors:
     metric_aggregation: "COUNT(DISTINCT workspace)"
     time_partitioning: created_at
     monitored_ids:
-      - ch-prod::default::runs
+      - ch-prod.default.runs
     mode:
       fixed_thresholds:
         max: 1000
-    filter:
-      created_at > today()
+    filter: created_at > today()

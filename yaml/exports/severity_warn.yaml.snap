@@ -1,0 +1,17 @@
+
+[TestYAMLGeneratorSuite/TestExamples - 1]
+namespace: ""
+monitors:
+    - id: b6c784cf-7a31-5869-a56f-2000ba641961
+      name: runs_volume_warn
+      type: volume
+      monitored_id: ch-prod.default.runs
+      severity: WARNING
+      time_partitioning: created_at
+      mode:
+        anomaly_engine:
+            sensitivity: BALANCED
+      schedule:
+        daily: 0
+
+---

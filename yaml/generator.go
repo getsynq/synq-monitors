@@ -50,7 +50,7 @@ func (p *YAMLGenerator) generateSingleMonitor(
 		Name:             protoMonitor.Name,
 		ConfigID:         p.configId,
 		Id:               protoMonitor.Id,
-		MonitoredID:      protoMonitor.MonitoredId.GetSynqPath().Path,
+		MonitoredID:      monitorIdWithDots(protoMonitor.MonitoredId.GetSynqPath().GetPath()),
 		TimePartitioning: protoMonitor.GetTimePartitioning().GetExpression(),
 	}
 

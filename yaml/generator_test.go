@@ -9,6 +9,7 @@ import (
 	"testing"
 
 	"github.com/getsynq/monitors_mgmt/uuid"
+	"github.com/gkampitakis/go-snaps/snaps"
 	"github.com/stretchr/testify/suite"
 	goyaml "gopkg.in/yaml.v3"
 )
@@ -58,8 +59,15 @@ func (s *YAMLGeneratorSuite) TestExamples() {
 		s.Require().False(conversionErrors.HasErrors(), conversionErrors.Error())
 
 		generator := NewYAMLGenerator(config.ConfigID, protoMonitors)
-		_, convErrors := generator.GenerateYAML()
+		config, convErrors := generator.GenerateYAML()
 		s.Require().False(convErrors.HasErrors())
+
+		bytes, err := goyaml.Marshal(config)
+		s.Require().NoError(err)
+		snaps.WithConfig(snaps.Dir("exports"), snaps.Filename(filepath.Base(file))).MatchSnapshot(
+			s.T(),
+			string(bytes),
+		)
 	}
 
 }

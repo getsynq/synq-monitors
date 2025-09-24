@@ -7,4 +7,4 @@ monitors:
     schedule:
       hourly: 15 # runs at 15th minute of every hour
     monitored_ids:
-      - ch-prod::default::runs
+      - ch-prod.default.runs

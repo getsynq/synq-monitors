@@ -6,4 +6,4 @@ monitors:
     time_partitioning: created_at
     severity: WARNING # change severity to WARNING
     monitored_ids:
-      - ch-prod::default::runs
+      - ch-prod.default.runs

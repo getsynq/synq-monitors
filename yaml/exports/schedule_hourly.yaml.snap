@@ -1,0 +1,17 @@
+
+[TestYAMLGeneratorSuite/TestExamples - 1]
+namespace: ""
+monitors:
+    - id: 5a6f522b-5fcc-57aa-b4ad-4b36db54c04f
+      name: runs_volume_hourly
+      type: volume
+      monitored_id: ch-prod.default.runs
+      severity: ERROR
+      time_partitioning: created_at
+      mode:
+        anomaly_engine:
+            sensitivity: BALANCED
+      schedule:
+        hourly: 15
+
+---

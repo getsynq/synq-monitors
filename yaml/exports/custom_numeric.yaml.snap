@@ -1,0 +1,19 @@
+
+[TestYAMLGeneratorSuite/TestExamples - 1]
+namespace: ""
+monitors:
+    - id: 370fe457-ccc4-515d-a0e1-fc52f0234fbf
+      name: runs_unique_workspaces
+      type: custom_numeric
+      metric_aggregation: COUNT(DISTINCT workspace)
+      monitored_id: ch-prod.default.runs
+      filter: created_at > today()
+      severity: ERROR
+      time_partitioning: created_at
+      mode:
+        fixed_thresholds:
+            max: 1000
+      schedule:
+        daily: 0
+
+---
