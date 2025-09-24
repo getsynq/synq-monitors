@@ -7,6 +7,7 @@ import (
 	entitiesv1 "buf.build/gen/go/getsynq/api/protocolbuffers/go/synq/entities/v1"
 	pb "buf.build/gen/go/getsynq/api/protocolbuffers/go/synq/monitors/custom_monitors/v1"
 	"github.com/getsynq/monitors_mgmt/uuid"
+	"github.com/samber/lo"
 	"google.golang.org/protobuf/types/known/wrapperspb"
 )
 
@@ -70,6 +71,10 @@ func (p *YAMLParser) ConvertToMonitorDefinitions() ([]*pb.MonitorDefinition, Con
 			monitoredIds = append(monitoredIds, yamlMonitor.MonitoredID)
 		}
 
+		monitoredIds = lo.Map(monitoredIds, func(monitoredID string, _ int) string {
+			return handleMonitorID(monitoredID)
+		})
+
 		for _, monitoredID := range monitoredIds {
 			protoMonitor, convErrors := convertSingleMonitor(&yamlMonitor, p.yamlConfig, monitoredID)
 			if convErrors.HasErrors() {
@@ -82,6 +87,11 @@ func (p *YAMLParser) ConvertToMonitorDefinitions() ([]*pb.MonitorDefinition, Con
 	}
 
 	return protoMonitors, errors
+}
+
+func handleMonitorID(monitorId string) string {
+	// replace all dots to colons
+	return strings.ReplaceAll(monitorId, ".", "::")
 }
 
 // convertSingleMonitor converts a single YAML monitor to proto for a specific monitored ID

@@ -11,20 +11,20 @@ monitors:
   - id: freshness_financial_statement
     type: freshness
     monitored_ids:
-      - bq-synq-demo::nyc_taxi::financial_statement
+      - bq-synq-demo.nyc_taxi.financial_statement
     time_partitioning: month
     expression: "month"
 
   # 2) Volume per month
   - id: volume_financial_statement
     type: volume
-    monitored_id: bq-synq-demo::nyc_taxi::financial_statement
+    monitored_id: bq-synq-demo.nyc_taxi.financial_statement
     time_partitioning: month
 
   # 3) Field stats on key metrics with BALANCED sensitivity
   - id: stats_financial_statement
     type: field_stats
-    monitored_id: bq-synq-demo::nyc_taxi::financial_statement
+    monitored_id: bq-synq-demo.nyc_taxi.financial_statement
     time_partitioning: month
     fields:
       - total_revenue
@@ -37,7 +37,7 @@ monitors:
   - id: custom_financial_statement_revenue_nonnegative
     type: custom_numeric
     monitored_ids:
-      - bq-synq-demo::nyc_taxi::financial_statement
+      - bq-synq-demo.nyc_taxi.financial_statement
     time_partitioning: month
     metric_aggregation: "MIN(total_revenue)"
     mode:
