@@ -15,6 +15,7 @@ import (
 	"github.com/getsynq/monitors_mgmt/uuid"
 	"github.com/getsynq/monitors_mgmt/yaml"
 	"github.com/manifoldco/promptui"
+	"github.com/pkg/errors"
 	"github.com/samber/lo"
 	"github.com/spf13/cobra"
 	goyaml "gopkg.in/yaml.v3"
@@ -196,7 +197,7 @@ func resolve(pathsConverter paths.PathConverter, config *yaml.YAMLConfig) (*yaml
 
 	resolvedPaths, err := pathsConverter.SimpleToPath(pathsToConvert)
 	if err != nil && err.HasErrors() {
-		return config, fmt.Errorf(err.Error())
+		return config, errors.New(err.Error())
 	}
 
 	// set resolved paths back to config

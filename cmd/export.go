@@ -14,6 +14,7 @@ import (
 	"github.com/getsynq/monitors_mgmt/paths"
 	"github.com/getsynq/monitors_mgmt/uuid"
 	"github.com/getsynq/monitors_mgmt/yaml"
+	"github.com/pkg/errors"
 	"github.com/samber/lo"
 	"github.com/spf13/cobra"
 	goyaml "gopkg.in/yaml.v3"
@@ -175,7 +176,7 @@ func createListScope(pathsConverter paths.PathConverter) *mgmt.ListScope {
 		monitoredPaths = lo.Uniq(strings.Split(monitoredPath, ","))
 		converted, err := pathsConverter.SimpleToPath(monitoredPaths)
 		if err != nil && err.HasErrors() {
-			exitWithError(fmt.Errorf(err.Error()))
+			exitWithError(errors.New(err.Error()))
 		}
 		monitoredPaths = lo.Values(converted)
 	}
