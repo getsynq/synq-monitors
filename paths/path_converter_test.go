@@ -41,11 +41,33 @@ func (s *PathConverterTestSuite) TearDownTest() {
 }
 
 func (s *PathConverterTestSuite) TestSimpleToPath() {
+	s.Run("entity_found_for_synqpath", func() {
+		input := []string{"foo::bar"}
+		resp := &entitiesentitiesv1.BatchGetEntitiesResponse{
+			Entities: []*entitiesv1.Entity{
+				{
+					EntityType: entitiesv1.EntityType_ENTITY_TYPE_CLICKHOUSE_TABLE.Enum(),
+					Id: &entitiesv1.Identifier{
+						Id: &entitiesv1.Identifier_SynqPath{
+							SynqPath: &entitiesv1.SynqPathIdentifier{Path: "foo::bar"},
+						},
+					},
+				},
+			},
+		}
+		s.mockEntities.EXPECT().BatchGetEntities(gomock.Any(), gomock.Any()).Return(resp, nil)
+		// No coordinates call expected
+		result, err := s.converter.SimpleToPath(input)
+		s.Require().Nil(err)
+		s.Require().Equal(map[string]string{"foo::bar": "foo::bar"}, result)
+	})
+
 	s.Run("entity_found", func() {
 		input := []string{"foo.bar"}
 		resp := &entitiesentitiesv1.BatchGetEntitiesResponse{
 			Entities: []*entitiesv1.Entity{
 				{
+					EntityType: entitiesv1.EntityType_ENTITY_TYPE_CLICKHOUSE_TABLE.Enum(),
 					Id: &entitiesv1.Identifier{
 						Id: &entitiesv1.Identifier_SynqPath{
 							SynqPath: &entitiesv1.SynqPathIdentifier{Path: "foo::bar"},

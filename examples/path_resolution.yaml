@@ -7,3 +7,4 @@ monitors:
     monitored_ids:
       - runs_buffer
       - ch-prod.default.runs
+      - bq-synq-dwh::cloud::card_opened_view

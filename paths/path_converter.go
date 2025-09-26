@@ -36,13 +36,16 @@ func NewPathConverter(
 	}
 }
 
-// Returns the resolved paths for the given simple paths.
-// A simple path is either a DB coordinate or a dot notation path.
+// Returns the resolved paths for the given paths.
+// A given path is one of the following:
+// * a SYNQ path (with ::)
+// * a DB coordinate
+// * a dot notation path.
 // The resolved paths are the Synq paths (with ::) for the given simple paths.
-// If a simple path resolves to multiple Synq paths, all of them are returned.
+// If a simple path resolves to multiple valid SYNQ paths, it is added to the error.
 // If a simple path cannot be resolved, it is added to the error.
-func (s *pathConverter) SimpleToPath(simple []string) (map[string]string, *SimpleToPathError) {
-	if len(simple) == 0 {
+func (s *pathConverter) SimpleToPath(requestedPaths []string) (map[string]string, *SimpleToPathError) {
+	if len(requestedPaths) == 0 {
 		return map[string]string{}, nil
 	}
 
@@ -55,7 +58,7 @@ func (s *pathConverter) SimpleToPath(simple []string) (map[string]string, *Simpl
 	// fetch entities for all paths
 	{
 		resp, err := s.entitiesService.BatchGetEntities(s.ctx, &entitiesentitiesv1.BatchGetEntitiesRequest{
-			Ids: lo.Map(simple, func(path string, _ int) *entitiesv1.Identifier {
+			Ids: lo.Map(requestedPaths, func(path string, _ int) *entitiesv1.Identifier {
 				return &entitiesv1.Identifier{
 					Id: &entitiesv1.Identifier_SynqPath{
 						SynqPath: &entitiesv1.SynqPathIdentifier{
@@ -71,15 +74,24 @@ func (s *pathConverter) SimpleToPath(simple []string) (map[string]string, *Simpl
 		}
 
 		for _, entity := range resp.Entities {
-			if entity.Id.GetSynqPath() != nil {
-				resolvedPaths[PathWithDots(entity.Id.GetSynqPath().Path)] = entity.Id.GetSynqPath().Path
+			synqPath := entity.Id.GetSynqPath().GetPath()
+			if len(synqPath) > 0 {
+				requested := synqPath
+				if !slices.Contains(requestedPaths, synqPath) {
+					requested = PathWithDots(synqPath)
+				}
+				if entity.EntityType != nil && slices.Contains(ValidMonitoredTypes, *entity.EntityType) {
+					// valid monitored type
+					resolvedPaths[requested] = synqPath
+					continue
+				}
 			}
 		}
 	}
 
 	// for the ones without entities, fetch as coordinates
 	{
-		pathsToFetchCoordinates := lo.Filter(simple, func(path string, _ int) bool {
+		pathsToFetchCoordinates := lo.Filter(requestedPaths, func(path string, _ int) bool {
 			_, ok := resolvedPaths[path]
 			return !ok
 		})
