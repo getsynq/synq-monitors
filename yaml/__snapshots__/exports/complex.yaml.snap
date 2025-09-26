@@ -6,7 +6,7 @@ monitors:
       name: freshness_on_orders
       type: freshness
       expression: created_at
-      monitored_id: ch-prod.anomalies.corrections_v2
+      monitored_id: ch-prod::anomalies::corrections_v2
       severity: WARNING
       time_partitioning: created_at
       mode:
@@ -18,7 +18,7 @@ monitors:
       name: freshness_on_orders
       type: freshness
       expression: created_at
-      monitored_id: ch-prod.anomalies.external_sqltests
+      monitored_id: ch-prod::anomalies::external_sqltests
       severity: WARNING
       time_partitioning: created_at
       mode:
@@ -29,7 +29,7 @@ monitors:
     - id: c20b07ae-27f5-50ff-ab17-7b11bed097dd
       name: volume_on_logs
       type: volume
-      monitored_id: bq-synq-dwh.petr.kernel_assets__stg_assets
+      monitored_id: bq-synq-dwh::petr::kernel_assets__stg_assets
       segmentation:
         expression: country
       filter: country IN ('US', 'CA')
@@ -43,7 +43,7 @@ monitors:
     - id: 911f832a-8ce5-5b14-930d-28d37a4f37b3
       name: stats_on_user_fields
       type: field_stats
-      monitored_id: bq-synq-dwh.test.orders
+      monitored_id: bq-synq-dwh::test::orders
       fields:
         - status
         - order_date
@@ -58,7 +58,7 @@ monitors:
       name: custom_numeric_active_users
       type: custom_numeric
       metric_aggregation: COUNT(DISTINCT user_id)
-      monitored_id: bq-synq-dwh.test.orders
+      monitored_id: bq-synq-dwh::test::orders
       severity: ERROR
       time_partitioning: order_date
       mode:

@@ -1,0 +1,9 @@
+# Create a volume monitors for two tables, each identified differently by db coordinates and dot notation path
+
+monitors:
+  - id: runs_volume_daily
+    type: volume
+    time_partitioning: created_at
+    monitored_ids:
+      - runs_buffer
+      - ch-prod.default.runs

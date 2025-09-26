@@ -8,6 +8,9 @@ import (
 	"runtime"
 	"testing"
 
+	entitiesv1 "buf.build/gen/go/getsynq/api/protocolbuffers/go/synq/entities/v1"
+	pb "buf.build/gen/go/getsynq/api/protocolbuffers/go/synq/monitors/custom_monitors/v1"
+	"github.com/getsynq/monitors_mgmt/paths"
 	"github.com/getsynq/monitors_mgmt/uuid"
 	"github.com/gkampitakis/go-snaps/snaps"
 	"github.com/stretchr/testify/suite"
@@ -52,7 +55,7 @@ func (s *YAMLParserSuite) TestExamples() {
 		err = goyaml.Unmarshal(yamlContent, &config)
 		s.Require().NoError(err)
 
-		yamlParser := NewYAMLParser(&config, s.uuidGenerator)
+		yamlParser := NewYAMLParser(&config)
 		s.Require().NoError(err)
 
 		// Convert to protobuf
@@ -60,6 +63,7 @@ func (s *YAMLParserSuite) TestExamples() {
 		s.Require().False(conversionErrors.HasErrors(), conversionErrors.Error())
 
 		for _, monitor := range protoMonitors {
+			monitor = sanitize(monitor, s.uuidGenerator)
 			monitorJson, err := protojson.Marshal(monitor)
 			s.Require().NoError(err)
 
@@ -72,4 +76,16 @@ func (s *YAMLParserSuite) TestExamples() {
 
 	}
 
+}
+
+func sanitize(monitor *pb.MonitorDefinition, uuidGenerator *uuid.UUIDGenerator) *pb.MonitorDefinition {
+	monitor.MonitoredId = &entitiesv1.Identifier{
+		Id: &entitiesv1.Identifier_SynqPath{
+			SynqPath: &entitiesv1.SynqPathIdentifier{
+				Path: paths.PathWithColons(monitor.MonitoredId.GetSynqPath().GetPath()),
+			},
+		},
+	}
+	monitor.Id = uuidGenerator.GenerateMonitorUUID(monitor)
+	return monitor
 }

@@ -47,16 +47,21 @@ func (s *YAMLGeneratorSuite) TestExamples() {
 		yamlContent, err := os.ReadFile(file)
 		s.Require().NoError(err)
 
-		var config YAMLConfig
+		var config *YAMLConfig
 		err = goyaml.Unmarshal(yamlContent, &config)
 		s.Require().NoError(err)
 
-		yamlParser := NewYAMLParser(&config, s.uuidGenerator)
+		yamlParser := NewYAMLParser(config)
 		s.Require().NoError(err)
 
 		// Convert to protobuf
 		protoMonitors, conversionErrors := yamlParser.ConvertToMonitorDefinitions()
 		s.Require().False(conversionErrors.HasErrors(), conversionErrors.Error())
+
+		uuidGenerator := uuid.NewUUIDGenerator(s.workspace)
+		for i := range protoMonitors {
+			protoMonitors[i] = sanitize(protoMonitors[i], uuidGenerator)
+		}
 
 		generator := NewYAMLGenerator(config.ConfigID, protoMonitors)
 		config, convErrors := generator.GenerateYAML()
@@ -64,7 +69,8 @@ func (s *YAMLGeneratorSuite) TestExamples() {
 
 		bytes, err := goyaml.Marshal(config)
 		s.Require().NoError(err)
-		snaps.WithConfig(snaps.Dir("exports"), snaps.Filename(filepath.Base(file))).MatchSnapshot(
+		snapFileName := filepath.Join("exports", filepath.Base(file))
+		snaps.WithConfig(snaps.Filename(snapFileName)).MatchSnapshot(
 			s.T(),
 			string(bytes),
 		)

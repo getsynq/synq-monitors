@@ -11,8 +11,10 @@ import (
 	iamv1grpc "buf.build/gen/go/getsynq/api/grpc/go/synq/auth/iam/v1/iamv1grpc"
 	iamv1 "buf.build/gen/go/getsynq/api/protocolbuffers/go/synq/auth/iam/v1"
 	"github.com/getsynq/monitors_mgmt/mgmt"
-	"github.com/getsynq/monitors_mgmt/uuid"
+	"github.com/getsynq/monitors_mgmt/paths"
 	"github.com/getsynq/monitors_mgmt/yaml"
+	"github.com/pkg/errors"
+	"github.com/samber/lo"
 	"github.com/spf13/cobra"
 	goyaml "gopkg.in/yaml.v3"
 )
@@ -74,9 +76,12 @@ func exportMonitors(cmd *cobra.Command, args []string) {
 	workspace := iamResponse.Workspace
 	fmt.Printf("🔍 Workspace: %s\nLooking for exportable monitors\n\n", workspace)
 
-	// Fetch
+	// Initialize Services
 	mgmtService := mgmt.NewMgmtRemoteService(ctx, conn)
-	monitors, err := mgmtService.ListMonitors(createListScope())
+	pathsConverter := paths.NewPathConverter(ctx, conn)
+
+	// Fetch
+	monitors, err := mgmtService.ListMonitors(createListScope(pathsConverter))
 	if err != nil {
 		exitWithError(fmt.Errorf("❌ Error getting monitors: %v", err))
 	}
@@ -93,8 +98,14 @@ func exportMonitors(cmd *cobra.Command, args []string) {
 		exitWithError(fmt.Errorf("❌ Conversion errors found: %s\n", conversionErrors.Error()))
 	}
 
+	// Simplify monitored paths
+	config, err = simplifyPaths(pathsConverter, config)
+	if err != nil {
+		exitWithError(fmt.Errorf("❌ Error simplifying monitored paths: %w", err))
+	}
+
 	// Parse to test validity
-	yamlParser := yaml.NewYAMLParser(&config, uuid.NewUUIDGenerator(workspace))
+	yamlParser := yaml.NewYAMLParser(config)
 	_, conversionErrors = yamlParser.ConvertToMonitorDefinitions()
 	if conversionErrors.HasErrors() {
 		exitWithError(fmt.Errorf("❌ Conversion errors found while parsing generated YAML: %s\n", conversionErrors.Error()))
@@ -119,20 +130,59 @@ func exportMonitors(cmd *cobra.Command, args []string) {
 	fmt.Println("✅ Export complete!")
 }
 
-func createListScope() *mgmt.ListScope {
+func simplifyPaths(pathsConverter paths.PathConverter, config *yaml.YAMLConfig) (*yaml.YAMLConfig, error) {
+	pathsToSimplify := []string{}
+	for _, monitor := range config.Monitors {
+		if len(monitor.MonitoredID) > 0 {
+			pathsToSimplify = append(pathsToSimplify, monitor.MonitoredID)
+		} else {
+			pathsToSimplify = append(pathsToSimplify, monitor.MonitoredIDs...)
+		}
+	}
+
+	simplifiedPaths, err := pathsConverter.PathToSimple(lo.Uniq(pathsToSimplify))
+	if err != nil {
+		return nil, err
+	}
+
+	for i := range config.Monitors {
+		if len(config.Monitors[i].MonitoredID) > 0 {
+			path, ok := simplifiedPaths[config.Monitors[i].MonitoredID]
+			if ok && len(path) > 0 {
+				config.Monitors[i].MonitoredID = path
+			}
+		} else {
+			for j, monitoredId := range config.Monitors[i].MonitoredIDs {
+				path, ok := simplifiedPaths[monitoredId]
+				if ok && len(path) > 0 {
+					config.Monitors[i].MonitoredIDs[j] = path
+				}
+			}
+		}
+	}
+
+	return config, nil
+}
+
+func createListScope(pathsConverter paths.PathConverter) *mgmt.ListScope {
 	integrationIds := []string{}
 	for _, integrationId := range exportCmd_integrationIds {
-		integrationIds = append(integrationIds, strings.Split(integrationId, ",")...)
+		integrationIds = lo.Uniq(strings.Split(integrationId, ","))
 	}
 
 	monitoredPaths := []string{}
 	for _, monitoredPath := range exportCmd_monitoredPaths {
-		monitoredPaths = append(monitoredPaths, strings.Split(monitoredPath, ",")...)
+		monitoredPaths = lo.Uniq(strings.Split(monitoredPath, ","))
+		converted, err := pathsConverter.SimpleToPath(monitoredPaths)
+		if err != nil && err.HasErrors() {
+			exitWithError(errors.New(err.Error()))
+		}
+		monitoredPaths = lo.Values(converted)
 	}
 
 	monitorIds := []string{}
 	for _, monitorId := range exportCmd_monitorIds {
-		monitorIds = append(monitorIds, strings.Split(monitorId, ",")...)
+		monitorIds = lo.Uniq(strings.Split(monitorId, ","))
 	}
 
 	source := strings.ToLower(exportCmd_source)

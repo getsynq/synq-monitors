@@ -32,14 +32,19 @@ require (
 )
 
 require (
-	buf.build/gen/go/getsynq/api/grpc/go v1.5.1-20250916141244-f69653f7454c.2
-	buf.build/gen/go/getsynq/api/protocolbuffers/go v1.36.9-20250916141244-f69653f7454c.1
+	buf.build/gen/go/getsynq/api/grpc/go v1.5.1-20250922105254-9270eaa9228b.2
+	buf.build/gen/go/getsynq/api/protocolbuffers/go v1.36.9-20250922105254-9270eaa9228b.1
 	github.com/gkampitakis/go-snaps v0.5.14
 )
 
 require (
+	github.com/golang/mock v1.6.0 // indirect
 	github.com/sergi/go-diff v1.4.0 // indirect
 	github.com/yudai/golcs v0.0.0-20170316035057-ecda9a501e82 // indirect
+	go.uber.org/mock v0.6.0 // indirect
+	golang.org/x/mod v0.27.0 // indirect
+	golang.org/x/sync v0.16.0 // indirect
+	golang.org/x/tools v0.36.0 // indirect
 )
 
 require (
@@ -50,6 +55,7 @@ require (
 	github.com/kr/pretty v0.3.1 // indirect
 	github.com/kr/text v0.2.0 // indirect
 	github.com/maruel/natural v1.1.1 // indirect
+	github.com/pkg/errors v0.9.1
 	github.com/rogpeppe/go-internal v1.13.1 // indirect
 	github.com/tidwall/gjson v1.18.0 // indirect
 	github.com/tidwall/match v1.1.1 // indirect

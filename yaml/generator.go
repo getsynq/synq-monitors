@@ -21,10 +21,10 @@ func NewYAMLGenerator(configId string, monitors []*pb.MonitorDefinition) *YAMLGe
 }
 
 // GenerateYAML converts protobuf MonitorDefinitions to YAML config.
-func (p *YAMLGenerator) GenerateYAML() (YAMLConfig, ConversionErrors) {
+func (p *YAMLGenerator) GenerateYAML() (*YAMLConfig, ConversionErrors) {
 	var errors ConversionErrors
 
-	config := YAMLConfig{
+	config := &YAMLConfig{
 		ConfigID: p.configId,
 	}
 	for _, protoMonitor := range p.monitors {
@@ -50,7 +50,7 @@ func (p *YAMLGenerator) generateSingleMonitor(
 		Name:             protoMonitor.Name,
 		ConfigID:         p.configId,
 		Id:               protoMonitor.Id,
-		MonitoredID:      monitorIdWithDots(protoMonitor.MonitoredId.GetSynqPath().GetPath()),
+		MonitoredID:      protoMonitor.MonitoredId.GetSynqPath().GetPath(),
 		TimePartitioning: protoMonitor.GetTimePartitioning().GetExpression(),
 	}
 

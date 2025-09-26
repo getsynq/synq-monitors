@@ -7,48 +7,49 @@ import (
 	"strings"
 
 	custommonitorsv1grpc "buf.build/gen/go/getsynq/api/grpc/go/synq/monitors/custom_monitors/v1/custom_monitorsv1grpc"
-	pb "buf.build/gen/go/getsynq/api/protocolbuffers/go/synq/monitors/custom_monitors/v1"
+	custommonitorsv1 "buf.build/gen/go/getsynq/api/protocolbuffers/go/synq/monitors/custom_monitors/v1"
 	"github.com/samber/lo"
 	"google.golang.org/grpc"
 )
 
 type MgmtService interface {
-	ConfigChangesOverview(protoMonitors []*pb.MonitorDefinition, configId string) (*ChangesOverview, error)
+	ConfigChangesOverview(protoMonitors []*custommonitorsv1.MonitorDefinition, configId string) (*ChangesOverview, error)
 	DeployMonitors(changesOverview *ChangesOverview) error
+	ListMonitors(scope *ListScope) ([]*custommonitorsv1.MonitorDefinition, error)
 }
 
-type RemoteMgmtService struct {
+type remoteMgmtService struct {
 	service custommonitorsv1grpc.CustomMonitorsServiceClient
 	ctx     context.Context
 }
 
-var _ MgmtService = &RemoteMgmtService{}
+var _ MgmtService = &remoteMgmtService{}
 
 func NewMgmtRemoteService(
 	ctx context.Context,
 	conn *grpc.ClientConn,
-) *RemoteMgmtService {
-	return &RemoteMgmtService{
+) MgmtService {
+	return &remoteMgmtService{
 		service: custommonitorsv1grpc.NewCustomMonitorsServiceClient(conn),
 		ctx:     ctx,
 	}
 }
 
-func (s *RemoteMgmtService) ConfigChangesOverview(
-	protoMonitors []*pb.MonitorDefinition,
+func (s *remoteMgmtService) ConfigChangesOverview(
+	protoMonitors []*custommonitorsv1.MonitorDefinition,
 	configId string,
 ) (*ChangesOverview, error) {
-	requestedMonitors := map[string]*pb.MonitorDefinition{}
+	requestedMonitors := map[string]*custommonitorsv1.MonitorDefinition{}
 	for _, pm := range protoMonitors {
 		requestedMonitors[pm.Id] = pm
 	}
-	allFetchedMonitors := map[string]*pb.MonitorDefinition{}
+	allFetchedMonitors := map[string]*custommonitorsv1.MonitorDefinition{}
 
 	// Get all monitors in config
 	monitorIdsInConfig := []string{}
-	configMonitorsResp, err := s.service.ListMonitors(s.ctx, &pb.ListMonitorsRequest{
+	configMonitorsResp, err := s.service.ListMonitors(s.ctx, &custommonitorsv1.ListMonitorsRequest{
 		ConfigIds: []string{configId},
-		Sources:   []pb.MonitorDefinition_Source{pb.MonitorDefinition_SOURCE_API},
+		Sources:   []custommonitorsv1.MonitorDefinition_Source{custommonitorsv1.MonitorDefinition_SOURCE_API},
 	})
 	if err != nil {
 		return nil, err
@@ -66,7 +67,7 @@ func (s *RemoteMgmtService) ConfigChangesOverview(
 		}
 	}
 	if len(monitorIdsNotInConfig) > 0 {
-		monitorsResp, err := s.service.ListMonitors(s.ctx, &pb.ListMonitorsRequest{
+		monitorsResp, err := s.service.ListMonitors(s.ctx, &custommonitorsv1.ListMonitorsRequest{
 			MonitorIds: monitorIdsNotInConfig,
 		})
 		if err != nil {
@@ -80,12 +81,12 @@ func (s *RemoteMgmtService) ConfigChangesOverview(
 	return GenerateConfigChangesOverview(configId, protoMonitors, allFetchedMonitors)
 }
 
-func (s *RemoteMgmtService) DeployMonitors(
+func (s *remoteMgmtService) DeployMonitors(
 	changesOverview *ChangesOverview,
 ) error {
 	if len(changesOverview.MonitorsToCreate) > 0 {
 		fmt.Println("Creating monitors...")
-		_, err := s.service.BatchCreateMonitor(s.ctx, &pb.BatchCreateMonitorRequest{
+		_, err := s.service.BatchCreateMonitor(s.ctx, &custommonitorsv1.BatchCreateMonitorRequest{
 			Monitors: changesOverview.MonitorsToCreate,
 		})
 		if err != nil {
@@ -95,8 +96,8 @@ func (s *RemoteMgmtService) DeployMonitors(
 
 	if len(changesOverview.MonitorsToDelete) > 0 {
 		fmt.Println("Deleting monitors...")
-		_, err := s.service.BatchDeleteMonitor(s.ctx, &pb.BatchDeleteMonitorRequest{
-			Ids: lo.Map(changesOverview.MonitorsToDelete, func(monitor *pb.MonitorDefinition, _ int) string {
+		_, err := s.service.BatchDeleteMonitor(s.ctx, &custommonitorsv1.BatchDeleteMonitorRequest{
+			Ids: lo.Map(changesOverview.MonitorsToDelete, func(monitor *custommonitorsv1.MonitorDefinition, _ int) string {
 				return monitor.Id
 			}),
 		})
@@ -108,14 +109,14 @@ func (s *RemoteMgmtService) DeployMonitors(
 
 	if len(changesOverview.MonitorsChangesOverview) > 0 {
 		fmt.Println("Updating monitors...")
-		newDefinitions := lo.Map(changesOverview.MonitorsChangesOverview, func(changeOverview *pb.ChangeOverview, _ int) *pb.MonitorDefinition {
+		newDefinitions := lo.Map(changesOverview.MonitorsChangesOverview, func(changeOverview *custommonitorsv1.ChangeOverview, _ int) *custommonitorsv1.MonitorDefinition {
 			return changeOverview.NewDefinition
 		})
-		monitorIdsToReset := lo.FilterMap(changesOverview.MonitorsChangesOverview, func(changeOverview *pb.ChangeOverview, _ int) (string, bool) {
+		monitorIdsToReset := lo.FilterMap(changesOverview.MonitorsChangesOverview, func(changeOverview *custommonitorsv1.ChangeOverview, _ int) (string, bool) {
 			return changeOverview.MonitorId, changeOverview.ShouldReset
 		})
 
-		_, err := s.service.BatchUpdateMonitor(s.ctx, &pb.BatchUpdateMonitorRequest{
+		_, err := s.service.BatchUpdateMonitor(s.ctx, &custommonitorsv1.BatchUpdateMonitorRequest{
 			MonitorIdsToReset: monitorIdsToReset,
 			Monitors:          newDefinitions,
 		})
@@ -134,10 +135,11 @@ type ListScope struct {
 	Source         string
 }
 
-func (s *RemoteMgmtService) ListMonitors(
+func (s *remoteMgmtService) ListMonitors(
 	scope *ListScope,
-) ([]*pb.MonitorDefinition, error) {
-	req := &pb.ListMonitorsRequest{}
+) ([]*custommonitorsv1.MonitorDefinition, error) {
+	fmt.Printf("Listing monitors with scope: %+v\n", scope)
+	req := &custommonitorsv1.ListMonitorsRequest{}
 
 	if len(scope.IntegrationIds) > 0 {
 		ids := lo.Map(scope.IntegrationIds, func(id string, _ int) string {
@@ -161,9 +163,9 @@ func (s *RemoteMgmtService) ListMonitors(
 
 	switch scope.Source {
 	case "api":
-		req.Sources = []pb.MonitorDefinition_Source{pb.MonitorDefinition_SOURCE_API}
+		req.Sources = []custommonitorsv1.MonitorDefinition_Source{custommonitorsv1.MonitorDefinition_SOURCE_API}
 	case "app":
-		req.Sources = []pb.MonitorDefinition_Source{pb.MonitorDefinition_SOURCE_APP}
+		req.Sources = []custommonitorsv1.MonitorDefinition_Source{custommonitorsv1.MonitorDefinition_SOURCE_APP}
 	case "all":
 	}
 

@@ -5,7 +5,7 @@ monitors:
     - id: 303011a1-a77a-5b05-9f19-fc73b0bc14a9
       name: runs_volume_daily
       type: volume
-      monitored_id: ch-prod.default.runs
+      monitored_id: ch-prod::default::runs
       severity: ERROR
       time_partitioning: created_at
       mode:
