@@ -145,17 +145,17 @@ func simplifyPaths(pathsConverter paths.PathConverter, config *yaml.YAMLConfig) 
 		return nil, err
 	}
 
-	for _, monitor := range config.Monitors {
-		if len(monitor.MonitoredID) > 0 {
-			path, ok := simplifiedPaths[monitor.MonitoredID]
+	for i := range config.Monitors {
+		if len(config.Monitors[i].MonitoredID) > 0 {
+			path, ok := simplifiedPaths[config.Monitors[i].MonitoredID]
 			if ok && len(path) > 0 {
-				monitor.MonitoredID = path
+				config.Monitors[i].MonitoredID = path
 			}
 		} else {
-			for i, monitoredId := range monitor.MonitoredIDs {
+			for i, monitoredId := range config.Monitors[i].MonitoredIDs {
 				path, ok := simplifiedPaths[monitoredId]
 				if ok && len(path) > 0 {
-					monitor.MonitoredIDs[i] = path
+					config.Monitors[i].MonitoredIDs[i] = path
 				}
 			}
 		}

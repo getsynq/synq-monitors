@@ -200,15 +200,15 @@ func resolve(pathsConverter paths.PathConverter, config *yaml.YAMLConfig) (*yaml
 	}
 
 	// set resolved paths back to config
-	for _, monitor := range config.Monitors {
-		if len(monitor.MonitoredID) > 0 {
-			if path, ok := resolvedPaths[monitor.MonitoredID]; ok && len(path) > 0 {
-				monitor.MonitoredID = path
+	for i := range config.Monitors {
+		if len(config.Monitors[i].MonitoredID) > 0 {
+			if path, ok := resolvedPaths[config.Monitors[i].MonitoredID]; ok && len(path) > 0 {
+				config.Monitors[i].MonitoredID = path
 			}
 		} else {
-			for i, monitoredId := range monitor.MonitoredIDs {
+			for j, monitoredId := range config.Monitors[i].MonitoredIDs {
 				if path, ok := resolvedPaths[monitoredId]; ok && len(path) > 0 {
-					monitor.MonitoredIDs[i] = path
+					config.Monitors[i].MonitoredIDs[j] = path
 				}
 			}
 		}
