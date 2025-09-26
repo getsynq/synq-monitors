@@ -152,10 +152,10 @@ func simplifyPaths(pathsConverter paths.PathConverter, config *yaml.YAMLConfig) 
 				config.Monitors[i].MonitoredID = path
 			}
 		} else {
-			for i, monitoredId := range config.Monitors[i].MonitoredIDs {
+			for j, monitoredId := range config.Monitors[i].MonitoredIDs {
 				path, ok := simplifiedPaths[monitoredId]
 				if ok && len(path) > 0 {
-					config.Monitors[i].MonitoredIDs[i] = path
+					config.Monitors[i].MonitoredIDs[j] = path
 				}
 			}
 		}
