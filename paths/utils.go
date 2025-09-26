@@ -2,10 +2,10 @@ package paths
 
 import "strings"
 
-func pathWithColons(path string) string {
+func PathWithColons(path string) string {
 	return strings.ReplaceAll(path, ".", "::")
 }
 
-func pathWithDots(path string) string {
+func PathWithDots(path string) string {
 	return strings.ReplaceAll(path, "::", ".")
 }

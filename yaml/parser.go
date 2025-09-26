@@ -11,14 +11,12 @@ import (
 )
 
 type YAMLParser struct {
-	uuidGenerator *uuid.UUIDGenerator
-	yamlConfig    *YAMLConfig
+	yamlConfig *YAMLConfig
 }
 
-func NewYAMLParser(config *YAMLConfig, uuidGenerator *uuid.UUIDGenerator) *YAMLParser {
+func NewYAMLParser(config *YAMLConfig) *YAMLParser {
 	return &YAMLParser{
-		uuidGenerator: uuidGenerator,
-		yamlConfig:    config,
+		yamlConfig: config,
 	}
 }
 
@@ -27,7 +25,7 @@ func (p *YAMLParser) GetYAMLConfig() *YAMLConfig {
 }
 
 // ConvertToMonitorDefinitions converts YAML config to protobuf MonitorDefinitions
-func (p *YAMLParser) ConvertToMonitorDefinitions() ([]*pb.MonitorDefinition, ConversionErrors) {
+func (p *YAMLParser) ConvertToMonitorDefinitions(uuidGenerator *uuid.UUIDGenerator) ([]*pb.MonitorDefinition, ConversionErrors) {
 	var errors ConversionErrors
 	var protoMonitors []*pb.MonitorDefinition
 	existingMonitorIds := make(map[string]bool)
@@ -76,7 +74,7 @@ func (p *YAMLParser) ConvertToMonitorDefinitions() ([]*pb.MonitorDefinition, Con
 				errors = append(errors, convErrors...)
 				continue
 			}
-			protoMonitor.Id = p.uuidGenerator.GenerateMonitorUUID(protoMonitor)
+			protoMonitor.Id = uuidGenerator.GenerateMonitorUUID(protoMonitor)
 			protoMonitors = append(protoMonitors, protoMonitor)
 		}
 	}

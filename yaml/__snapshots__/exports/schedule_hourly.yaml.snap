@@ -2,16 +2,16 @@
 [TestYAMLGeneratorSuite/TestExamples - 1]
 namespace: ""
 monitors:
-    - id: cd7a6968-78a3-5c9a-8f0e-e2a6bbaae074
-      name: runs_volume_daily
+    - id: 5a6f522b-5fcc-57aa-b4ad-4b36db54c04f
+      name: runs_volume_hourly
       type: volume
-      monitored_id: ch-prod.default.runs
+      monitored_id: ch-prod::default::runs
       severity: ERROR
       time_partitioning: created_at
       mode:
         anomaly_engine:
             sensitivity: BALANCED
       schedule:
-        daily: 0
+        hourly: 15
 
 ---

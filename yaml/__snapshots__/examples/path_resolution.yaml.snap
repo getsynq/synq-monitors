@@ -1,0 +1,42 @@
+
+[TestYAMLParserSuite/TestExamples - 1]
+{
+ "anomalyEngine": {
+  "sensitivity": "SENSITIVITY_BALANCED"
+ },
+ "daily": {},
+ "id": "a362569f-dd60-5132-abd5-7434f98cbf13",
+ "monitoredId": {
+  "synqPath": {
+   "path": "runs_buffer"
+  }
+ },
+ "name": "runs_volume_daily",
+ "severity": "SEVERITY_ERROR",
+ "timePartitioning": {
+  "expression": "created_at"
+ },
+ "volume": {}
+}
+---
+
+[TestYAMLParserSuite/TestExamples - 2]
+{
+ "anomalyEngine": {
+  "sensitivity": "SENSITIVITY_BALANCED"
+ },
+ "daily": {},
+ "id": "0d447202-5622-5005-aea8-86520caac8f0",
+ "monitoredId": {
+  "synqPath": {
+   "path": "ch-prod::default::runs"
+  }
+ },
+ "name": "runs_volume_daily",
+ "severity": "SEVERITY_ERROR",
+ "timePartitioning": {
+  "expression": "created_at"
+ },
+ "volume": {}
+}
+---

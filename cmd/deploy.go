@@ -97,7 +97,7 @@ func deployFromYaml(cmd *cobra.Command, args []string) {
 	}
 
 	// parse
-	yamlParser, err := parse(filePath, workspace, deployCmd_printProtobuf)
+	yamlParser, err := parse(filePath)
 	if err != nil {
 		exitWithError(err)
 	}
@@ -121,7 +121,7 @@ func deployFromYaml(cmd *cobra.Command, args []string) {
 	mgmtService := mgmt.NewMgmtRemoteService(ctx, conn)
 
 	// convert
-	protoMonitors, err := convert(yamlParser, deployCmd_printProtobuf)
+	protoMonitors, err := convert(workspace, yamlParser, deployCmd_printProtobuf)
 	if err != nil {
 		exitWithError(err)
 	}
@@ -164,7 +164,7 @@ func deployFromYaml(cmd *cobra.Command, args []string) {
 	fmt.Println("✅ Deployment complete!")
 }
 
-func parse(filePath, workspace string, printProtobuf bool) (*yaml.YAMLParser, error) {
+func parse(filePath string) (*yaml.YAMLParser, error) {
 	// Read YAML file
 	fmt.Println("🔍 Parsing YAML structure...")
 	yamlContent, err := os.ReadFile(filePath)
@@ -179,7 +179,7 @@ func parse(filePath, workspace string, printProtobuf bool) (*yaml.YAMLParser, er
 	}
 	fmt.Println("✅ YAML syntax is valid!")
 
-	return yaml.NewYAMLParser(&config, uuid.NewUUIDGenerator(workspace)), nil
+	return yaml.NewYAMLParser(&config), nil
 }
 
 func resolve(pathsConverter paths.PathConverter, config *yaml.YAMLConfig) (*yaml.YAMLConfig, error) {
@@ -219,10 +219,10 @@ func resolve(pathsConverter paths.PathConverter, config *yaml.YAMLConfig) (*yaml
 	return config, nil
 }
 
-func convert(yamlParser *yaml.YAMLParser, printProtobuf bool) ([]*pb.MonitorDefinition, error) {
+func convert(workspace string, yamlParser *yaml.YAMLParser, printProtobuf bool) ([]*pb.MonitorDefinition, error) {
 	// Convert to protobuf
 	fmt.Println("\n🔄 Converting to protobuf format...")
-	protoMonitors, conversionErrors := yamlParser.ConvertToMonitorDefinitions()
+	protoMonitors, conversionErrors := yamlParser.ConvertToMonitorDefinitions(uuid.NewUUIDGenerator(workspace))
 	if conversionErrors.HasErrors() {
 		return nil, fmt.Errorf("❌ Conversion errors found: %s\n", conversionErrors.Error())
 	}

@@ -6,7 +6,7 @@ monitors:
       name: runs_unique_workspaces
       type: custom_numeric
       metric_aggregation: COUNT(DISTINCT workspace)
-      monitored_id: ch-prod.default.runs
+      monitored_id: ch-prod::default::runs
       filter: created_at > today()
       severity: ERROR
       time_partitioning: created_at

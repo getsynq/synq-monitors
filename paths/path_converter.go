@@ -58,7 +58,7 @@ func (s *pathConverter) SimpleToPath(simple []string) (map[string]string, *Simpl
 				return &entitiesv1.Identifier{
 					Id: &entitiesv1.Identifier_SynqPath{
 						SynqPath: &entitiesv1.SynqPathIdentifier{
-							Path: pathWithColons(path),
+							Path: PathWithColons(path),
 						},
 					},
 				}
@@ -71,7 +71,7 @@ func (s *pathConverter) SimpleToPath(simple []string) (map[string]string, *Simpl
 		}
 		for _, entity := range resp.Entities {
 			if entity.Id.GetSynqPath() != nil {
-				resolvedPaths[pathWithDots(entity.Id.GetSynqPath().Path)] = entity.Id.GetSynqPath().Path
+				resolvedPaths[PathWithDots(entity.Id.GetSynqPath().Path)] = entity.Id.GetSynqPath().Path
 			}
 		}
 	}
@@ -156,7 +156,7 @@ func (s *pathConverter) PathToSimple(paths []string) (map[string]string, error) 
 
 	for _, path := range paths {
 		if _, ok := simplifiedPaths[path]; !ok {
-			simplifiedPaths[path] = pathWithDots(path)
+			simplifiedPaths[path] = PathWithDots(path)
 		}
 	}
 

@@ -8,6 +8,7 @@ import (
 	"runtime"
 	"testing"
 
+	"github.com/getsynq/monitors_mgmt/paths"
 	"github.com/getsynq/monitors_mgmt/uuid"
 	"github.com/gkampitakis/go-snaps/snaps"
 	"github.com/stretchr/testify/suite"
@@ -52,11 +53,13 @@ func (s *YAMLParserSuite) TestExamples() {
 		err = goyaml.Unmarshal(yamlContent, &config)
 		s.Require().NoError(err)
 
-		yamlParser := NewYAMLParser(&config, s.uuidGenerator)
+		sanitizePaths(&config)
+
+		yamlParser := NewYAMLParser(&config)
 		s.Require().NoError(err)
 
 		// Convert to protobuf
-		protoMonitors, conversionErrors := yamlParser.ConvertToMonitorDefinitions()
+		protoMonitors, conversionErrors := yamlParser.ConvertToMonitorDefinitions(s.uuidGenerator)
 		s.Require().False(conversionErrors.HasErrors(), conversionErrors.Error())
 
 		for _, monitor := range protoMonitors {
@@ -72,4 +75,17 @@ func (s *YAMLParserSuite) TestExamples() {
 
 	}
 
+}
+
+func sanitizePaths(config *YAMLConfig) *YAMLConfig {
+	for i := range config.Monitors {
+		if len(config.Monitors[i].MonitoredID) > 0 {
+			config.Monitors[i].MonitoredID = paths.PathWithColons(config.Monitors[i].MonitoredID)
+		} else {
+			for j := range config.Monitors[i].MonitoredIDs {
+				config.Monitors[i].MonitoredIDs[j] = paths.PathWithColons(config.Monitors[i].MonitoredIDs[j])
+			}
+		}
+	}
+	return config
 }

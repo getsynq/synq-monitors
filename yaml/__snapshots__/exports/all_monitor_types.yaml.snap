@@ -6,7 +6,7 @@ monitors:
       name: freshness_financial_statement
       type: freshness
       expression: month
-      monitored_id: bq-synq-demo.nyc_taxi.financial_statement
+      monitored_id: bq-synq-demo::nyc_taxi::financial_statement
       severity: ERROR
       time_partitioning: month
       mode:
@@ -17,7 +17,7 @@ monitors:
     - id: e522340e-088a-5eb8-8ee6-77bebd3fbc57
       name: volume_financial_statement
       type: volume
-      monitored_id: bq-synq-demo.nyc_taxi.financial_statement
+      monitored_id: bq-synq-demo::nyc_taxi::financial_statement
       severity: ERROR
       time_partitioning: month
       mode:
@@ -28,7 +28,7 @@ monitors:
     - id: 5c6c57a2-91f5-5e87-be4c-497aac1a907f
       name: stats_financial_statement
       type: field_stats
-      monitored_id: bq-synq-demo.nyc_taxi.financial_statement
+      monitored_id: bq-synq-demo::nyc_taxi::financial_statement
       fields:
         - total_revenue
         - total_tips
@@ -43,7 +43,7 @@ monitors:
       name: custom_financial_statement_revenue_nonnegative
       type: custom_numeric
       metric_aggregation: MIN(total_revenue)
-      monitored_id: bq-synq-demo.nyc_taxi.financial_statement
+      monitored_id: bq-synq-demo::nyc_taxi::financial_statement
       severity: ERROR
       time_partitioning: month
       mode:

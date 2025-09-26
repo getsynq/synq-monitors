@@ -105,8 +105,8 @@ func exportMonitors(cmd *cobra.Command, args []string) {
 	}
 
 	// Parse to test validity
-	yamlParser := yaml.NewYAMLParser(config, uuid.NewUUIDGenerator(workspace))
-	_, conversionErrors = yamlParser.ConvertToMonitorDefinitions()
+	yamlParser := yaml.NewYAMLParser(config)
+	_, conversionErrors = yamlParser.ConvertToMonitorDefinitions(uuid.NewUUIDGenerator(workspace))
 	if conversionErrors.HasErrors() {
 		exitWithError(fmt.Errorf("❌ Conversion errors found while parsing generated YAML: %s\n", conversionErrors.Error()))
 	}
