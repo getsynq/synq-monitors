@@ -97,45 +97,112 @@ func (s *PathConverterTestSuite) TestSimpleToPath() {
 		s.Require().Contains(err.UnresolvedPaths, "notfound")
 	})
 
-	s.Run("coordinate_found_with_multiple_candidates", func() {
-		input := []string{"ambiguous"}
-		resp := &entitiesentitiesv1.BatchGetEntitiesResponse{Entities: []*entitiesv1.Entity{}}
+	s.Run("coordinate_found_with_ambiguous_candidates", func() {
+		input := []string{"ambiguous2"}
+		resp := &entitiesentitiesv1.BatchGetEntitiesResponse{Entities: []*entitiesv1.Entity{
+			{
+				SynqPath:   "ambiguous2::a",
+				EntityType: entitiesv1.EntityType_ENTITY_TYPE_CLICKHOUSE_VIEW.Enum(),
+			},
+			{
+				SynqPath:   "ambiguous2::b",
+				EntityType: entitiesv1.EntityType_ENTITY_TYPE_CLICKHOUSE_TABLE.Enum(),
+			},
+			{
+				SynqPath:   "ambiguous2::c",
+				EntityType: entitiesv1.EntityType_ENTITY_TYPE_DBT_MODEL.Enum(),
+			},
+		}}
 		coordResp := &coordinatesv1.BatchIdsByCoordinatesResponse{
 			MatchedCoordinates: []*coordinatesv1.BatchIdsByCoordinatesResponse_MatchedCoordinates{
 				{
-					SqlFqn: "ambiguous",
+					SqlFqn: "ambiguous2",
 					Candidates: []*coordinatesv1.DatabaseCoordinates{
-						{SynqPaths: []string{"amb1::foo"}},
-						{SynqPaths: []string{"amb2::foo"}},
+						{SynqPaths: []string{"ambiguous2::a", "ambiguous2::b"}},
+						{SynqPaths: []string{"ambiguous2::c"}},
 					},
 				},
 			},
 		}
-		s.mockEntities.EXPECT().BatchGetEntities(gomock.Any(), gomock.Any()).Return(resp, nil)
+		s.mockEntities.EXPECT().BatchGetEntities(gomock.Any(), gomock.Any()).Return(resp, nil).Times(2)
 		s.mockCoordinates.EXPECT().BatchIdsByCoordinates(gomock.Any(), gomock.Any()).Return(coordResp, nil)
 		result, err := s.converter.SimpleToPath(input)
-		s.Require().Empty(result)
-		s.Require().Contains(err.MonitoredEntitiesWithMultipleEntities, "ambiguous")
+		s.Require().Nil(result)
+		s.Require().Empty(err.UnresolvedPaths)
+		s.Require().Contains(err.MonitoredEntitiesWithMultipleEntities, "ambiguous2")
+		s.Require().Len(err.MonitoredEntitiesWithMultipleEntities["ambiguous2"], 2)
+		s.Require().Contains(err.MonitoredEntitiesWithMultipleEntities["ambiguous2"], "ambiguous2::a")
+		s.Require().Contains(err.MonitoredEntitiesWithMultipleEntities["ambiguous2"], "ambiguous2::b")
 	})
 
-	s.Run("coordinate_found_with_multiple_synq_paths", func() {
-		input := []string{"multi"}
-		resp := &entitiesentitiesv1.BatchGetEntitiesResponse{Entities: []*entitiesv1.Entity{}}
+	s.Run("coordinate_found_with_unambiguous_candidates", func() {
+		input := []string{"ambiguous2"}
+		resp := &entitiesentitiesv1.BatchGetEntitiesResponse{Entities: []*entitiesv1.Entity{
+			{
+				SynqPath:   "ambiguous2::a",
+				EntityType: entitiesv1.EntityType_ENTITY_TYPE_CLICKHOUSE_VIEW.Enum(),
+			},
+			{
+				SynqPath:   "ambiguous2::b",
+				EntityType: entitiesv1.EntityType_ENTITY_TYPE_DBT_SNAPSHOT.Enum(),
+			},
+			{
+				SynqPath:   "ambiguous2::c",
+				EntityType: entitiesv1.EntityType_ENTITY_TYPE_DBT_MODEL.Enum(),
+			},
+		}}
 		coordResp := &coordinatesv1.BatchIdsByCoordinatesResponse{
 			MatchedCoordinates: []*coordinatesv1.BatchIdsByCoordinatesResponse_MatchedCoordinates{
 				{
-					SqlFqn: "multi",
+					SqlFqn: "ambiguous2",
 					Candidates: []*coordinatesv1.DatabaseCoordinates{
-						{SynqPaths: []string{"multi::a", "multi::b"}},
+						{SynqPaths: []string{"ambiguous2::a", "ambiguous2::b"}},
+						{SynqPaths: []string{"ambiguous2::c"}},
 					},
 				},
 			},
 		}
-		s.mockEntities.EXPECT().BatchGetEntities(gomock.Any(), gomock.Any()).Return(resp, nil)
+		s.mockEntities.EXPECT().BatchGetEntities(gomock.Any(), gomock.Any()).Return(resp, nil).Times(2)
 		s.mockCoordinates.EXPECT().BatchIdsByCoordinates(gomock.Any(), gomock.Any()).Return(coordResp, nil)
 		result, err := s.converter.SimpleToPath(input)
-		s.Require().Empty(result)
-		s.Require().Contains(err.MonitoredEntitiesWithMultipleEntities, "multi")
+		s.Require().Nil(err)
+		s.Require().Equal(map[string]string{"ambiguous2": "ambiguous2::a"}, result)
+	})
+
+	s.Run("coordinate_found_with_no_valid_candidates", func() {
+		input := []string{"ambiguous2"}
+		resp := &entitiesentitiesv1.BatchGetEntitiesResponse{Entities: []*entitiesv1.Entity{
+			{
+				SynqPath:   "ambiguous2::a",
+				EntityType: entitiesv1.EntityType_ENTITY_TYPE_AIRFLOW_TASK.Enum(),
+			},
+			{
+				SynqPath:   "ambiguous2::b",
+				EntityType: entitiesv1.EntityType_ENTITY_TYPE_DBT_SNAPSHOT.Enum(),
+			},
+			{
+				SynqPath:   "ambiguous2::c",
+				EntityType: entitiesv1.EntityType_ENTITY_TYPE_DBT_MODEL.Enum(),
+			},
+		}}
+		coordResp := &coordinatesv1.BatchIdsByCoordinatesResponse{
+			MatchedCoordinates: []*coordinatesv1.BatchIdsByCoordinatesResponse_MatchedCoordinates{
+				{
+					SqlFqn: "ambiguous2",
+					Candidates: []*coordinatesv1.DatabaseCoordinates{
+						{SynqPaths: []string{"ambiguous2::a", "ambiguous2::b"}},
+						{SynqPaths: []string{"ambiguous2::c"}},
+					},
+				},
+			},
+		}
+		s.mockEntities.EXPECT().BatchGetEntities(gomock.Any(), gomock.Any()).Return(resp, nil).Times(2)
+		s.mockCoordinates.EXPECT().BatchIdsByCoordinates(gomock.Any(), gomock.Any()).Return(coordResp, nil)
+		result, err := s.converter.SimpleToPath(input)
+		s.Require().Nil(result)
+		s.Require().Empty(err.MonitoredEntitiesWithMultipleEntities)
+		s.Require().Len(err.UnresolvedPaths, 1)
+		s.Require().Contains(err.UnresolvedPaths, "ambiguous2")
 	})
 }
 

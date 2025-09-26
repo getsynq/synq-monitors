@@ -12,7 +12,6 @@ import (
 	iamv1 "buf.build/gen/go/getsynq/api/protocolbuffers/go/synq/auth/iam/v1"
 	"github.com/getsynq/monitors_mgmt/mgmt"
 	"github.com/getsynq/monitors_mgmt/paths"
-	"github.com/getsynq/monitors_mgmt/uuid"
 	"github.com/getsynq/monitors_mgmt/yaml"
 	"github.com/pkg/errors"
 	"github.com/samber/lo"
@@ -107,7 +106,7 @@ func exportMonitors(cmd *cobra.Command, args []string) {
 
 	// Parse to test validity
 	yamlParser := yaml.NewYAMLParser(config)
-	_, conversionErrors = yamlParser.ConvertToMonitorDefinitions(uuid.NewUUIDGenerator(workspace))
+	_, conversionErrors = yamlParser.ConvertToMonitorDefinitions()
 	if conversionErrors.HasErrors() {
 		exitWithError(fmt.Errorf("❌ Conversion errors found while parsing generated YAML: %s\n", conversionErrors.Error()))
 	}

@@ -3,6 +3,7 @@ package paths
 import (
 	"context"
 	"fmt"
+	"slices"
 
 	"buf.build/gen/go/getsynq/api/grpc/go/synq/entities/coordinates/v1/coordinatesv1grpc"
 	"buf.build/gen/go/getsynq/api/grpc/go/synq/entities/entities/v1/entitiesv1grpc"
@@ -64,11 +65,11 @@ func (s *pathConverter) SimpleToPath(simple []string) (map[string]string, *Simpl
 				}
 			}),
 		})
-
 		if err != nil {
 			Err.Err = fmt.Errorf("error fetching entities for monitored paths: %w", err)
 			return nil, Err
 		}
+
 		for _, entity := range resp.Entities {
 			if entity.Id.GetSynqPath() != nil {
 				resolvedPaths[PathWithDots(entity.Id.GetSynqPath().Path)] = entity.Id.GetSynqPath().Path
@@ -77,46 +78,82 @@ func (s *pathConverter) SimpleToPath(simple []string) (map[string]string, *Simpl
 	}
 
 	// for the ones without entities, fetch as coordinates
-	pathsToFetchCoordinates := lo.Filter(simple, func(path string, _ int) bool {
-		_, ok := resolvedPaths[path]
-		return !ok
-	})
-	if len(pathsToFetchCoordinates) > 0 {
-		coordResp, err := s.coordinatesService.BatchIdsByCoordinates(s.ctx, &coordinatesv1.BatchIdsByCoordinatesRequest{
-			SqlFqn: pathsToFetchCoordinates,
+	{
+		pathsToFetchCoordinates := lo.Filter(simple, func(path string, _ int) bool {
+			_, ok := resolvedPaths[path]
+			return !ok
 		})
-		if err != nil {
-			Err.Err = fmt.Errorf("error fetching coordinates for monitored paths: %w", err)
-			return nil, Err
-		}
-		for _, coord := range coordResp.MatchedCoordinates {
-			if len(coord.Candidates) == 0 {
-				Err.UnresolvedPaths = append(Err.UnresolvedPaths, coord.SqlFqn)
-				continue
-			}
-			if len(coord.Candidates) > 1 {
-				Err.MonitoredEntitiesWithMultipleEntities[coord.SqlFqn] = lo.Uniq(lo.FlatMap(coord.Candidates, func(cand *coordinatesv1.DatabaseCoordinates, _ int) []string {
-					return cand.SynqPaths
-				}))
-				continue
-			}
-			if len(coord.Candidates[0].SynqPaths) == 0 {
-				Err.UnresolvedPaths = append(Err.UnresolvedPaths, coord.SqlFqn)
-				continue
-			}
-			if len(coord.Candidates[0].SynqPaths) > 1 {
-				Err.MonitoredEntitiesWithMultipleEntities[coord.SqlFqn] = coord.Candidates[0].SynqPaths
-				continue
+		if len(pathsToFetchCoordinates) > 0 {
+			coordResp, err := s.coordinatesService.BatchIdsByCoordinates(s.ctx, &coordinatesv1.BatchIdsByCoordinatesRequest{
+				SqlFqn: pathsToFetchCoordinates,
+			})
+			if err != nil {
+				Err.Err = fmt.Errorf("error fetching coordinates for monitored paths: %w", err)
+				return nil, Err
 			}
 
-			// exactly one candidate
-			// pick the first candidate's first synq path
-			resolvedPaths[coord.SqlFqn] = coord.Candidates[0].SynqPaths[0]
+			ambiguiousPathsByCoordinate := map[string][]string{}
+			for _, coord := range coordResp.MatchedCoordinates {
+				if len(coord.Candidates) == 0 || (len(coord.Candidates) == 1 && len(coord.Candidates[0].SynqPaths) == 0) {
+					Err.UnresolvedPaths = append(Err.UnresolvedPaths, coord.SqlFqn)
+					continue
+				}
+				if len(coord.Candidates) == 1 && len(coord.Candidates[0].SynqPaths) == 1 {
+					resolvedPaths[coord.SqlFqn] = coord.Candidates[0].SynqPaths[0]
+					continue
+				}
+				// more than one possible candidate or synq paths
+				// check for ambiguity
+				ambiguiousPathsByCoordinate[coord.SqlFqn] = lo.FlatMap(coord.Candidates, func(cand *coordinatesv1.DatabaseCoordinates, _ int) []string {
+					return cand.SynqPaths
+				})
+			}
+
+			allAmbiguousPaths := lo.Uniq(lo.FlatMap(lo.Values(ambiguiousPathsByCoordinate), func(paths []string, _ int) []string {
+				return paths
+			}))
+			if len(allAmbiguousPaths) > 0 {
+				// fetch entities for all ambiguous paths and see if they are valid types
+				resp, err := s.entitiesService.BatchGetEntities(s.ctx, &entitiesentitiesv1.BatchGetEntitiesRequest{
+					Ids: lo.Map(allAmbiguousPaths, func(path string, _ int) *entitiesv1.Identifier {
+						return &entitiesv1.Identifier{
+							Id: &entitiesv1.Identifier_SynqPath{
+								SynqPath: &entitiesv1.SynqPathIdentifier{
+									Path: PathWithColons(path),
+								},
+							},
+						}
+					}),
+				})
+				if err != nil {
+					Err.Err = fmt.Errorf("error fetching entities for ambiguous paths: %w", err)
+					return nil, Err
+				}
+
+				typesByPath := map[string]*entitiesv1.EntityType{}
+				for _, entity := range resp.Entities {
+					typesByPath[entity.SynqPath] = entity.EntityType
+				}
+
+				for coord, paths := range ambiguiousPathsByCoordinate {
+					validPaths := lo.Filter(paths, func(path string, _ int) bool {
+						typ, ok := typesByPath[path]
+						return ok && slices.Contains(ValidMonitoredTypes, *typ)
+					})
+					if len(validPaths) == 1 {
+						resolvedPaths[coord] = validPaths[0]
+					} else if len(validPaths) > 1 {
+						Err.MonitoredEntitiesWithMultipleEntities[coord] = lo.Uniq(validPaths)
+					} else {
+						Err.UnresolvedPaths = append(Err.UnresolvedPaths, coord)
+					}
+				}
+			}
 		}
 	}
 
 	if Err.HasErrors() {
-		return resolvedPaths, Err
+		return nil, Err
 	}
 	return resolvedPaths, nil
 }

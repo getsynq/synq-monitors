@@ -8,6 +8,8 @@ import (
 	"runtime"
 	"testing"
 
+	entitiesv1 "buf.build/gen/go/getsynq/api/protocolbuffers/go/synq/entities/v1"
+	pb "buf.build/gen/go/getsynq/api/protocolbuffers/go/synq/monitors/custom_monitors/v1"
 	"github.com/getsynq/monitors_mgmt/paths"
 	"github.com/getsynq/monitors_mgmt/uuid"
 	"github.com/gkampitakis/go-snaps/snaps"
@@ -53,16 +55,15 @@ func (s *YAMLParserSuite) TestExamples() {
 		err = goyaml.Unmarshal(yamlContent, &config)
 		s.Require().NoError(err)
 
-		sanitizePaths(&config)
-
 		yamlParser := NewYAMLParser(&config)
 		s.Require().NoError(err)
 
 		// Convert to protobuf
-		protoMonitors, conversionErrors := yamlParser.ConvertToMonitorDefinitions(s.uuidGenerator)
+		protoMonitors, conversionErrors := yamlParser.ConvertToMonitorDefinitions()
 		s.Require().False(conversionErrors.HasErrors(), conversionErrors.Error())
 
 		for _, monitor := range protoMonitors {
+			monitor = sanitize(monitor, s.uuidGenerator)
 			monitorJson, err := protojson.Marshal(monitor)
 			s.Require().NoError(err)
 
@@ -77,15 +78,14 @@ func (s *YAMLParserSuite) TestExamples() {
 
 }
 
-func sanitizePaths(config *YAMLConfig) *YAMLConfig {
-	for i := range config.Monitors {
-		if len(config.Monitors[i].MonitoredID) > 0 {
-			config.Monitors[i].MonitoredID = paths.PathWithColons(config.Monitors[i].MonitoredID)
-		} else {
-			for j := range config.Monitors[i].MonitoredIDs {
-				config.Monitors[i].MonitoredIDs[j] = paths.PathWithColons(config.Monitors[i].MonitoredIDs[j])
-			}
-		}
+func sanitize(monitor *pb.MonitorDefinition, uuidGenerator *uuid.UUIDGenerator) *pb.MonitorDefinition {
+	monitor.MonitoredId = &entitiesv1.Identifier{
+		Id: &entitiesv1.Identifier_SynqPath{
+			SynqPath: &entitiesv1.SynqPathIdentifier{
+				Path: paths.PathWithColons(monitor.MonitoredId.GetSynqPath().GetPath()),
+			},
+		},
 	}
-	return config
+	monitor.Id = uuidGenerator.GenerateMonitorUUID(monitor)
+	return monitor
 }

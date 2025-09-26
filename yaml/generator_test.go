@@ -51,14 +51,17 @@ func (s *YAMLGeneratorSuite) TestExamples() {
 		err = goyaml.Unmarshal(yamlContent, &config)
 		s.Require().NoError(err)
 
-		config = sanitizePaths(config)
-
 		yamlParser := NewYAMLParser(config)
 		s.Require().NoError(err)
 
 		// Convert to protobuf
-		protoMonitors, conversionErrors := yamlParser.ConvertToMonitorDefinitions(s.uuidGenerator)
+		protoMonitors, conversionErrors := yamlParser.ConvertToMonitorDefinitions()
 		s.Require().False(conversionErrors.HasErrors(), conversionErrors.Error())
+
+		uuidGenerator := uuid.NewUUIDGenerator(s.workspace)
+		for i := range protoMonitors {
+			protoMonitors[i] = sanitize(protoMonitors[i], uuidGenerator)
+		}
 
 		generator := NewYAMLGenerator(config.ConfigID, protoMonitors)
 		config, convErrors := generator.GenerateYAML()
