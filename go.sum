@@ -20,6 +20,8 @@ buf.build/gen/go/getsynq/api/protocolbuffers/go v1.36.9-20250916141244-f69653f74
 buf.build/gen/go/getsynq/api/protocolbuffers/go v1.36.9-20250916141244-f69653f7454c.1/go.mod h1:z9IATNU0C/Nt4XxGOWr99RTU0KBYM2X/JNP9m+yA9Gk=
 buf.build/gen/go/getsynq/api/protocolbuffers/go v1.36.9-20250922105254-9270eaa9228b.1 h1:7cTzn9pzAORSahMAsfl+WSPaxaj+4fhq/qVH7isjyJc=
 buf.build/gen/go/getsynq/api/protocolbuffers/go v1.36.9-20250922105254-9270eaa9228b.1/go.mod h1:z9IATNU0C/Nt4XxGOWr99RTU0KBYM2X/JNP9m+yA9Gk=
+buf.build/gen/go/getsynq/api/protocolbuffers/go v1.36.9-20250929113914-c9dc91c716e7.1 h1:iB/b/G43pUBE8CRJKsY+RhrIzdbuGClw5XMY3nan/Ro=
+buf.build/gen/go/getsynq/api/protocolbuffers/go v1.36.9-20250929113914-c9dc91c716e7.1/go.mod h1:z9IATNU0C/Nt4XxGOWr99RTU0KBYM2X/JNP9m+yA9Gk=
 cloud.google.com/go/compute/metadata v0.7.0 h1:PBWF+iiAerVNe8UCHxdOt6eHLVc3ydFeOCw78U8ytSU=
 cloud.google.com/go/compute/metadata v0.7.0/go.mod h1:j5MvL9PprKL39t166CoB1uVHfQMs4tFQZZcKwksXUjo=
 github.com/chzyer/logex v1.1.10/go.mod h1:+Ywpsq7O8HXn0nuIou7OrIPyXbp3wmkHB+jjWRnGsAI=

@@ -324,6 +324,12 @@ func convertSingleMonitor(
 		}
 	}
 
+	// set timezone
+	if yamlMonitor.Schedule != nil && yamlMonitor.Schedule.Timezone != "" {
+		proto.Timezone = yamlMonitor.Schedule.Timezone
+	} else if config.Defaults.Schedule != nil && config.Defaults.Schedule.Timezone != "" {
+		proto.Timezone = config.Defaults.Schedule.Timezone
+	}
 	return proto, errors
 }
 

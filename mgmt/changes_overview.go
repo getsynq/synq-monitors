@@ -351,12 +351,33 @@ func shouldReset(
 	originDef *pb.MonitorDefinition,
 	newDef *pb.MonitorDefinition,
 ) bool {
+	if originDef.GetTimezone() != newDef.GetTimezone() {
+		return true
+	}
+
 	if originDef.GetCustomNumeric().GetMetricAggregation() != newDef.GetCustomNumeric().GetMetricAggregation() {
 		return true
 	}
 
 	if reflect.TypeOf(originDef.Schedule) != reflect.TypeOf(newDef.Schedule) {
 		return true
+	} else {
+		switch originDef.Schedule.(type) {
+		case *pb.MonitorDefinition_Daily:
+			if originDef.GetDaily().GetMinutesSinceMidnight() != newDef.GetDaily().GetMinutesSinceMidnight() {
+				return true
+			}
+			if originDef.GetDaily().GetDelayNumDays() != newDef.GetDaily().GetDelayNumDays() {
+				return true
+			}
+		case *pb.MonitorDefinition_Hourly:
+			if originDef.GetHourly().GetMinuteOfHour() != newDef.GetHourly().GetMinuteOfHour() {
+				return true
+			}
+			if originDef.GetHourly().GetDelayNumHours() != newDef.GetHourly().GetDelayNumHours() {
+				return true
+			}
+		}
 	}
 
 	if originDef.GetTimePartitioning().GetExpression() != newDef.GetTimePartitioning().GetExpression() {

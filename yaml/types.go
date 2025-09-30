@@ -62,9 +62,10 @@ type YAMLFixedThresholds struct {
 
 // YAMLSchedule represents schedule configuration
 type YAMLSchedule struct {
-	Daily  *int   `yaml:"daily,omitempty"`  // Minutes since midnight (0-1439)
-	Hourly *int   `yaml:"hourly,omitempty"` // Minute of hour (0-59)
-	Delay  *int32 `yaml:"delay,omitempty"`  // Number of chosen intervals to delay by. Ignores last `X` intervals.
+	Timezone string `yaml:"timezone,omitempty"`
+	Daily    *int   `yaml:"daily,omitempty"`  // Minutes since midnight (0-1439)
+	Hourly   *int   `yaml:"hourly,omitempty"` // Minute of hour (0-59)
+	Delay    *int32 `yaml:"delay,omitempty"`  // Number of chosen intervals to delay by. Ignores last `X` intervals.
 }
 
 // ConversionError represents an error during YAML to proto conversion
