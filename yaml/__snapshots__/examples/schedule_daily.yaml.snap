@@ -18,6 +18,7 @@
  "timePartitioning": {
   "expression": "created_at"
  },
+ "timezone": "Europe/Prague",
  "volume": {}
 }
 ---
