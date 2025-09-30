@@ -132,13 +132,15 @@ func (p *YAMLGenerator) generateSingleMonitor(
 		switch t := protoMonitor.Schedule.(type) {
 		case *pb.MonitorDefinition_Daily:
 			yamlMonitor.Schedule = &YAMLSchedule{
-				Daily: lo.ToPtr(int(t.Daily.MinutesSinceMidnight % 60)),
-				Delay: t.Daily.DelayNumDays,
+				Timezone: protoMonitor.Timezone,
+				Daily:    lo.ToPtr(int(t.Daily.MinutesSinceMidnight % 60)),
+				Delay:    t.Daily.DelayNumDays,
 			}
 		case *pb.MonitorDefinition_Hourly:
 			yamlMonitor.Schedule = &YAMLSchedule{
-				Hourly: lo.ToPtr(int(t.Hourly.MinuteOfHour)),
-				Delay:  t.Hourly.DelayNumHours,
+				Timezone: protoMonitor.Timezone,
+				Hourly:   lo.ToPtr(int(t.Hourly.MinuteOfHour)),
+				Delay:    t.Hourly.DelayNumHours,
 			}
 		default:
 			errors = append(errors, ConversionError{
