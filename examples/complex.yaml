@@ -2,8 +2,8 @@ namespace: "data-team-pipeline"
 
 defaults:
   severity: ERROR
-  schedule:
-    daily: 120 # 2:00 AM
+  daily:
+    query_delay: 2h
   time_partitioning: "created_at"
   mode:
     anomaly_engine:
@@ -37,8 +37,7 @@ monitors:
     mode:
       anomaly_engine:
         sensitivity: BALANCED
-    schedule:
-      daily: 0
+    daily: {}
 
   - id: custom_numeric_active_users
     type: custom_numeric

@@ -5,7 +5,8 @@
   "sensitivity": "SENSITIVITY_BALANCED"
  },
  "hourly": {
-  "minuteOfHour": 15
+  "minuteOfHour": 15,
+  "onlyScheduleDelay": true
  },
  "id": "29b94d55-ba5f-5a55-a201-0b7eb30df29e",
  "monitoredId": {
@@ -18,6 +19,7 @@
  "timePartitioning": {
   "expression": "created_at"
  },
+ "timezone": "Europe/Prague",
  "volume": {}
 }
 ---
