@@ -11,7 +11,7 @@ monitors:
       mode:
         anomaly_engine:
             sensitivity: BALANCED
-      schedule:
-        hourly: 15
+      hourly:
+        query_delay: 1h0m0s
 
 ---

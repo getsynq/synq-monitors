@@ -1,11 +1,11 @@
-# Create a single volume monitor for runs table running daily at 15th minute since midnight.
+# Create a single volume monitor for runs table running daily with time partitioning shift.
 
 monitors:
   - id: runs_volume_daily
     type: volume
     time_partitioning: created_at
-    schedule:
-      timezone: Europe/Prague
-      daily: 15 # runs at 15th minute since midnight
+    timezone: Europe/Prague
+    daily:
+      time_partitioning_shift: 1h
     monitored_ids:
       - ch-prod.default.runs

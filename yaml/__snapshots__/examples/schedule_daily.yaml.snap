@@ -5,7 +5,7 @@
   "sensitivity": "SENSITIVITY_BALANCED"
  },
  "daily": {
-  "minutesSinceMidnight": 15
+  "minutesSinceMidnight": 60
  },
  "id": "0d447202-5622-5005-aea8-86520caac8f0",
  "monitoredId": {
@@ -18,7 +18,6 @@
  "timePartitioning": {
   "expression": "created_at"
  },
- "timezone": "Europe/Prague",
  "volume": {}
 }
 ---

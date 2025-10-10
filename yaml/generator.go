@@ -3,6 +3,7 @@ package yaml
 import (
 	"fmt"
 	"strings"
+	"time"
 
 	pb "buf.build/gen/go/getsynq/api/protocolbuffers/go/synq/monitors/custom_monitors/v1"
 	"github.com/samber/lo"
@@ -131,17 +132,9 @@ func (p *YAMLGenerator) generateSingleMonitor(
 	if protoMonitor.Schedule != nil {
 		switch t := protoMonitor.Schedule.(type) {
 		case *pb.MonitorDefinition_Daily:
-			yamlMonitor.Schedule = &YAMLSchedule{
-				Timezone: protoMonitor.Timezone,
-				Daily:    lo.ToPtr(int(t.Daily.MinutesSinceMidnight % 60)),
-				Delay:    t.Daily.DelayNumDays,
-			}
+			yamlMonitor.Daily = convertProtoToDailySchedule(t.Daily, protoMonitor.Timezone)
 		case *pb.MonitorDefinition_Hourly:
-			yamlMonitor.Schedule = &YAMLSchedule{
-				Timezone: protoMonitor.Timezone,
-				Hourly:   lo.ToPtr(int(t.Hourly.MinuteOfHour)),
-				Delay:    t.Hourly.DelayNumHours,
-			}
+			yamlMonitor.Hourly = convertProtoToHourlySchedule(t.Hourly, protoMonitor.Timezone)
 		default:
 			errors = append(errors, ConversionError{
 				Field:   "schedule",
@@ -152,4 +145,44 @@ func (p *YAMLGenerator) generateSingleMonitor(
 	}
 
 	return yamlMonitor, errors
+}
+
+// convertProtoToDailySchedule converts proto ScheduleDaily to YAMLDailySchedule
+func convertProtoToDailySchedule(daily *pb.ScheduleDaily, timezone string) *YAMLDailySchedule {
+	schedule := &YAMLDailySchedule{
+		Timezone: timezone,
+	}
+
+	// Determine if this is time_partitioning_shift or query_delay based on proto fields
+	if daily.DelayNumDays != nil {
+		// This is query_delay
+		duration := time.Duration(*daily.DelayNumDays) * 24 * time.Hour
+		schedule.QueryDelay = &duration
+	} else {
+		// This is time_partitioning_shift (minutes since midnight)
+		duration := time.Duration(daily.MinutesSinceMidnight) * time.Minute
+		schedule.TimePartitioningShift = &duration
+	}
+
+	return schedule
+}
+
+// convertProtoToHourlySchedule converts proto ScheduleHourly to YAMLHourlySchedule
+func convertProtoToHourlySchedule(hourly *pb.ScheduleHourly, timezone string) *YAMLHourlySchedule {
+	schedule := &YAMLHourlySchedule{
+		Timezone: timezone,
+	}
+
+	// Determine if this is time_partitioning_shift or query_delay based on proto fields
+	if hourly.DelayNumHours != nil {
+		// This is query_delay
+		duration := time.Duration(*hourly.DelayNumHours) * time.Hour
+		schedule.QueryDelay = &duration
+	} else {
+		// This is time_partitioning_shift (minute of hour)
+		duration := time.Duration(hourly.MinuteOfHour) * time.Minute
+		schedule.TimePartitioningShift = &duration
+	}
+
+	return schedule
 }

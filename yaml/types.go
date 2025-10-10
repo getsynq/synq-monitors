@@ -3,37 +3,40 @@ package yaml
 import (
 	"fmt"
 	"strings"
+	"time"
 )
 
 // YAMLConfig represents the YAML file structure
 type YAMLConfig struct {
 	ConfigID string `yaml:"namespace"`
 	Defaults struct {
-		Severity         string        `yaml:"severity,omitempty"`
-		TimePartitioning string        `yaml:"time_partitioning,omitempty"`
-		Schedule         *YAMLSchedule `yaml:"schedule,omitempty"` // default: daily at midnight
-		Mode             *YAMLMode     `yaml:"mode,omitempty"`
+		Severity         string              `yaml:"severity,omitempty"`
+		TimePartitioning string              `yaml:"time_partitioning,omitempty"`
+		Daily            *YAMLDailySchedule  `yaml:"daily,omitempty"`
+		Hourly           *YAMLHourlySchedule `yaml:"hourly,omitempty"`
+		Mode             *YAMLMode           `yaml:"mode,omitempty"`
 	} `yaml:"defaults,omitempty"`
 	Monitors []YAMLMonitor `yaml:"monitors"`
 }
 
 // YAMLMonitor represents a monitor in YAML format
 type YAMLMonitor struct {
-	Id                string            `yaml:"id"`
-	Name              string            `yaml:"name,omitempty"` //default: `{id}`
-	Type              string            `yaml:"type"`
-	Expression        string            `yaml:"expression,omitempty"`
-	MetricAggregation string            `yaml:"metric_aggregation,omitempty"`
-	MonitoredIDs      []string          `yaml:"monitored_ids,omitempty"`
-	MonitoredID       string            `yaml:"monitored_id,omitempty"`
-	Fields            []string          `yaml:"fields,omitempty"`
-	Segmentation      *YAMLSegmentation `yaml:"segmentation,omitempty"`
-	Filter            string            `yaml:"filter,omitempty"`
-	Severity          string            `yaml:"severity,omitempty"`
-	TimePartitioning  string            `yaml:"time_partitioning,omitempty"`
-	Mode              *YAMLMode         `yaml:"mode,omitempty"`
-	Schedule          *YAMLSchedule     `yaml:"schedule,omitempty"`
-	ConfigID          string            `yaml:"-"`
+	Id                string              `yaml:"id"`
+	Name              string              `yaml:"name,omitempty"` //default: `{id}`
+	Type              string              `yaml:"type"`
+	Expression        string              `yaml:"expression,omitempty"`
+	MetricAggregation string              `yaml:"metric_aggregation,omitempty"`
+	MonitoredIDs      []string            `yaml:"monitored_ids,omitempty"`
+	MonitoredID       string              `yaml:"monitored_id,omitempty"`
+	Fields            []string            `yaml:"fields,omitempty"`
+	Segmentation      *YAMLSegmentation   `yaml:"segmentation,omitempty"`
+	Filter            string              `yaml:"filter,omitempty"`
+	Severity          string              `yaml:"severity,omitempty"`
+	TimePartitioning  string              `yaml:"time_partitioning,omitempty"`
+	Mode              *YAMLMode           `yaml:"mode,omitempty"`
+	Daily             *YAMLDailySchedule  `yaml:"daily,omitempty"`
+	Hourly            *YAMLHourlySchedule `yaml:"hourly,omitempty"`
+	ConfigID          string              `yaml:"-"`
 }
 
 type YAMLSegmentation struct {
@@ -60,12 +63,18 @@ type YAMLFixedThresholds struct {
 	Max *float64 `yaml:"max,omitempty"`
 }
 
-// YAMLSchedule represents schedule configuration
-type YAMLSchedule struct {
-	Timezone string `yaml:"timezone,omitempty"`
-	Daily    *int   `yaml:"daily,omitempty"`  // Minutes since midnight (0-1439)
-	Hourly   *int   `yaml:"hourly,omitempty"` // Minute of hour (0-59)
-	Delay    *int32 `yaml:"delay,omitempty"`  // Number of chosen intervals to delay by. Ignores last `X` intervals.
+// YAMLDailySchedule represents daily schedule configuration
+type YAMLDailySchedule struct {
+	Timezone              string         `yaml:"timezone,omitempty"`
+	TimePartitioningShift *time.Duration `yaml:"time_partitioning_shift,omitempty"`
+	QueryDelay            *time.Duration `yaml:"query_delay,omitempty"`
+}
+
+// YAMLHourlySchedule represents hourly schedule configuration
+type YAMLHourlySchedule struct {
+	Timezone              string         `yaml:"timezone,omitempty"`
+	TimePartitioningShift *time.Duration `yaml:"time_partitioning_shift,omitempty"`
+	QueryDelay            *time.Duration `yaml:"query_delay,omitempty"`
 }
 
 // ConversionError represents an error during YAML to proto conversion

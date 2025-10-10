@@ -11,7 +11,7 @@ require (
 	github.com/stretchr/testify v1.10.0
 	golang.org/x/oauth2 v0.30.0
 	google.golang.org/grpc v1.74.2
-	google.golang.org/protobuf v1.36.9
+	google.golang.org/protobuf v1.36.10
 	gopkg.in/yaml.v3 v3.0.1
 )
 
@@ -33,22 +33,21 @@ require (
 
 require (
 	buf.build/gen/go/getsynq/api/grpc/go v1.5.1-20250922105254-9270eaa9228b.2
-	buf.build/gen/go/getsynq/api/protocolbuffers/go v1.36.9-20250929113914-c9dc91c716e7.1
+	buf.build/gen/go/getsynq/api/protocolbuffers/go v1.36.10-20251010120448-fd019d34b0ea.1
 	github.com/gkampitakis/go-snaps v0.5.14
+	go.uber.org/mock v0.6.0
 )
 
 require (
-	github.com/golang/mock v1.6.0 // indirect
+	github.com/onsi/ginkgo v1.16.5 // indirect
+	github.com/onsi/gomega v1.38.2 // indirect
 	github.com/sergi/go-diff v1.4.0 // indirect
 	github.com/yudai/golcs v0.0.0-20170316035057-ecda9a501e82 // indirect
-	go.uber.org/mock v0.6.0 // indirect
-	golang.org/x/mod v0.27.0 // indirect
-	golang.org/x/sync v0.16.0 // indirect
-	golang.org/x/tools v0.36.0 // indirect
+	github.com/yudai/pp v2.0.1+incompatible // indirect
 )
 
 require (
-	buf.build/gen/go/bufbuild/protovalidate/protocolbuffers/go v1.36.9-20250717185734-6c6e0d3c608e.1 // indirect
+	buf.build/gen/go/bufbuild/protovalidate/protocolbuffers/go v1.36.10-20250717185734-6c6e0d3c608e.1 // indirect
 	github.com/gkampitakis/ciinfo v0.3.2 // indirect
 	github.com/gkampitakis/go-diff v1.3.2 // indirect
 	github.com/goccy/go-yaml v1.18.0 // indirect
