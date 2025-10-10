@@ -300,19 +300,22 @@ func convertSingleMonitor(
 		}
 	}
 
+	// Set timezone
+	confTimezone := config.Defaults.Timezone
+	if yamlMonitor.Timezone != "" {
+		confTimezone = yamlMonitor.Timezone
+	}
+	proto.Timezone = confTimezone
+
 	// Set schedule
 	if yamlMonitor.Daily != nil {
 		proto.Schedule = convertDailySchedule(yamlMonitor.Daily)
-		proto.Timezone = yamlMonitor.Daily.Timezone
 	} else if yamlMonitor.Hourly != nil {
 		proto.Schedule = convertHourlySchedule(yamlMonitor.Hourly)
-		proto.Timezone = yamlMonitor.Hourly.Timezone
 	} else if config.Defaults.Daily != nil {
 		proto.Schedule = convertDailySchedule(config.Defaults.Daily)
-		proto.Timezone = config.Defaults.Daily.Timezone
 	} else if config.Defaults.Hourly != nil {
 		proto.Schedule = convertHourlySchedule(config.Defaults.Hourly)
-		proto.Timezone = config.Defaults.Hourly.Timezone
 	} else {
 		// Default to daily at midnight
 		proto.Schedule = &pb.MonitorDefinition_Daily{
@@ -419,18 +422,17 @@ func validateScheduleConfiguration(monitor *YAMLMonitor) ConversionErrors {
 // convertDailySchedule converts YAMLDailySchedule to proto ScheduleDaily
 func convertDailySchedule(daily *YAMLDailySchedule) *pb.MonitorDefinition_Daily {
 	schedule := &pb.ScheduleDaily{
-		MinutesSinceMidnight: int32(0), // Default to midnight
+		DelayNumDays: daily.IgnoreLast,
 	}
 
 	// Handle time_partitioning_shift or query_delay
-	if daily.TimePartitioningShift != nil {
-		// Convert duration to minutes since midnight (simplified - assumes shift from midnight)
+	if daily.QueryDelay != nil {
 		minutes := int32(daily.TimePartitioningShift.Minutes())
 		schedule.MinutesSinceMidnight = minutes % 1440 // Ensure within 24 hours
-	} else if daily.QueryDelay != nil {
-		// Convert duration to delay in days
-		days := int32(daily.QueryDelay.Hours() / 24)
-		schedule.DelayNumDays = &days
+		schedule.OnlyScheduleDelay = true
+	} else if daily.TimePartitioningShift != nil {
+		minutes := int32(daily.TimePartitioningShift.Minutes())
+		schedule.MinutesSinceMidnight = minutes % 1440 // Ensure within 24 hours
 	}
 
 	return &pb.MonitorDefinition_Daily{Daily: schedule}
@@ -439,18 +441,19 @@ func convertDailySchedule(daily *YAMLDailySchedule) *pb.MonitorDefinition_Daily 
 // convertHourlySchedule converts YAMLHourlySchedule to proto ScheduleHourly
 func convertHourlySchedule(hourly *YAMLHourlySchedule) *pb.MonitorDefinition_Hourly {
 	schedule := &pb.ScheduleHourly{
-		MinuteOfHour: int32(0), // Default to start of hour
+		DelayNumHours: hourly.IgnoreLast,
 	}
 
 	// Handle time_partitioning_shift or query_delay
-	if hourly.TimePartitioningShift != nil {
+	if hourly.QueryDelay != nil {
+		// Convert duration to delay in hours
+		minutes := int32(hourly.QueryDelay.Minutes())
+		schedule.MinuteOfHour = minutes % 60 // Ensure within hour
+		schedule.OnlyScheduleDelay = true
+	} else if hourly.TimePartitioningShift != nil {
 		// Convert duration to minute of hour
 		minutes := int32(hourly.TimePartitioningShift.Minutes())
 		schedule.MinuteOfHour = minutes % 60 // Ensure within hour
-	} else if hourly.QueryDelay != nil {
-		// Convert duration to delay in hours
-		hours := int32(hourly.QueryDelay.Hours())
-		schedule.DelayNumHours = &hours
 	}
 
 	return &pb.MonitorDefinition_Hourly{Hourly: schedule}

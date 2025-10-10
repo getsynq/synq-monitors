@@ -16,7 +16,6 @@ monitors:
       mode:
         anomaly_engine:
             sensitivity: BALANCED
-      daily:
-        time_partitioning_shift: 0s
+      daily: {}
 
 ---

@@ -15,6 +15,7 @@ type YAMLConfig struct {
 		Daily            *YAMLDailySchedule  `yaml:"daily,omitempty"`
 		Hourly           *YAMLHourlySchedule `yaml:"hourly,omitempty"`
 		Mode             *YAMLMode           `yaml:"mode,omitempty"`
+		Timezone         string              `yaml:"timezone,omitempty"`
 	} `yaml:"defaults,omitempty"`
 	Monitors []YAMLMonitor `yaml:"monitors"`
 }
@@ -36,6 +37,7 @@ type YAMLMonitor struct {
 	Mode              *YAMLMode           `yaml:"mode,omitempty"`
 	Daily             *YAMLDailySchedule  `yaml:"daily,omitempty"`
 	Hourly            *YAMLHourlySchedule `yaml:"hourly,omitempty"`
+	Timezone          string              `yaml:"timezone,omitempty"`
 	ConfigID          string              `yaml:"-"`
 }
 
@@ -65,16 +67,16 @@ type YAMLFixedThresholds struct {
 
 // YAMLDailySchedule represents daily schedule configuration
 type YAMLDailySchedule struct {
-	Timezone              string         `yaml:"timezone,omitempty"`
 	TimePartitioningShift *time.Duration `yaml:"time_partitioning_shift,omitempty"`
 	QueryDelay            *time.Duration `yaml:"query_delay,omitempty"`
+	IgnoreLast            *int32         `yaml:"ignore_last,omitempty"`
 }
 
 // YAMLHourlySchedule represents hourly schedule configuration
 type YAMLHourlySchedule struct {
-	Timezone              string         `yaml:"timezone,omitempty"`
 	TimePartitioningShift *time.Duration `yaml:"time_partitioning_shift,omitempty"`
 	QueryDelay            *time.Duration `yaml:"query_delay,omitempty"`
+	IgnoreLast            *int32         `yaml:"ignore_last,omitempty"`
 }
 
 // ConversionError represents an error during YAML to proto conversion

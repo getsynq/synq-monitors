@@ -128,13 +128,18 @@ func (p *YAMLGenerator) generateSingleMonitor(
 		}
 	}
 
+	// Set timezone
+	if protoMonitor.Timezone != "" {
+		yamlMonitor.Timezone = protoMonitor.Timezone
+	}
+
 	// Set schedule
 	if protoMonitor.Schedule != nil {
 		switch t := protoMonitor.Schedule.(type) {
 		case *pb.MonitorDefinition_Daily:
-			yamlMonitor.Daily = convertProtoToDailySchedule(t.Daily, protoMonitor.Timezone)
+			yamlMonitor.Daily = convertProtoToDailySchedule(t.Daily)
 		case *pb.MonitorDefinition_Hourly:
-			yamlMonitor.Hourly = convertProtoToHourlySchedule(t.Hourly, protoMonitor.Timezone)
+			yamlMonitor.Hourly = convertProtoToHourlySchedule(t.Hourly)
 		default:
 			errors = append(errors, ConversionError{
 				Field:   "schedule",
@@ -148,40 +153,40 @@ func (p *YAMLGenerator) generateSingleMonitor(
 }
 
 // convertProtoToDailySchedule converts proto ScheduleDaily to YAMLDailySchedule
-func convertProtoToDailySchedule(daily *pb.ScheduleDaily, timezone string) *YAMLDailySchedule {
-	schedule := &YAMLDailySchedule{
-		Timezone: timezone,
+func convertProtoToDailySchedule(daily *pb.ScheduleDaily) *YAMLDailySchedule {
+	schedule := &YAMLDailySchedule{}
+	if daily.GetDelayNumDays() != 0 {
+		schedule.IgnoreLast = lo.ToPtr(daily.GetDelayNumDays())
 	}
+	duration := time.Duration(daily.GetMinutesSinceMidnight()) * time.Minute
 
 	// Determine if this is time_partitioning_shift or query_delay based on proto fields
-	if daily.DelayNumDays != nil {
-		// This is query_delay
-		duration := time.Duration(*daily.DelayNumDays) * 24 * time.Hour
+	if daily.GetOnlyScheduleDelay() {
 		schedule.QueryDelay = &duration
 	} else {
-		// This is time_partitioning_shift (minutes since midnight)
-		duration := time.Duration(daily.MinutesSinceMidnight) * time.Minute
-		schedule.TimePartitioningShift = &duration
+		if duration != 0 {
+			schedule.TimePartitioningShift = &duration
+		}
 	}
 
 	return schedule
 }
 
 // convertProtoToHourlySchedule converts proto ScheduleHourly to YAMLHourlySchedule
-func convertProtoToHourlySchedule(hourly *pb.ScheduleHourly, timezone string) *YAMLHourlySchedule {
-	schedule := &YAMLHourlySchedule{
-		Timezone: timezone,
+func convertProtoToHourlySchedule(hourly *pb.ScheduleHourly) *YAMLHourlySchedule {
+	schedule := &YAMLHourlySchedule{}
+	if hourly.GetDelayNumHours() != 0 {
+		schedule.IgnoreLast = lo.ToPtr(hourly.GetDelayNumHours())
 	}
-
+	duration := time.Duration(hourly.GetMinuteOfHour()) * time.Minute
 	// Determine if this is time_partitioning_shift or query_delay based on proto fields
-	if hourly.DelayNumHours != nil {
-		// This is query_delay
-		duration := time.Duration(*hourly.DelayNumHours) * time.Hour
+	if hourly.GetOnlyScheduleDelay() {
 		schedule.QueryDelay = &duration
 	} else {
-		// This is time_partitioning_shift (minute of hour)
-		duration := time.Duration(hourly.MinuteOfHour) * time.Minute
-		schedule.TimePartitioningShift = &duration
+		if duration != 0 {
+			// This is time_partitioning_shift (minute of hour)
+			schedule.TimePartitioningShift = &duration
+		}
 	}
 
 	return schedule

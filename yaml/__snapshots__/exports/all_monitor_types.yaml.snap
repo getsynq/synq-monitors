@@ -12,8 +12,7 @@ monitors:
       mode:
         anomaly_engine:
             sensitivity: BALANCED
-      daily:
-        time_partitioning_shift: 0s
+      daily: {}
     - id: e522340e-088a-5eb8-8ee6-77bebd3fbc57
       name: volume_financial_statement
       type: volume
@@ -23,8 +22,7 @@ monitors:
       mode:
         anomaly_engine:
             sensitivity: BALANCED
-      daily:
-        time_partitioning_shift: 0s
+      daily: {}
     - id: 5c6c57a2-91f5-5e87-be4c-497aac1a907f
       name: stats_financial_statement
       type: field_stats
@@ -37,8 +35,7 @@ monitors:
       mode:
         anomaly_engine:
             sensitivity: BALANCED
-      daily:
-        time_partitioning_shift: 0s
+      daily: {}
     - id: e91ae608-1467-5afd-91db-d0ba786197b5
       name: custom_financial_statement_revenue_nonnegative
       type: custom_numeric
@@ -49,7 +46,6 @@ monitors:
       mode:
         fixed_thresholds:
             min: 0
-      daily:
-        time_partitioning_shift: 0s
+      daily: {}
 
 ---

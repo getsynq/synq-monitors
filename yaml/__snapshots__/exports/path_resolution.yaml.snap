@@ -11,8 +11,7 @@ monitors:
       mode:
         anomaly_engine:
             sensitivity: BALANCED
-      daily:
-        time_partitioning_shift: 0s
+      daily: {}
     - id: cd7a6968-78a3-5c9a-8f0e-e2a6bbaae074
       name: runs_volume_daily
       type: volume
@@ -22,7 +21,6 @@ monitors:
       mode:
         anomaly_engine:
             sensitivity: BALANCED
-      daily:
-        time_partitioning_shift: 0s
+      daily: {}
 
 ---

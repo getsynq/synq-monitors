@@ -13,7 +13,6 @@ monitors:
       mode:
         fixed_thresholds:
             max: 1000
-      daily:
-        time_partitioning_shift: 0s
+      daily: {}
 
 ---

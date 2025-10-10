@@ -52,8 +52,7 @@ monitors:
       mode:
         anomaly_engine:
             sensitivity: BALANCED
-      daily:
-        time_partitioning_shift: 0s
+      daily: {}
     - id: 9769be77-e584-5bd5-8289-8321b4a01f4f
       name: custom_numeric_active_users
       type: custom_numeric
