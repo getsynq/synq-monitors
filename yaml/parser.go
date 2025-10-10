@@ -420,7 +420,7 @@ func validateScheduleConfiguration(monitor *YAMLMonitor) ConversionErrors {
 }
 
 // convertDailySchedule converts YAMLDailySchedule to proto ScheduleDaily
-func convertDailySchedule(daily *YAMLDailySchedule) *pb.MonitorDefinition_Daily {
+func convertDailySchedule(daily *YAMLSchedule) *pb.MonitorDefinition_Daily {
 	schedule := &pb.ScheduleDaily{
 		DelayNumDays: daily.IgnoreLast,
 	}
@@ -439,7 +439,7 @@ func convertDailySchedule(daily *YAMLDailySchedule) *pb.MonitorDefinition_Daily 
 }
 
 // convertHourlySchedule converts YAMLHourlySchedule to proto ScheduleHourly
-func convertHourlySchedule(hourly *YAMLHourlySchedule) *pb.MonitorDefinition_Hourly {
+func convertHourlySchedule(hourly *YAMLSchedule) *pb.MonitorDefinition_Hourly {
 	schedule := &pb.ScheduleHourly{
 		DelayNumHours: hourly.IgnoreLast,
 	}

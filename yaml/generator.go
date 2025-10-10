@@ -153,8 +153,8 @@ func (p *YAMLGenerator) generateSingleMonitor(
 }
 
 // convertProtoToDailySchedule converts proto ScheduleDaily to YAMLDailySchedule
-func convertProtoToDailySchedule(daily *pb.ScheduleDaily) *YAMLDailySchedule {
-	schedule := &YAMLDailySchedule{}
+func convertProtoToDailySchedule(daily *pb.ScheduleDaily) *YAMLSchedule {
+	schedule := &YAMLSchedule{}
 	if daily.GetDelayNumDays() != 0 {
 		schedule.IgnoreLast = lo.ToPtr(daily.GetDelayNumDays())
 	}
@@ -173,8 +173,8 @@ func convertProtoToDailySchedule(daily *pb.ScheduleDaily) *YAMLDailySchedule {
 }
 
 // convertProtoToHourlySchedule converts proto ScheduleHourly to YAMLHourlySchedule
-func convertProtoToHourlySchedule(hourly *pb.ScheduleHourly) *YAMLHourlySchedule {
-	schedule := &YAMLHourlySchedule{}
+func convertProtoToHourlySchedule(hourly *pb.ScheduleHourly) *YAMLSchedule {
+	schedule := &YAMLSchedule{}
 	if hourly.GetDelayNumHours() != 0 {
 		schedule.IgnoreLast = lo.ToPtr(hourly.GetDelayNumHours())
 	}

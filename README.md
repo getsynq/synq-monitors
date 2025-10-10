@@ -152,9 +152,9 @@ namespace: "data-team-pipeline"
 
 defaults:
   severity: ERROR
+  timezone: "Europe/Paris" # optional, defaults to UTC if not specified
   daily:
-    timezone: "Europe/Paris" # optional, defaults to UTC if not specified
-    time_partitioning_shift: 1h # optional, defaults to 0s if not specified
+    query_delay: 1h # optional, defaults to 0s if not specified
 
 monitors:
   - name: freshness_on_orders
@@ -182,9 +182,9 @@ monitors:
     mode:
       anomaly_engine:
         sensitivity: BALANCED
+    timezone: "UTC" # optional, defaults to UTC if not specified
     daily:
-      time_partitioning_shift: 0s # midnight (0 seconds since midnight)
-      timezone: "UTC" # optional, defaults to UTC if not specified
+      query_delay: 0s # midnight (0 seconds since midnight)
 
   - name: custom_numeric_active_users
     time_partitioning: registered_at
@@ -212,7 +212,7 @@ monitors:
 - **segmentation**: Column to segment by
 - **filter**: SQL filter expression
 - **mode**: `anomaly_engine` or `fixed_thresholds`
-- **schedule**: `daily` or `hourly` with `time_partitioning_shift` or `query_delay`
+- **schedule**: `daily` or `hourly` with `time_partitioning_shift` (deprecated) or `query_delay`
 
 ## Available YAML Fields
 
@@ -233,6 +233,7 @@ monitors:
 | `defaults.daily`             | object | ❌       | -                                      | Default daily schedule configuration                                     |
 | `defaults.hourly`            | object | ❌       | -                                      | Default hourly schedule configuration                                    |
 | `defaults.mode`              | object | ❌       | `anomaly_engine.sensitivity: BALANCED` | Default detection mode                                                   |
+| `defaults.timezone`          | string | ❌       | `UTC`                                  | Default timezone for schedule execution (e.g., "America/New_York")       |
 
 ### Monitor Fields
 
@@ -253,6 +254,7 @@ monitors:
 | `mode`               | object        | ❌       | `{defaults.mode}`              | Detection mode configuration                                                          |
 | `daily`              | object        | ❌       | `{defaults.daily}`             | Daily schedule configuration                                                          |
 | `hourly`             | object        | ❌       | `{defaults.hourly}`            | Hourly schedule configuration                                                         |
+| `timezone`           | string        | ❌       | `{defaults.timezone}`          | Timezone for schedule execution (e.g., "America/New_York")                            |
 | `namespace`          | string        | ❌       | `{namespace}`                  | Override default namespace ID                                                         |
 
 ### Segmentation Configuration
@@ -275,26 +277,27 @@ monitors:
 
 ### Daily Schedule Configuration
 
-| Field                           | Type     | Required | Default | Description                                                      |
-| ------------------------------- | -------- | -------- | ------- | ---------------------------------------------------------------- |
-| `daily.timezone`                | string   | ❌       | `UTC`   | Timezone for schedule execution (e.g., "America/New_York")       |
-| `daily.time_partitioning_shift` | duration | ❌       | `0s`    | Duration to shift time partitioning (e.g., "1h", "30m", "2h30m") |
-| `daily.query_delay`             | duration | ❌       | -       | Duration to delay query execution (e.g., "1h", "30m", "2h30m")   |
+| Field                           | Type     | Required | Default | Description                                                    |
+| ------------------------------- | -------- | -------- | ------- | -------------------------------------------------------------- |
+| `daily.time_partitioning_shift` | duration | ❌       | -       | Shift of time partitioning. Deprecated, use timezone instead   |
+| `daily.query_delay`             | duration | ❌       | -       | Duration to delay query execution (e.g., "1h", "30m", "2h30m") |
+| `daily.ignore_last`             | int32    | ❌       | -       | Ignore the last X days from the query results                  |
 
 ### Hourly Schedule Configuration
 
-| Field                            | Type     | Required | Default | Description                                                      |
-| -------------------------------- | -------- | -------- | ------- | ---------------------------------------------------------------- |
-| `hourly.timezone`                | string   | ❌       | `UTC`   | Timezone for schedule execution (e.g., "America/New_York")       |
-| `hourly.time_partitioning_shift` | duration | ❌       | `0s`    | Duration to shift time partitioning (e.g., "1h", "30m", "2h30m") |
-| `hourly.query_delay`             | duration | ❌       | -       | Duration to delay query execution (e.g., "1h", "30m", "2h30m")   |
+| Field                            | Type     | Required | Default | Description                                                    |
+| -------------------------------- | -------- | -------- | ------- | -------------------------------------------------------------- |
+| `hourly.time_partitioning_shift` | duration | ❌       | -       | Shift of time partitioning. Deprecated, use timezone instead   |
+| `hourly.query_delay`             | duration | ❌       | -       | Duration to delay query execution (e.g., "1h", "30m", "2h30m") |
+| `hourly.ignore_last`             | int32    | ❌       | -       | Ignore the last X hours from the query results                 |
 
 **Note:**
 
 - Only one of `daily` or `hourly` should be specified per monitor
-- Within each schedule type, only one of `time_partitioning_shift` or `query_delay` should be specified
 - Duration values use Go duration format (e.g., "1h30m", "45m", "2h")
+- Timezone is specified at the monitor or defaults level, not within the schedule object
 - If no timezone is specified, UTC is used as the default
+- `ignore_last` is used to exclude recent data from analysis (e.g., for daily schedules, `ignore_last: 1` ignores the last day; for hourly schedules, it ignores the last hour)
 
 ### Field Requirements by Monitor Type
 

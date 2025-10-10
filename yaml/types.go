@@ -10,35 +10,35 @@ import (
 type YAMLConfig struct {
 	ConfigID string `yaml:"namespace"`
 	Defaults struct {
-		Severity         string              `yaml:"severity,omitempty"`
-		TimePartitioning string              `yaml:"time_partitioning,omitempty"`
-		Daily            *YAMLDailySchedule  `yaml:"daily,omitempty"`
-		Hourly           *YAMLHourlySchedule `yaml:"hourly,omitempty"`
-		Mode             *YAMLMode           `yaml:"mode,omitempty"`
-		Timezone         string              `yaml:"timezone,omitempty"`
+		Severity         string        `yaml:"severity,omitempty"`
+		TimePartitioning string        `yaml:"time_partitioning,omitempty"`
+		Daily            *YAMLSchedule `yaml:"daily,omitempty"`
+		Hourly           *YAMLSchedule `yaml:"hourly,omitempty"`
+		Mode             *YAMLMode     `yaml:"mode,omitempty"`
+		Timezone         string        `yaml:"timezone,omitempty"`
 	} `yaml:"defaults,omitempty"`
 	Monitors []YAMLMonitor `yaml:"monitors"`
 }
 
 // YAMLMonitor represents a monitor in YAML format
 type YAMLMonitor struct {
-	Id                string              `yaml:"id"`
-	Name              string              `yaml:"name,omitempty"` //default: `{id}`
-	Type              string              `yaml:"type"`
-	Expression        string              `yaml:"expression,omitempty"`
-	MetricAggregation string              `yaml:"metric_aggregation,omitempty"`
-	MonitoredIDs      []string            `yaml:"monitored_ids,omitempty"`
-	MonitoredID       string              `yaml:"monitored_id,omitempty"`
-	Fields            []string            `yaml:"fields,omitempty"`
-	Segmentation      *YAMLSegmentation   `yaml:"segmentation,omitempty"`
-	Filter            string              `yaml:"filter,omitempty"`
-	Severity          string              `yaml:"severity,omitempty"`
-	TimePartitioning  string              `yaml:"time_partitioning,omitempty"`
-	Mode              *YAMLMode           `yaml:"mode,omitempty"`
-	Daily             *YAMLDailySchedule  `yaml:"daily,omitempty"`
-	Hourly            *YAMLHourlySchedule `yaml:"hourly,omitempty"`
-	Timezone          string              `yaml:"timezone,omitempty"`
-	ConfigID          string              `yaml:"-"`
+	Id                string            `yaml:"id"`
+	Name              string            `yaml:"name,omitempty"` //default: `{id}`
+	Type              string            `yaml:"type"`
+	Expression        string            `yaml:"expression,omitempty"`
+	MetricAggregation string            `yaml:"metric_aggregation,omitempty"`
+	MonitoredIDs      []string          `yaml:"monitored_ids,omitempty"`
+	MonitoredID       string            `yaml:"monitored_id,omitempty"`
+	Fields            []string          `yaml:"fields,omitempty"`
+	Segmentation      *YAMLSegmentation `yaml:"segmentation,omitempty"`
+	Filter            string            `yaml:"filter,omitempty"`
+	Severity          string            `yaml:"severity,omitempty"`
+	TimePartitioning  string            `yaml:"time_partitioning,omitempty"`
+	Mode              *YAMLMode         `yaml:"mode,omitempty"`
+	Daily             *YAMLSchedule     `yaml:"daily,omitempty"`
+	Hourly            *YAMLSchedule     `yaml:"hourly,omitempty"`
+	Timezone          string            `yaml:"timezone,omitempty"`
+	ConfigID          string            `yaml:"-"`
 }
 
 type YAMLSegmentation struct {
@@ -65,15 +65,7 @@ type YAMLFixedThresholds struct {
 	Max *float64 `yaml:"max,omitempty"`
 }
 
-// YAMLDailySchedule represents daily schedule configuration
-type YAMLDailySchedule struct {
-	TimePartitioningShift *time.Duration `yaml:"time_partitioning_shift,omitempty"`
-	QueryDelay            *time.Duration `yaml:"query_delay,omitempty"`
-	IgnoreLast            *int32         `yaml:"ignore_last,omitempty"`
-}
-
-// YAMLHourlySchedule represents hourly schedule configuration
-type YAMLHourlySchedule struct {
+type YAMLSchedule struct {
 	TimePartitioningShift *time.Duration `yaml:"time_partitioning_shift,omitempty"`
 	QueryDelay            *time.Duration `yaml:"query_delay,omitempty"`
 	IgnoreLast            *int32         `yaml:"ignore_last,omitempty"`
