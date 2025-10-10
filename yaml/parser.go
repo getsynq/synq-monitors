@@ -427,7 +427,7 @@ func convertDailySchedule(daily *YAMLDailySchedule) *pb.MonitorDefinition_Daily 
 
 	// Handle time_partitioning_shift or query_delay
 	if daily.QueryDelay != nil {
-		minutes := int32(daily.TimePartitioningShift.Minutes())
+		minutes := int32(daily.QueryDelay.Minutes())
 		schedule.MinutesSinceMidnight = minutes % 1440 // Ensure within 24 hours
 		schedule.OnlyScheduleDelay = true
 	} else if daily.TimePartitioningShift != nil {

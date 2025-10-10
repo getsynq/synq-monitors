@@ -5,7 +5,8 @@
   "sensitivity": "SENSITIVITY_BALANCED"
  },
  "daily": {
-  "minutesSinceMidnight": 60
+  "minutesSinceMidnight": 60,
+  "onlyScheduleDelay": true
  },
  "id": "0d447202-5622-5005-aea8-86520caac8f0",
  "monitoredId": {

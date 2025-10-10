@@ -6,6 +6,6 @@ monitors:
     time_partitioning: created_at
     timezone: Europe/Prague
     daily:
-      time_partitioning_shift: 1h
+      query_delay: 1h
     monitored_ids:
       - ch-prod.default.runs

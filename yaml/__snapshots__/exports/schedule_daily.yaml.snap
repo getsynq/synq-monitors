@@ -12,7 +12,7 @@ monitors:
         anomaly_engine:
             sensitivity: BALANCED
       daily:
-        time_partitioning_shift: 1h0m0s
+        query_delay: 1h0m0s
       timezone: Europe/Prague
 
 ---
