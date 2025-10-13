@@ -16,7 +16,6 @@ monitors:
       mode:
         anomaly_engine:
             sensitivity: BALANCED
-      schedule:
-        daily: 0
+      daily: {}
 
 ---

@@ -62,6 +62,11 @@ func (p *YAMLParser) ConvertToMonitorDefinitions() ([]*pb.MonitorDefinition, Con
 			})
 		}
 
+		// Validate schedule configuration
+		if scheduleErrors := validateScheduleConfiguration(&yamlMonitor); scheduleErrors.HasErrors() {
+			errors = append(errors, scheduleErrors...)
+		}
+
 		monitoredIds := yamlMonitor.MonitoredIDs
 		if len(yamlMonitor.MonitoredID) > 0 {
 			monitoredIds = append(monitoredIds, yamlMonitor.MonitoredID)
@@ -295,40 +300,29 @@ func convertSingleMonitor(
 		}
 	}
 
-	// Set schedule
-	schedule := config.Defaults.Schedule
-	if yamlMonitor.Schedule != nil {
-		schedule = yamlMonitor.Schedule
+	// Set timezone
+	confTimezone := config.Defaults.Timezone
+	if yamlMonitor.Timezone != "" {
+		confTimezone = yamlMonitor.Timezone
 	}
-	if schedule == nil {
+	proto.Timezone = confTimezone
+
+	// Set schedule
+	if yamlMonitor.Daily != nil {
+		proto.Schedule = convertDailySchedule(yamlMonitor.Daily)
+	} else if yamlMonitor.Hourly != nil {
+		proto.Schedule = convertHourlySchedule(yamlMonitor.Hourly)
+	} else if config.Defaults.Daily != nil {
+		proto.Schedule = convertDailySchedule(config.Defaults.Daily)
+	} else if config.Defaults.Hourly != nil {
+		proto.Schedule = convertHourlySchedule(config.Defaults.Hourly)
+	} else {
+		// Default to daily at midnight
 		proto.Schedule = &pb.MonitorDefinition_Daily{
 			Daily: &pb.ScheduleDaily{
 				MinutesSinceMidnight: int32(0),
 			},
 		}
-	} else {
-		if schedule.Daily != nil {
-			proto.Schedule = &pb.MonitorDefinition_Daily{
-				Daily: &pb.ScheduleDaily{
-					MinutesSinceMidnight: int32(*schedule.Daily),
-					DelayNumDays:         schedule.Delay,
-				},
-			}
-		} else if schedule.Hourly != nil {
-			proto.Schedule = &pb.MonitorDefinition_Hourly{
-				Hourly: &pb.ScheduleHourly{
-					MinuteOfHour:  int32(*schedule.Hourly),
-					DelayNumHours: schedule.Delay,
-				},
-			}
-		}
-	}
-
-	// set timezone
-	if yamlMonitor.Schedule != nil && yamlMonitor.Schedule.Timezone != "" {
-		proto.Timezone = yamlMonitor.Schedule.Timezone
-	} else if config.Defaults.Schedule != nil && config.Defaults.Schedule.Timezone != "" {
-		proto.Timezone = config.Defaults.Schedule.Timezone
 	}
 	return proto, errors
 }
@@ -384,4 +378,83 @@ func GetYAMLSummary(config *YAMLConfig) map[string]interface{} {
 	summary["monitor_types"] = typeCount
 
 	return summary
+}
+
+// validateScheduleConfiguration validates the new daily/hourly schedule structure
+func validateScheduleConfiguration(monitor *YAMLMonitor) ConversionErrors {
+	var errors ConversionErrors
+
+	// Check mutual exclusivity between daily and hourly
+	if monitor.Daily != nil && monitor.Hourly != nil {
+		errors = append(errors, ConversionError{
+			Field:   "schedule",
+			Message: "daily and hourly schedules are mutually exclusive",
+			Monitor: monitor.Id,
+		})
+		return errors // Return early since both can't be set
+	}
+
+	// Validate daily schedule
+	if monitor.Daily != nil {
+		if monitor.Daily.TimePartitioningShift != nil && monitor.Daily.QueryDelay != nil {
+			errors = append(errors, ConversionError{
+				Field:   "daily",
+				Message: "time_partitioning_shift and query_delay are mutually exclusive within daily schedule",
+				Monitor: monitor.Id,
+			})
+		}
+	}
+
+	// Validate hourly schedule
+	if monitor.Hourly != nil {
+		if monitor.Hourly.TimePartitioningShift != nil && monitor.Hourly.QueryDelay != nil {
+			errors = append(errors, ConversionError{
+				Field:   "hourly",
+				Message: "time_partitioning_shift and query_delay are mutually exclusive within hourly schedule",
+				Monitor: monitor.Id,
+			})
+		}
+	}
+
+	return errors
+}
+
+// convertDailySchedule converts YAMLDailySchedule to proto ScheduleDaily
+func convertDailySchedule(daily *YAMLSchedule) *pb.MonitorDefinition_Daily {
+	schedule := &pb.ScheduleDaily{
+		DelayNumDays: daily.IgnoreLast,
+	}
+
+	// Handle time_partitioning_shift or query_delay
+	if daily.QueryDelay != nil {
+		minutes := int32(daily.QueryDelay.Minutes())
+		schedule.MinutesSinceMidnight = minutes % 1440 // Ensure within 24 hours
+		schedule.OnlyScheduleDelay = true
+	} else if daily.TimePartitioningShift != nil {
+		minutes := int32(daily.TimePartitioningShift.Minutes())
+		schedule.MinutesSinceMidnight = minutes % 1440 // Ensure within 24 hours
+	}
+
+	return &pb.MonitorDefinition_Daily{Daily: schedule}
+}
+
+// convertHourlySchedule converts YAMLHourlySchedule to proto ScheduleHourly
+func convertHourlySchedule(hourly *YAMLSchedule) *pb.MonitorDefinition_Hourly {
+	schedule := &pb.ScheduleHourly{
+		DelayNumHours: hourly.IgnoreLast,
+	}
+
+	// Handle time_partitioning_shift or query_delay
+	if hourly.QueryDelay != nil {
+		// Convert duration to delay in hours
+		minutes := int32(hourly.QueryDelay.Minutes())
+		schedule.MinuteOfHour = minutes % 60 // Ensure within hour
+		schedule.OnlyScheduleDelay = true
+	} else if hourly.TimePartitioningShift != nil {
+		// Convert duration to minute of hour
+		minutes := int32(hourly.TimePartitioningShift.Minutes())
+		schedule.MinuteOfHour = minutes % 60 // Ensure within hour
+	}
+
+	return &pb.MonitorDefinition_Hourly{Hourly: schedule}
 }

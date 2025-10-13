@@ -152,8 +152,9 @@ namespace: "data-team-pipeline"
 
 defaults:
   severity: ERROR
-  schedule:
-    timezone: "Europe/Paris" # optional, defaults to UTC if not specified
+  timezone: "Europe/Paris" # optional, defaults to UTC if not specified
+  daily:
+    query_delay: 1h # optional, defaults to 0s if not specified
 
 monitors:
   - name: freshness_on_orders
@@ -181,9 +182,9 @@ monitors:
     mode:
       anomaly_engine:
         sensitivity: BALANCED
-    schedule:
-      daily: 0 # midnight (0 minutes since midnight)
-      timezone: "UTC" # optional, defaults to UTC if not specified
+    timezone: "UTC" # optional, defaults to UTC if not specified
+    daily:
+      query_delay: 0s # midnight (0 seconds since midnight)
 
   - name: custom_numeric_active_users
     time_partitioning: registered_at
@@ -195,8 +196,8 @@ monitors:
       fixed_thresholds:
         min: 100
         max: 10000
-    schedule:
-      hourly: 15 # 15 minutes past each hour
+    hourly:
+      query_delay: 15m # 15 minutes delay for hourly execution
 ```
 
 ## Monitor Types
@@ -211,7 +212,7 @@ monitors:
 - **segmentation**: Column to segment by
 - **filter**: SQL filter expression
 - **mode**: `anomaly_engine` or `fixed_thresholds`
-- **schedule**: `daily` (minutes since midnight 0-1439) or `hourly` (minute 0-59)
+- **schedule**: `daily` or `hourly` with `time_partitioning_shift` (deprecated) or `query_delay`
 
 ## Available YAML Fields
 
@@ -229,8 +230,10 @@ monitors:
 | ---------------------------- | ------ | -------- | -------------------------------------- | ------------------------------------------------------------------------ |
 | `defaults.severity`          | string | ❌       | `ERROR`                                | Default severity level for monitors. Possible values: `WARNING`, `ERROR` |
 | `defaults.time_partitioning` | string | ❌       | -                                      | Default time partitioning expression                                     |
-| `defaults.schedule`          | object | ❌       | `daily: 0` (midnight)                  | Default schedule configuration                                           |
+| `defaults.daily`             | object | ❌       | -                                      | Default daily schedule configuration                                     |
+| `defaults.hourly`            | object | ❌       | -                                      | Default hourly schedule configuration                                    |
 | `defaults.mode`              | object | ❌       | `anomaly_engine.sensitivity: BALANCED` | Default detection mode                                                   |
+| `defaults.timezone`          | string | ❌       | `UTC`                                  | Default timezone for schedule execution (e.g., "America/New_York")       |
 
 ### Monitor Fields
 
@@ -249,7 +252,9 @@ monitors:
 | `severity`           | string        | ❌       | `{defaults.severity}`          | Monitor severity level. Possible values: `WARNING`, `ERROR`                           |
 | `time_partitioning`  | string        | ❌       | `{defaults.time_partitioning}` | Time partitioning expression                                                          |
 | `mode`               | object        | ❌       | `{defaults.mode}`              | Detection mode configuration                                                          |
-| `schedule`           | object        | ❌       | `{defaults.schedule}`          | Schedule configuration                                                                |
+| `daily`              | object        | ❌       | `{defaults.daily}`             | Daily schedule configuration                                                          |
+| `hourly`             | object        | ❌       | `{defaults.hourly}`            | Hourly schedule configuration                                                         |
+| `timezone`           | string        | ❌       | `{defaults.timezone}`          | Timezone for schedule execution (e.g., "America/New_York")                            |
 | `namespace`          | string        | ❌       | `{namespace}`                  | Override default namespace ID                                                         |
 
 ### Segmentation Configuration
@@ -270,16 +275,29 @@ monitors:
 
 **Note:** Only one of `anomaly_engine` or `fixed_thresholds` should be specified per mode.
 
-### Schedule Configuration
+### Daily Schedule Configuration
 
-| Field               | Type   | Required | Default | Description                                                |
-| ------------------- | ------ | -------- | ------- | ---------------------------------------------------------- |
-| `schedule.daily`    | int    | ❌       | -       | Minutes since midnight (0-1439) for daily execution        |
-| `schedule.hourly`   | int    | ❌       | -       | Minute of hour (0-59) for hourly execution                 |
-| `schedule.delay`    | int32  | ❌       | -       | Number of intervals to delay by (ignores last X intervals) |
-| `schedule.timezone` | string | ❌       | `UTC`   | Timezone for schedule execution (e.g., "America/New_York") |
+| Field                           | Type     | Required | Default | Description                                                    |
+| ------------------------------- | -------- | -------- | ------- | -------------------------------------------------------------- |
+| `daily.time_partitioning_shift` | duration | ❌       | -       | Shift of time partitioning. Deprecated, use timezone instead   |
+| `daily.query_delay`             | duration | ❌       | -       | Duration to delay query execution (e.g., "1h", "30m", "2h30m") |
+| `daily.ignore_last`             | int32    | ❌       | -       | Ignore the last X days from the query results                  |
 
-**Note:** Only one of `daily` or `hourly` should be specified per schedule. If no timezone is specified, UTC is used as the default.
+### Hourly Schedule Configuration
+
+| Field                            | Type     | Required | Default | Description                                                    |
+| -------------------------------- | -------- | -------- | ------- | -------------------------------------------------------------- |
+| `hourly.time_partitioning_shift` | duration | ❌       | -       | Shift of time partitioning. Deprecated, use timezone instead   |
+| `hourly.query_delay`             | duration | ❌       | -       | Duration to delay query execution (e.g., "1h", "30m", "2h30m") |
+| `hourly.ignore_last`             | int32    | ❌       | -       | Ignore the last X hours from the query results                 |
+
+**Note:**
+
+- Only one of `daily` or `hourly` should be specified per monitor
+- Duration values use Go duration format (e.g., "1h30m", "45m", "2h")
+- Timezone is specified at the monitor or defaults level, not within the schedule object
+- If no timezone is specified, UTC is used as the default
+- `ignore_last` is used to exclude recent data from analysis (e.g., for daily schedules, `ignore_last: 1` ignores the last day; for hourly schedules, it ignores the last hour)
 
 ### Field Requirements by Monitor Type
 
@@ -339,8 +357,8 @@ monitors:
 - **Purpose**: Configure detection mode (anomaly detection or fixed thresholds)
 - **Mutually Exclusive**: `anomaly_engine` OR `fixed_thresholds`
 
-#### YAMLSchedule
+#### YAMLDailySchedule / YAMLHourlySchedule
 
 - **Purpose**: Configure monitor execution schedule
 - **Mutually Exclusive**: `daily` OR `hourly`
-- **Optional**: `delay` (can be used with either)
+- **Mutually Exclusive within each**: `time_partitioning_shift` OR `query_delay`

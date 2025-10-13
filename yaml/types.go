@@ -3,6 +3,7 @@ package yaml
 import (
 	"fmt"
 	"strings"
+	"time"
 )
 
 // YAMLConfig represents the YAML file structure
@@ -11,8 +12,10 @@ type YAMLConfig struct {
 	Defaults struct {
 		Severity         string        `yaml:"severity,omitempty"`
 		TimePartitioning string        `yaml:"time_partitioning,omitempty"`
-		Schedule         *YAMLSchedule `yaml:"schedule,omitempty"` // default: daily at midnight
+		Daily            *YAMLSchedule `yaml:"daily,omitempty"`
+		Hourly           *YAMLSchedule `yaml:"hourly,omitempty"`
 		Mode             *YAMLMode     `yaml:"mode,omitempty"`
+		Timezone         string        `yaml:"timezone,omitempty"`
 	} `yaml:"defaults,omitempty"`
 	Monitors []YAMLMonitor `yaml:"monitors"`
 }
@@ -32,7 +35,9 @@ type YAMLMonitor struct {
 	Severity          string            `yaml:"severity,omitempty"`
 	TimePartitioning  string            `yaml:"time_partitioning,omitempty"`
 	Mode              *YAMLMode         `yaml:"mode,omitempty"`
-	Schedule          *YAMLSchedule     `yaml:"schedule,omitempty"`
+	Daily             *YAMLSchedule     `yaml:"daily,omitempty"`
+	Hourly            *YAMLSchedule     `yaml:"hourly,omitempty"`
+	Timezone          string            `yaml:"timezone,omitempty"`
 	ConfigID          string            `yaml:"-"`
 }
 
@@ -60,12 +65,10 @@ type YAMLFixedThresholds struct {
 	Max *float64 `yaml:"max,omitempty"`
 }
 
-// YAMLSchedule represents schedule configuration
 type YAMLSchedule struct {
-	Timezone string `yaml:"timezone,omitempty"`
-	Daily    *int   `yaml:"daily,omitempty"`  // Minutes since midnight (0-1439)
-	Hourly   *int   `yaml:"hourly,omitempty"` // Minute of hour (0-59)
-	Delay    *int32 `yaml:"delay,omitempty"`  // Number of chosen intervals to delay by. Ignores last `X` intervals.
+	TimePartitioningShift *time.Duration `yaml:"time_partitioning_shift,omitempty"`
+	QueryDelay            *time.Duration `yaml:"query_delay,omitempty"`
+	IgnoreLast            *int32         `yaml:"ignore_last,omitempty"`
 }
 
 // ConversionError represents an error during YAML to proto conversion

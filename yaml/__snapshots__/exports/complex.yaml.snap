@@ -12,8 +12,8 @@ monitors:
       mode:
         anomaly_engine:
             sensitivity: BALANCED
-      schedule:
-        daily: 0
+      daily:
+        query_delay: 2h0m0s
     - id: 24a0e18e-5ef3-5269-ba2b-fbec88270430
       name: freshness_on_orders
       type: freshness
@@ -24,8 +24,8 @@ monitors:
       mode:
         anomaly_engine:
             sensitivity: BALANCED
-      schedule:
-        daily: 0
+      daily:
+        query_delay: 2h0m0s
     - id: c20b07ae-27f5-50ff-ab17-7b11bed097dd
       name: volume_on_logs
       type: volume
@@ -38,8 +38,8 @@ monitors:
       mode:
         anomaly_engine:
             sensitivity: BALANCED
-      schedule:
-        daily: 0
+      daily:
+        query_delay: 2h0m0s
     - id: 911f832a-8ce5-5b14-930d-28d37a4f37b3
       name: stats_on_user_fields
       type: field_stats
@@ -52,8 +52,7 @@ monitors:
       mode:
         anomaly_engine:
             sensitivity: BALANCED
-      schedule:
-        daily: 0
+      daily: {}
     - id: 9769be77-e584-5bd5-8289-8321b4a01f4f
       name: custom_numeric_active_users
       type: custom_numeric
@@ -65,7 +64,7 @@ monitors:
         fixed_thresholds:
             min: 100
             max: 10000
-      schedule:
-        daily: 0
+      daily:
+        query_delay: 2h0m0s
 
 ---

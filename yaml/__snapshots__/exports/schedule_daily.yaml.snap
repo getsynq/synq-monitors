@@ -11,8 +11,8 @@ monitors:
       mode:
         anomaly_engine:
             sensitivity: BALANCED
-      schedule:
-        timezone: Europe/Prague
-        daily: 15
+      daily:
+        query_delay: 1h0m0s
+      timezone: Europe/Prague
 
 ---
