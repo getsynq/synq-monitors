@@ -6,6 +6,7 @@ import (
 	pb "buf.build/gen/go/getsynq/api/protocolbuffers/go/synq/monitors/custom_monitors/v1"
 	"github.com/getsynq/monitors_mgmt/yaml/core"
 	"github.com/getsynq/monitors_mgmt/yaml/v1beta1"
+	"github.com/getsynq/monitors_mgmt/yaml/v1beta2"
 	"github.com/samber/lo"
 )
 
@@ -15,6 +16,7 @@ type VersionedGenerator struct {
 
 var generatorConstructors = map[string]func(string, []*pb.MonitorDefinition) core.Generator{
 	core.Version_V1Beta1: v1beta1.NewYAMLGenerator,
+	core.Version_V1Beta2: v1beta2.NewYAMLGenerator,
 }
 
 func NewVersionedGenerator(version string, configId string, monitors []*pb.MonitorDefinition) (*VersionedGenerator, error) {
