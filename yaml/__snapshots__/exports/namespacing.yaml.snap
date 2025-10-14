@@ -1,5 +1,6 @@
 
 [TestYAMLGeneratorSuite/TestExamples - 1]
+version: beta-1
 namespace: team-Y
 monitors:
     - id: 303011a1-a77a-5b05-9f19-fc73b0bc14a9

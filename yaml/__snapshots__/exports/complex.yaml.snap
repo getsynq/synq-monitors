@@ -1,5 +1,6 @@
 
 [TestYAMLGeneratorSuite/TestExamples - 1]
+version: beta-1
 namespace: data-team-pipeline
 monitors:
     - id: e90ecd7b-111d-5f14-9da7-e94c08f67655
