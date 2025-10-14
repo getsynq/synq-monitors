@@ -11,7 +11,6 @@ import (
 	"github.com/getsynq/monitors_mgmt/uuid"
 	"github.com/gkampitakis/go-snaps/snaps"
 	"github.com/stretchr/testify/suite"
-	goyaml "gopkg.in/yaml.v3"
 )
 
 type YAMLGeneratorSuite struct {
@@ -47,32 +46,29 @@ func (s *YAMLGeneratorSuite) TestExamples() {
 		yamlContent, err := os.ReadFile(file)
 		s.Require().NoError(err)
 
-		var config *YAMLConfig
-		err = goyaml.Unmarshal(yamlContent, &config)
-		s.Require().NoError(err)
-
-		yamlParser := NewYAMLParser(config)
+		yamlParser, err := NewYAMLParser(yamlContent)
 		s.Require().NoError(err)
 
 		// Convert to protobuf
-		protoMonitors, conversionErrors := yamlParser.ConvertToMonitorDefinitions()
-		s.Require().False(conversionErrors.HasErrors(), conversionErrors.Error())
+		protoMonitors, err := yamlParser.ConvertToMonitorDefinitions()
+		s.Require().NoError(err)
 
 		uuidGenerator := uuid.NewUUIDGenerator(s.workspace)
 		for i := range protoMonitors {
 			protoMonitors[i] = sanitize(protoMonitors[i], uuidGenerator)
 		}
 
-		generator := NewYAMLGenerator(config.ConfigID, protoMonitors)
-		config, convErrors := generator.GenerateYAML()
-		s.Require().False(convErrors.HasErrors())
-
-		bytes, err := goyaml.Marshal(config)
+		configID := yamlParser.GetConfigID()
+		generator, err := NewVersionedGenerator(DefaultVersion, configID, protoMonitors)
 		s.Require().NoError(err)
+
+		yamlBytes, err := generator.GenerateYAML()
+		s.Require().NoError(err)
+
 		snapFileName := filepath.Join("exports", filepath.Base(file))
 		snaps.WithConfig(snaps.Filename(snapFileName)).MatchSnapshot(
 			s.T(),
-			string(bytes),
+			string(yamlBytes),
 		)
 	}
 

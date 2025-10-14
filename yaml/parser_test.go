@@ -15,7 +15,6 @@ import (
 	"github.com/gkampitakis/go-snaps/snaps"
 	"github.com/stretchr/testify/suite"
 	"google.golang.org/protobuf/encoding/protojson"
-	goyaml "gopkg.in/yaml.v3"
 )
 
 type YAMLParserSuite struct {
@@ -38,29 +37,26 @@ func (s *YAMLParserSuite) TestExamples() {
 	s.Require().True(ok)
 	examplesFolder := filepath.Join(filepath.Dir(thisfile), "../examples")
 	files := []string{}
-	filepath.WalkDir(examplesFolder, func(path string, d fs.DirEntry, err error) error {
+	err := filepath.WalkDir(examplesFolder, func(path string, d fs.DirEntry, err error) error {
 		s.Require().NoError(err)
 		if filepath.Ext(d.Name()) == ".yaml" || filepath.Ext(d.Name()) == ".yml" {
 			files = append(files, path)
 		}
 		return nil
 	})
+	s.Require().NoError(err)
 
 	for _, file := range files {
 		fmt.Printf("Parsing file: %s\n", file)
 		yamlContent, err := os.ReadFile(file)
 		s.Require().NoError(err)
 
-		var config YAMLConfig
-		err = goyaml.Unmarshal(yamlContent, &config)
-		s.Require().NoError(err)
-
-		yamlParser := NewYAMLParser(&config)
+		yamlParser, err := NewYAMLParser(yamlContent)
 		s.Require().NoError(err)
 
 		// Convert to protobuf
-		protoMonitors, conversionErrors := yamlParser.ConvertToMonitorDefinitions()
-		s.Require().False(conversionErrors.HasErrors(), conversionErrors.Error())
+		protoMonitors, err := yamlParser.ConvertToMonitorDefinitions()
+		s.Require().NoError(err)
 
 		for _, monitor := range protoMonitors {
 			monitor = sanitize(monitor, s.uuidGenerator)
@@ -75,7 +71,6 @@ func (s *YAMLParserSuite) TestExamples() {
 		}
 
 	}
-
 }
 
 func sanitize(monitor *pb.MonitorDefinition, uuidGenerator *uuid.UUIDGenerator) *pb.MonitorDefinition {
