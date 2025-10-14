@@ -51,7 +51,7 @@ func (s *YAMLParserSuite) TestExamples() {
 		yamlContent, err := os.ReadFile(file)
 		s.Require().NoError(err)
 
-		yamlParser, err := NewYAMLParser(yamlContent)
+		yamlParser, err := NewVersionedParser(yamlContent)
 		s.Require().NoError(err)
 
 		// Convert to protobuf

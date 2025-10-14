@@ -5,66 +5,31 @@ import (
 
 	pb "buf.build/gen/go/getsynq/api/protocolbuffers/go/synq/monitors/custom_monitors/v1"
 	beta1 "github.com/getsynq/monitors_mgmt/yaml/beta-1"
-	"gopkg.in/yaml.v3"
+	"github.com/getsynq/monitors_mgmt/yaml/core"
+	"github.com/samber/lo"
 )
 
 type VersionedGenerator struct {
-	version  string
-	configId string
-	monitors []*pb.MonitorDefinition
+	core.Generator
+}
+
+var generatorConstructors = map[string]func(string, []*pb.MonitorDefinition) core.Generator{
+	core.Version_V1Beta1: beta1.NewYAMLGenerator,
 }
 
 func NewVersionedGenerator(version string, configId string, monitors []*pb.MonitorDefinition) (*VersionedGenerator, error) {
 	if version == "" {
-		version = DefaultVersion
+		version = core.Version_Default
 	}
 
-	switch version {
-	case "beta-1":
-	default:
-		return nil, fmt.Errorf("unsupported YAML version: %s", version)
+	constructor, ok := generatorConstructors[version]
+	if !ok {
+		return nil, fmt.Errorf("version %s not supported, supported versions: %v", version, lo.Keys(generatorConstructors))
 	}
+
+	generator := constructor(configId, monitors)
 
 	return &VersionedGenerator{
-		version:  version,
-		configId: configId,
-		monitors: monitors,
+		Generator: generator,
 	}, nil
-}
-
-func (vg *VersionedGenerator) GenerateYAML() ([]byte, error) {
-	switch vg.version {
-	case "beta-1":
-		return vg.generateBeta1()
-	default:
-		return nil, fmt.Errorf("unsupported YAML version: %s", vg.version)
-	}
-}
-
-func (vg *VersionedGenerator) GetVersion() string {
-	return vg.version
-}
-
-func (vg *VersionedGenerator) generateBeta1() ([]byte, error) {
-	generator := beta1.NewYAMLGenerator(vg.configId, vg.monitors)
-	config, convErrors := generator.GenerateYAML()
-
-	if convErrors.HasErrors() {
-		return nil, fmt.Errorf("conversion errors: %v", convErrors)
-	}
-
-	versionedConfig := struct {
-		Version string            `yaml:"version"`
-		Config  *beta1.YAMLConfig `yaml:",inline"`
-	}{
-		Version: vg.version,
-		Config:  config,
-	}
-
-	yamlBytes, err := yaml.Marshal(versionedConfig)
-	if err != nil {
-		return nil, fmt.Errorf("failed to marshal YAML: %v", err)
-	}
-
-	return yamlBytes, nil
 }

@@ -6,24 +6,70 @@ import (
 
 	entitiesv1 "buf.build/gen/go/getsynq/api/protocolbuffers/go/synq/entities/v1"
 	pb "buf.build/gen/go/getsynq/api/protocolbuffers/go/synq/monitors/custom_monitors/v1"
+	"github.com/getsynq/monitors_mgmt/yaml/core"
+	"github.com/pkg/errors"
 	"google.golang.org/protobuf/types/known/wrapperspb"
+	goyaml "gopkg.in/yaml.v3"
 )
 
 type YAMLParser struct {
 	yamlConfig *YAMLConfig
 }
 
-func NewYAMLParser(config *YAMLConfig) *YAMLParser {
+func (p *YAMLParser) GetConfigID() string {
+	return p.yamlConfig.ID
+}
+
+func (p *YAMLParser) GetVersion() string {
+	return core.Version_V1Beta1
+}
+
+func (p *YAMLParser) GetYAMLSummary(config any) map[string]any {
+	conf, ok := config.(*YAMLConfig)
+	if !ok {
+		panic("type mismatch")
+	}
+	summary := make(map[string]any)
+	summary["namespace"] = conf.ID
+	summary["monitors_count"] = len(conf.Monitors)
+
+	if conf.Defaults.Severity != "" {
+		summary["default_severity"] = conf.Defaults.Severity
+	}
+	if conf.Defaults.TimePartitioning != "" {
+		summary["default_time_partitioning"] = conf.Defaults.TimePartitioning
+	}
+
+	typeCount := make(map[string]int)
+	for _, monitor := range conf.Monitors {
+		typeCount[monitor.Type]++
+	}
+	summary["monitor_types"] = typeCount
+
+	return summary
+}
+
+func NewYAMLParser(config *YAMLConfig) core.Parser {
 	return &YAMLParser{
 		yamlConfig: config,
 	}
+}
+
+func NewYAMLParserFromBytes(bytes []byte) (core.Parser, error) {
+	var config *YAMLConfig
+	err := goyaml.Unmarshal(bytes, &config)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to parse YAML")
+	}
+
+	return NewYAMLParser(config), nil
 }
 
 func (p *YAMLParser) GetYAMLConfig() *YAMLConfig {
 	return p.yamlConfig
 }
 
-func (p *YAMLParser) ConvertToMonitorDefinitions() ([]*pb.MonitorDefinition, ConversionErrors) {
+func (p *YAMLParser) ConvertToMonitorDefinitions() ([]*pb.MonitorDefinition, error) {
 	var errors ConversionErrors
 	var protoMonitors []*pb.MonitorDefinition
 	existingMonitorIds := make(map[string]bool)
@@ -61,7 +107,7 @@ func (p *YAMLParser) ConvertToMonitorDefinitions() ([]*pb.MonitorDefinition, Con
 			})
 		}
 
-		if scheduleErrors := validateScheduleConfiguration(&yamlMonitor); scheduleErrors.HasErrors() {
+		if scheduleErrors := validateScheduleConfiguration(&yamlMonitor); len(scheduleErrors) > 0 {
 			errors = append(errors, scheduleErrors...)
 		}
 
@@ -72,7 +118,7 @@ func (p *YAMLParser) ConvertToMonitorDefinitions() ([]*pb.MonitorDefinition, Con
 
 		for _, monitoredID := range monitoredIds {
 			protoMonitor, convErrors := convertSingleMonitor(&yamlMonitor, p.yamlConfig, monitoredID)
-			if convErrors.HasErrors() {
+			if len(convErrors) > 0 {
 				errors = append(errors, convErrors...)
 				continue
 			}
@@ -80,7 +126,11 @@ func (p *YAMLParser) ConvertToMonitorDefinitions() ([]*pb.MonitorDefinition, Con
 		}
 	}
 
-	return protoMonitors, errors
+	if len(errors) > 0 {
+		return protoMonitors, errors
+	}
+
+	return protoMonitors, nil
 }
 
 func convertSingleMonitor(
@@ -92,7 +142,7 @@ func convertSingleMonitor(
 
 	configID := yamlMonitor.ConfigID
 	if configID == "" {
-		configID = config.ConfigID
+		configID = config.ID
 	}
 	proto := &pb.MonitorDefinition{
 		Name:     yamlMonitor.Name,
@@ -339,27 +389,6 @@ func parseSensitivity(sensitivity string) (pb.Sensitivity, bool) {
 	default:
 		return pb.Sensitivity_SENSITIVITY_UNSPECIFIED, false
 	}
-}
-
-func GetYAMLSummary(config *YAMLConfig) map[string]any {
-	summary := make(map[string]any)
-	summary["namespace"] = config.ConfigID
-	summary["monitors_count"] = len(config.Monitors)
-
-	if config.Defaults.Severity != "" {
-		summary["default_severity"] = config.Defaults.Severity
-	}
-	if config.Defaults.TimePartitioning != "" {
-		summary["default_time_partitioning"] = config.Defaults.TimePartitioning
-	}
-
-	typeCount := make(map[string]int)
-	for _, monitor := range config.Monitors {
-		typeCount[monitor.Type]++
-	}
-	summary["monitor_types"] = typeCount
-
-	return summary
 }
 
 func validateScheduleConfiguration(monitor *YAMLMonitor) ConversionErrors {

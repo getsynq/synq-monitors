@@ -13,6 +13,7 @@ import (
 	"github.com/getsynq/monitors_mgmt/mgmt"
 	"github.com/getsynq/monitors_mgmt/paths"
 	"github.com/getsynq/monitors_mgmt/yaml"
+	"github.com/getsynq/monitors_mgmt/yaml/core"
 	"github.com/pkg/errors"
 	"github.com/samber/lo"
 	"github.com/spf13/cobra"
@@ -38,10 +39,14 @@ Optionally provide scope to limit the monitors exported.`,
 }
 
 func init() {
-	exportCmd.Flags().StringArrayVar(&exportCmd_integrationIds, "integration", []string{}, "Limit exported monitors by integration IDs. AND'ed with other scopes.")
-	exportCmd.Flags().StringArrayVar(&exportCmd_monitoredPaths, "monitored", []string{}, "Limit exported monitors by monitored asset paths. AND'ed with other scopes.")
-	exportCmd.Flags().StringArrayVar(&exportCmd_monitorIds, "monitor", []string{}, "Limit exported monitors by monitor IDs. AND'ed with other scopes.")
-	exportCmd.Flags().StringVar(&exportCmd_source, "source", exportCmd_validSources[0], fmt.Sprintf("Limit exported monitors by source. One of %+v. Defaults to \"%s\". AND'ed with other scopes.", exportCmd_validSources, exportCmd_validSources[0]))
+	exportCmd.Flags().
+		StringArrayVar(&exportCmd_integrationIds, "integration", []string{}, "Limit exported monitors by integration IDs. AND'ed with other scopes.")
+	exportCmd.Flags().
+		StringArrayVar(&exportCmd_monitoredPaths, "monitored", []string{}, "Limit exported monitors by monitored asset paths. AND'ed with other scopes.")
+	exportCmd.Flags().
+		StringArrayVar(&exportCmd_monitorIds, "monitor", []string{}, "Limit exported monitors by monitor IDs. AND'ed with other scopes.")
+	exportCmd.Flags().
+		StringVar(&exportCmd_source, "source", exportCmd_validSources[0], fmt.Sprintf("Limit exported monitors by source. One of %+v. Defaults to \"%s\". AND'ed with other scopes.", exportCmd_validSources, exportCmd_validSources[0]))
 	exportCmd.Flags().StringVar(&exportCmd_namespace, "namespace", "", "Namespace for generated YAML config")
 
 	rootCmd.AddCommand(exportCmd)
@@ -53,11 +58,13 @@ func exportMonitors(cmd *cobra.Command, args []string) {
 
 	// Check if file exists
 	if _, err := os.Stat(yamlFilePath); !os.IsNotExist(err) {
-		exitWithError(fmt.Errorf("❌ Error: File '%s' exists. Please provide a fresh path or remove the existing file before exporting.\n", yamlFilePath))
+		exitWithError(
+			fmt.Errorf("❌ Error: File '%s' exists. Please provide a fresh path or remove the existing file before exporting.\n", yamlFilePath),
+		)
 	}
 
 	// Create file directory if it does not exist
-	if err := os.MkdirAll(filepath.Dir(yamlFilePath), 0770); err != nil {
+	if err := os.MkdirAll(filepath.Dir(yamlFilePath), 0o770); err != nil {
 		exitWithError(fmt.Errorf("❌ Error: Unable to create directory for export file '%s'.\n", yamlFilePath))
 	}
 
@@ -92,7 +99,7 @@ func exportMonitors(cmd *cobra.Command, args []string) {
 	fmt.Printf("\n✅ Found %d monitors. Exporting...\n", len(monitors))
 
 	// Convert
-	version := yaml.DefaultVersion
+	version := core.Version_Default
 	generator, err := yaml.NewVersionedGenerator(version, exportCmd_namespace, monitors)
 	if err != nil {
 		exitWithError(fmt.Errorf("❌ Error creating generator: %v", err))
@@ -110,7 +117,7 @@ func exportMonitors(cmd *cobra.Command, args []string) {
 	}
 
 	// Parse to test validity
-	yamlParser, err := yaml.NewYAMLParser(yamlBytes)
+	yamlParser, err := yaml.NewVersionedParser(yamlBytes)
 	if err != nil {
 		exitWithError(fmt.Errorf("❌ Error parsing generated YAML: %v", err))
 	}
@@ -121,7 +128,7 @@ func exportMonitors(cmd *cobra.Command, args []string) {
 	fmt.Println("✅ Parse test completed for generated YAML...")
 
 	// Write to file
-	f, err := os.OpenFile(yamlFilePath, os.O_RDWR|os.O_CREATE, 0644)
+	f, err := os.OpenFile(yamlFilePath, os.O_RDWR|os.O_CREATE, 0o644)
 	if err != nil {
 		exitWithError(err)
 	}

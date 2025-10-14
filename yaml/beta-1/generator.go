@@ -6,7 +6,9 @@ import (
 	"time"
 
 	pb "buf.build/gen/go/getsynq/api/protocolbuffers/go/synq/monitors/custom_monitors/v1"
+	"github.com/getsynq/monitors_mgmt/yaml/core"
 	"github.com/samber/lo"
+	"gopkg.in/yaml.v3"
 )
 
 type YAMLGenerator struct {
@@ -14,29 +16,44 @@ type YAMLGenerator struct {
 	monitors []*pb.MonitorDefinition
 }
 
-func NewYAMLGenerator(configId string, monitors []*pb.MonitorDefinition) *YAMLGenerator {
+func (p *YAMLGenerator) GetConfigID() string {
+	return p.configId
+}
+
+func (p *YAMLGenerator) GetVersion() string {
+	return core.Version_V1Beta1
+}
+
+func NewYAMLGenerator(configId string, monitors []*pb.MonitorDefinition) core.Generator {
 	return &YAMLGenerator{
 		configId: configId,
 		monitors: monitors,
 	}
 }
 
-func (p *YAMLGenerator) GenerateYAML() (*YAMLConfig, ConversionErrors) {
+func (p *YAMLGenerator) GenerateYAML() ([]byte, error) {
 	var errors ConversionErrors
 
 	config := &YAMLConfig{
-		ConfigID: p.configId,
+		Config: core.Config{
+			Version: core.Version_V1Beta1,
+			ID:      p.configId,
+		},
 	}
 	for _, protoMonitor := range p.monitors {
 		monitor, convErrors := p.generateSingleMonitor(protoMonitor)
-		if convErrors.HasErrors() {
+		if len(convErrors) > 0 {
 			errors = append(errors, convErrors...)
 			continue
 		}
 		config.Monitors = append(config.Monitors, monitor)
 	}
 
-	return config, errors
+	if len(errors) > 0 {
+		return nil, errors
+	}
+
+	return yaml.Marshal(config)
 }
 
 func (p *YAMLGenerator) generateSingleMonitor(

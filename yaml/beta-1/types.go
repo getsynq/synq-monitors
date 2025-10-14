@@ -4,10 +4,13 @@ import (
 	"fmt"
 	"strings"
 	"time"
+
+	"github.com/getsynq/monitors_mgmt/yaml/core"
 )
 
 type YAMLConfig struct {
-	ConfigID string `yaml:"namespace"`
+	core.Config `yaml:",inline"`
+
 	Defaults struct {
 		Severity         string        `yaml:"severity,omitempty"`
 		TimePartitioning string        `yaml:"time_partitioning,omitempty"`
@@ -93,8 +96,4 @@ func (e ConversionErrors) Error() string {
 		messages = append(messages, err.Error())
 	}
 	return fmt.Sprintf("Multiple conversion errors:\n  - %s", strings.Join(messages, "\n  - "))
-}
-
-func (e ConversionErrors) HasErrors() bool {
-	return len(e) > 0
 }

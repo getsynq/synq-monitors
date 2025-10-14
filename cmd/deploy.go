@@ -182,7 +182,7 @@ func parse(filePath string) (*yaml.VersionedParser, []*pb.MonitorDefinition, err
 		return nil, nil, fmt.Errorf("❌ Error reading file: %v\n", err)
 	}
 
-	yamlParser, err := yaml.NewYAMLParser(yamlContent)
+	yamlParser, err := yaml.NewVersionedParser(yamlContent)
 	if err != nil {
 		return nil, nil, fmt.Errorf("❌ YAML parsing failed: %v\n", err)
 	}

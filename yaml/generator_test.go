@@ -9,6 +9,7 @@ import (
 	"testing"
 
 	"github.com/getsynq/monitors_mgmt/uuid"
+	"github.com/getsynq/monitors_mgmt/yaml/core"
 	"github.com/gkampitakis/go-snaps/snaps"
 	"github.com/stretchr/testify/suite"
 )
@@ -33,20 +34,21 @@ func (s *YAMLGeneratorSuite) TestExamples() {
 	s.Require().True(ok)
 	examplesFolder := filepath.Join(filepath.Dir(thisfile), "../examples")
 	files := []string{}
-	filepath.WalkDir(examplesFolder, func(path string, d fs.DirEntry, err error) error {
+	err := filepath.WalkDir(examplesFolder, func(path string, d fs.DirEntry, err error) error {
 		s.Require().NoError(err)
 		if filepath.Ext(d.Name()) == ".yaml" || filepath.Ext(d.Name()) == ".yml" {
 			files = append(files, path)
 		}
 		return nil
 	})
+	s.Require().NoError(err)
 
 	for _, file := range files {
 		fmt.Printf("Testing file: %s\n", file)
 		yamlContent, err := os.ReadFile(file)
 		s.Require().NoError(err)
 
-		yamlParser, err := NewYAMLParser(yamlContent)
+		yamlParser, err := NewVersionedParser(yamlContent)
 		s.Require().NoError(err)
 
 		// Convert to protobuf
@@ -59,7 +61,7 @@ func (s *YAMLGeneratorSuite) TestExamples() {
 		}
 
 		configID := yamlParser.GetConfigID()
-		generator, err := NewVersionedGenerator(DefaultVersion, configID, protoMonitors)
+		generator, err := NewVersionedGenerator(core.Version_Default, configID, protoMonitors)
 		s.Require().NoError(err)
 
 		yamlBytes, err := generator.GenerateYAML()
@@ -71,5 +73,4 @@ func (s *YAMLGeneratorSuite) TestExamples() {
 			string(yamlBytes),
 		)
 	}
-
 }
