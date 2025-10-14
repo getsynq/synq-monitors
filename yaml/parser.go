@@ -3,8 +3,8 @@ package yaml
 import (
 	"fmt"
 
-	beta1 "github.com/getsynq/monitors_mgmt/yaml/beta-1"
 	"github.com/getsynq/monitors_mgmt/yaml/core"
+	"github.com/getsynq/monitors_mgmt/yaml/v1beta1"
 	"github.com/samber/lo"
 	goyaml "gopkg.in/yaml.v3"
 )
@@ -14,7 +14,7 @@ type VersionedParser struct {
 }
 
 var parserConstructors = map[string]func([]byte) (core.Parser, error){
-	core.Version_V1Beta1: beta1.NewYAMLParserFromBytes,
+	core.Version_V1Beta1: v1beta1.NewYAMLParserFromBytes,
 }
 
 func NewVersionedParser(yamlContent []byte) (*VersionedParser, error) {
