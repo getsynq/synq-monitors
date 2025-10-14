@@ -5,8 +5,8 @@ import (
 )
 
 const (
-	Version_V1Beta1 = "beta-1"
-	Version_V1Beta2 = "beta-2"
+	Version_V1Beta1 = "v1beta1"
+	Version_V1Beta2 = "v1beta2"
 
 	Version_Default = Version_V1Beta1
 )

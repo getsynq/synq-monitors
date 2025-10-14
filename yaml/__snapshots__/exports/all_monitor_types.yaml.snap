@@ -1,6 +1,6 @@
 
 [TestYAMLGeneratorSuite/TestExamples - 1]
-version: beta-1
+version: v1beta1
 namespace: financial_data
 monitors:
     - id: 116844a4-aed0-56b4-bd75-350f26532aae

@@ -1,6 +1,6 @@
 
 [TestYAMLGeneratorSuite/TestExamples - 1]
-version: beta-1
+version: v1beta1
 namespace: ""
 monitors:
     - id: 370fe457-ccc4-515d-a0e1-fc52f0234fbf
