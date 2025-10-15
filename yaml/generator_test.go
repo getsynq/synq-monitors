@@ -61,7 +61,7 @@ func (s *YAMLGeneratorSuite) TestExamples() {
 		}
 
 		configID := yamlParser.GetConfigID()
-		generator, err := NewVersionedGenerator(core.Version_Default, configID, protoMonitors)
+		generator, err := NewVersionedGenerator(core.Version_DefaultGenerator, configID, protoMonitors)
 		s.Require().NoError(err)
 
 		yamlBytes, err := generator.GenerateYAML()

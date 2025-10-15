@@ -99,7 +99,7 @@ func exportMonitors(cmd *cobra.Command, args []string) {
 	fmt.Printf("\n✅ Found %d monitors. Exporting...\n", len(monitors))
 
 	// Convert
-	version := core.Version_Default
+	version := core.Version_DefaultGenerator
 	generator, err := yaml.NewVersionedGenerator(version, exportCmd_namespace, monitors)
 	if err != nil {
 		exitWithError(fmt.Errorf("❌ Error creating generator: %v", err))

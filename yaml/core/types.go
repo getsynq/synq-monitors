@@ -8,7 +8,8 @@ const (
 	Version_V1Beta1 = "v1beta1"
 	Version_V1Beta2 = "v1beta2"
 
-	Version_Default = Version_V1Beta1
+	Version_DefaultParser    = Version_V1Beta1
+	Version_DefaultGenerator = Version_V1Beta1
 )
 
 type Config struct {

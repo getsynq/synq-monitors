@@ -21,7 +21,7 @@ var generatorConstructors = map[string]func(string, []*pb.MonitorDefinition) cor
 
 func NewVersionedGenerator(version string, configId string, monitors []*pb.MonitorDefinition) (*VersionedGenerator, error) {
 	if version == "" {
-		version = core.Version_Default
+		version = core.Version_DefaultGenerator
 	}
 
 	constructor, ok := generatorConstructors[version]
