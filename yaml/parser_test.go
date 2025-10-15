@@ -63,7 +63,7 @@ func (s *YAMLParserSuite) TestExamples() {
 			monitorJson, err := protojson.Marshal(monitor)
 			s.Require().NoError(err)
 
-			snapFileName := filepath.Join(filepath.Base(filepath.Dir(file)), filepath.Base(file))
+			snapFileName := filepath.Join("examples", filepath.Base(filepath.Dir(file)), filepath.Base(file))
 			snaps.WithConfig(snaps.Filename(snapFileName)).MatchJSON(
 				s.T(),
 				monitorJson,
