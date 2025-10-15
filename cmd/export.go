@@ -13,6 +13,7 @@ import (
 	"github.com/getsynq/monitors_mgmt/mgmt"
 	"github.com/getsynq/monitors_mgmt/paths"
 	"github.com/getsynq/monitors_mgmt/yaml"
+	"github.com/getsynq/monitors_mgmt/yaml/core"
 	"github.com/pkg/errors"
 	"github.com/samber/lo"
 	"github.com/spf13/cobra"
@@ -38,10 +39,14 @@ Optionally provide scope to limit the monitors exported.`,
 }
 
 func init() {
-	exportCmd.Flags().StringArrayVar(&exportCmd_integrationIds, "integration", []string{}, "Limit exported monitors by integration IDs. AND'ed with other scopes.")
-	exportCmd.Flags().StringArrayVar(&exportCmd_monitoredPaths, "monitored", []string{}, "Limit exported monitors by monitored asset paths. AND'ed with other scopes.")
-	exportCmd.Flags().StringArrayVar(&exportCmd_monitorIds, "monitor", []string{}, "Limit exported monitors by monitor IDs. AND'ed with other scopes.")
-	exportCmd.Flags().StringVar(&exportCmd_source, "source", exportCmd_validSources[0], fmt.Sprintf("Limit exported monitors by source. One of %+v. Defaults to \"%s\". AND'ed with other scopes.", exportCmd_validSources, exportCmd_validSources[0]))
+	exportCmd.Flags().
+		StringArrayVar(&exportCmd_integrationIds, "integration", []string{}, "Limit exported monitors by integration IDs. AND'ed with other scopes.")
+	exportCmd.Flags().
+		StringArrayVar(&exportCmd_monitoredPaths, "monitored", []string{}, "Limit exported monitors by monitored asset paths. AND'ed with other scopes.")
+	exportCmd.Flags().
+		StringArrayVar(&exportCmd_monitorIds, "monitor", []string{}, "Limit exported monitors by monitor IDs. AND'ed with other scopes.")
+	exportCmd.Flags().
+		StringVar(&exportCmd_source, "source", exportCmd_validSources[0], fmt.Sprintf("Limit exported monitors by source. One of %+v. Defaults to \"%s\". AND'ed with other scopes.", exportCmd_validSources, exportCmd_validSources[0]))
 	exportCmd.Flags().StringVar(&exportCmd_namespace, "namespace", "", "Namespace for generated YAML config")
 
 	rootCmd.AddCommand(exportCmd)
@@ -53,11 +58,13 @@ func exportMonitors(cmd *cobra.Command, args []string) {
 
 	// Check if file exists
 	if _, err := os.Stat(yamlFilePath); !os.IsNotExist(err) {
-		exitWithError(fmt.Errorf("❌ Error: File '%s' exists. Please provide a fresh path or remove the existing file before exporting.\n", yamlFilePath))
+		exitWithError(
+			fmt.Errorf("❌ Error: File '%s' exists. Please provide a fresh path or remove the existing file before exporting.\n", yamlFilePath),
+		)
 	}
 
 	// Create file directory if it does not exist
-	if err := os.MkdirAll(filepath.Dir(yamlFilePath), 0770); err != nil {
+	if err := os.MkdirAll(filepath.Dir(yamlFilePath), 0o770); err != nil {
 		exitWithError(fmt.Errorf("❌ Error: Unable to create directory for export file '%s'.\n", yamlFilePath))
 	}
 
@@ -92,51 +99,76 @@ func exportMonitors(cmd *cobra.Command, args []string) {
 	fmt.Printf("\n✅ Found %d monitors. Exporting...\n", len(monitors))
 
 	// Convert
-	generator := yaml.NewYAMLGenerator(exportCmd_namespace, monitors)
-	config, conversionErrors := generator.GenerateYAML()
-	if conversionErrors.HasErrors() {
-		exitWithError(fmt.Errorf("❌ Conversion errors found: %s\n", conversionErrors.Error()))
+	version := core.Version_Default
+	generator, err := yaml.NewVersionedGenerator(version, exportCmd_namespace, monitors)
+	if err != nil {
+		exitWithError(fmt.Errorf("❌ Error creating generator: %v", err))
+	}
+
+	yamlBytes, err := generator.GenerateYAML()
+	if err != nil {
+		exitWithError(fmt.Errorf("❌ Conversion errors found: %s\n", err.Error()))
 	}
 
 	// Simplify monitored paths
-	config, err = simplifyPaths(pathsConverter, config)
+	yamlBytes, err = simplifyPaths(pathsConverter, yamlBytes)
 	if err != nil {
 		exitWithError(fmt.Errorf("❌ Error simplifying monitored paths: %w", err))
 	}
 
 	// Parse to test validity
-	yamlParser := yaml.NewYAMLParser(config)
-	_, conversionErrors = yamlParser.ConvertToMonitorDefinitions()
-	if conversionErrors.HasErrors() {
-		exitWithError(fmt.Errorf("❌ Conversion errors found while parsing generated YAML: %s\n", conversionErrors.Error()))
+	yamlParser, err := yaml.NewVersionedParser(yamlBytes)
+	if err != nil {
+		exitWithError(fmt.Errorf("❌ Error parsing generated YAML: %v", err))
+	}
+	_, err = yamlParser.ConvertToMonitorDefinitions()
+	if err != nil {
+		exitWithError(fmt.Errorf("❌ Conversion errors found while parsing generated YAML: %s\n", err.Error()))
 	}
 	fmt.Println("✅ Parse test completed for generated YAML...")
 
 	// Write to file
-	f, err := os.OpenFile(yamlFilePath, os.O_RDWR|os.O_CREATE, 0644)
+	f, err := os.OpenFile(yamlFilePath, os.O_RDWR|os.O_CREATE, 0o644)
 	if err != nil {
 		exitWithError(err)
 	}
 	defer f.Close()
 
-	b, err := goyaml.Marshal(config)
-	if err != nil {
-		exitWithError(fmt.Errorf("❌ Error marshaling YAML: %v", err))
-	}
-	if _, err := f.Write(b); err != nil {
+	if _, err := f.Write(yamlBytes); err != nil {
 		exitWithError(fmt.Errorf("❌ Error writing YAML: %v", err))
 	}
 
 	fmt.Println("✅ Export complete!")
 }
 
-func simplifyPaths(pathsConverter paths.PathConverter, config *yaml.YAMLConfig) (*yaml.YAMLConfig, error) {
+func simplifyPaths(pathsConverter paths.PathConverter, yamlBytes []byte) ([]byte, error) {
+	var config map[string]interface{}
+	err := goyaml.Unmarshal(yamlBytes, &config)
+	if err != nil {
+		return nil, fmt.Errorf("failed to unmarshal YAML: %w", err)
+	}
+
+	monitors, ok := config["monitors"].([]interface{})
+	if !ok {
+		return yamlBytes, nil
+	}
+
 	pathsToSimplify := []string{}
-	for _, monitor := range config.Monitors {
-		if len(monitor.MonitoredID) > 0 {
-			pathsToSimplify = append(pathsToSimplify, monitor.MonitoredID)
-		} else {
-			pathsToSimplify = append(pathsToSimplify, monitor.MonitoredIDs...)
+	for _, m := range monitors {
+		monitor, ok := m.(map[string]interface{})
+		if !ok {
+			continue
+		}
+
+		if monitoredID, ok := monitor["monitored_id"].(string); ok && len(monitoredID) > 0 {
+			pathsToSimplify = append(pathsToSimplify, monitoredID)
+		}
+		if monitoredIDs, ok := monitor["monitored_ids"].([]interface{}); ok {
+			for _, id := range monitoredIDs {
+				if idStr, ok := id.(string); ok {
+					pathsToSimplify = append(pathsToSimplify, idStr)
+				}
+			}
 		}
 	}
 
@@ -145,23 +177,29 @@ func simplifyPaths(pathsConverter paths.PathConverter, config *yaml.YAMLConfig) 
 		return nil, err
 	}
 
-	for i := range config.Monitors {
-		if len(config.Monitors[i].MonitoredID) > 0 {
-			path, ok := simplifiedPaths[config.Monitors[i].MonitoredID]
-			if ok && len(path) > 0 {
-				config.Monitors[i].MonitoredID = path
+	for _, m := range monitors {
+		monitor, ok := m.(map[string]interface{})
+		if !ok {
+			continue
+		}
+
+		if monitoredID, ok := monitor["monitored_id"].(string); ok && len(monitoredID) > 0 {
+			if path, ok := simplifiedPaths[monitoredID]; ok && len(path) > 0 {
+				monitor["monitored_id"] = path
 			}
-		} else {
-			for j, monitoredId := range config.Monitors[i].MonitoredIDs {
-				path, ok := simplifiedPaths[monitoredId]
-				if ok && len(path) > 0 {
-					config.Monitors[i].MonitoredIDs[j] = path
+		}
+		if monitoredIDs, ok := monitor["monitored_ids"].([]interface{}); ok {
+			for j, id := range monitoredIDs {
+				if idStr, ok := id.(string); ok {
+					if path, ok := simplifiedPaths[idStr]; ok && len(path) > 0 {
+						monitoredIDs[j] = path
+					}
 				}
 			}
 		}
 	}
 
-	return config, nil
+	return goyaml.Marshal(config)
 }
 
 func createListScope(pathsConverter paths.PathConverter) *mgmt.ListScope {

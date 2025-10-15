@@ -9,9 +9,9 @@ import (
 	"testing"
 
 	"github.com/getsynq/monitors_mgmt/uuid"
+	"github.com/getsynq/monitors_mgmt/yaml/core"
 	"github.com/gkampitakis/go-snaps/snaps"
 	"github.com/stretchr/testify/suite"
-	goyaml "gopkg.in/yaml.v3"
 )
 
 type YAMLGeneratorSuite struct {
@@ -34,46 +34,43 @@ func (s *YAMLGeneratorSuite) TestExamples() {
 	s.Require().True(ok)
 	examplesFolder := filepath.Join(filepath.Dir(thisfile), "../examples")
 	files := []string{}
-	filepath.WalkDir(examplesFolder, func(path string, d fs.DirEntry, err error) error {
+	err := filepath.WalkDir(examplesFolder, func(path string, d fs.DirEntry, err error) error {
 		s.Require().NoError(err)
 		if filepath.Ext(d.Name()) == ".yaml" || filepath.Ext(d.Name()) == ".yml" {
 			files = append(files, path)
 		}
 		return nil
 	})
+	s.Require().NoError(err)
 
 	for _, file := range files {
 		fmt.Printf("Testing file: %s\n", file)
 		yamlContent, err := os.ReadFile(file)
 		s.Require().NoError(err)
 
-		var config *YAMLConfig
-		err = goyaml.Unmarshal(yamlContent, &config)
-		s.Require().NoError(err)
-
-		yamlParser := NewYAMLParser(config)
+		yamlParser, err := NewVersionedParser(yamlContent)
 		s.Require().NoError(err)
 
 		// Convert to protobuf
-		protoMonitors, conversionErrors := yamlParser.ConvertToMonitorDefinitions()
-		s.Require().False(conversionErrors.HasErrors(), conversionErrors.Error())
+		protoMonitors, err := yamlParser.ConvertToMonitorDefinitions()
+		s.Require().NoError(err)
 
 		uuidGenerator := uuid.NewUUIDGenerator(s.workspace)
 		for i := range protoMonitors {
 			protoMonitors[i] = sanitize(protoMonitors[i], uuidGenerator)
 		}
 
-		generator := NewYAMLGenerator(config.ConfigID, protoMonitors)
-		config, convErrors := generator.GenerateYAML()
-		s.Require().False(convErrors.HasErrors())
-
-		bytes, err := goyaml.Marshal(config)
+		configID := yamlParser.GetConfigID()
+		generator, err := NewVersionedGenerator(core.Version_Default, configID, protoMonitors)
 		s.Require().NoError(err)
+
+		yamlBytes, err := generator.GenerateYAML()
+		s.Require().NoError(err)
+
 		snapFileName := filepath.Join("exports", filepath.Base(file))
 		snaps.WithConfig(snaps.Filename(snapFileName)).MatchSnapshot(
 			s.T(),
-			string(bytes),
+			string(yamlBytes),
 		)
 	}
-
 }

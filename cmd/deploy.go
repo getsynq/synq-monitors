@@ -19,7 +19,6 @@ import (
 	"github.com/pkg/errors"
 	"github.com/samber/lo"
 	"github.com/spf13/cobra"
-	goyaml "gopkg.in/yaml.v3"
 )
 
 var (
@@ -137,7 +136,8 @@ func deployFromYaml(cmd *cobra.Command, args []string) {
 	mgmtService := mgmt.NewMgmtRemoteService(ctx, conn)
 
 	// Calculate delta
-	changesOverview, err := mgmtService.ConfigChangesOverview(protoMonitors, yamlParser.GetYAMLConfig().ConfigID)
+	configID := yamlParser.GetConfigID()
+	changesOverview, err := mgmtService.ConfigChangesOverview(protoMonitors, configID)
 	if err != nil {
 		exitWithError(fmt.Errorf("❌ Error getting config changes overview: %v", err))
 	}
@@ -174,7 +174,7 @@ func deployFromYaml(cmd *cobra.Command, args []string) {
 	fmt.Println("✅ Deployment complete!")
 }
 
-func parse(filePath string) (*yaml.YAMLParser, []*pb.MonitorDefinition, error) {
+func parse(filePath string) (*yaml.VersionedParser, []*pb.MonitorDefinition, error) {
 	// Read YAML file
 	fmt.Println("🔍 Parsing YAML structure...")
 	yamlContent, err := os.ReadFile(filePath)
@@ -182,19 +182,17 @@ func parse(filePath string) (*yaml.YAMLParser, []*pb.MonitorDefinition, error) {
 		return nil, nil, fmt.Errorf("❌ Error reading file: %v\n", err)
 	}
 
-	var config yaml.YAMLConfig
-	err = goyaml.Unmarshal(yamlContent, &config)
+	yamlParser, err := yaml.NewVersionedParser(yamlContent)
 	if err != nil {
 		return nil, nil, fmt.Errorf("❌ YAML parsing failed: %v\n", err)
 	}
 	fmt.Println("✅ YAML syntax is valid!")
-	yamlParser := yaml.NewYAMLParser(&config)
 
 	// Convert to protobuf
 	fmt.Println("\n🔄 Converting to protobuf format...")
-	protoMonitors, conversionErrors := yamlParser.ConvertToMonitorDefinitions()
-	if conversionErrors.HasErrors() {
-		return nil, nil, fmt.Errorf("❌ Conversion errors found: %s\n", conversionErrors.Error())
+	protoMonitors, err := yamlParser.ConvertToMonitorDefinitions()
+	if err != nil {
+		return nil, nil, fmt.Errorf("❌ Conversion errors found: %s\n", err.Error())
 	}
 
 	fmt.Printf("✅ Successfully converted to %d protobuf MonitorDefinition(s)\n", len(protoMonitors))

@@ -1,14 +1,16 @@
-package yaml
+package v1beta1
 
 import (
 	"fmt"
 	"strings"
 	"time"
+
+	"github.com/getsynq/monitors_mgmt/yaml/core"
 )
 
-// YAMLConfig represents the YAML file structure
 type YAMLConfig struct {
-	ConfigID string `yaml:"namespace"`
+	core.Config `yaml:",inline"`
+
 	Defaults struct {
 		Severity         string        `yaml:"severity,omitempty"`
 		TimePartitioning string        `yaml:"time_partitioning,omitempty"`
@@ -20,10 +22,9 @@ type YAMLConfig struct {
 	Monitors []YAMLMonitor `yaml:"monitors"`
 }
 
-// YAMLMonitor represents a monitor in YAML format
 type YAMLMonitor struct {
 	Id                string            `yaml:"id"`
-	Name              string            `yaml:"name,omitempty"` //default: `{id}`
+	Name              string            `yaml:"name,omitempty"`
 	Type              string            `yaml:"type"`
 	Expression        string            `yaml:"expression,omitempty"`
 	MetricAggregation string            `yaml:"metric_aggregation,omitempty"`
@@ -47,19 +48,15 @@ type YAMLSegmentation struct {
 	ExcludeValues *[]string `yaml:"exclude_values,omitempty"`
 }
 
-// YAMLMode represents mode configuration in YAML
 type YAMLMode struct {
 	AnomalyEngine   *YAMLAnomalyEngine   `yaml:"anomaly_engine,omitempty"`
 	FixedThresholds *YAMLFixedThresholds `yaml:"fixed_thresholds,omitempty"`
 }
 
-// YAMLAnomalyEngine represents anomaly engine configuration
 type YAMLAnomalyEngine struct {
-	// default: BALANCED
 	Sensitivity string `yaml:"sensitivity"`
 }
 
-// YAMLFixedThresholds represents fixed thresholds configuration
 type YAMLFixedThresholds struct {
 	Min *float64 `yaml:"min,omitempty"`
 	Max *float64 `yaml:"max,omitempty"`
@@ -71,7 +68,6 @@ type YAMLSchedule struct {
 	IgnoreLast            *int32         `yaml:"ignore_last,omitempty"`
 }
 
-// ConversionError represents an error during YAML to proto conversion
 type ConversionError struct {
 	Field   string
 	Message string
@@ -85,7 +81,6 @@ func (e ConversionError) Error() string {
 	return fmt.Sprintf("%s - %s", e.Field, e.Message)
 }
 
-// ConversionErrors represents multiple conversion errors
 type ConversionErrors []ConversionError
 
 func (e ConversionErrors) Error() string {
@@ -101,8 +96,4 @@ func (e ConversionErrors) Error() string {
 		messages = append(messages, err.Error())
 	}
 	return fmt.Sprintf("Multiple conversion errors:\n  - %s", strings.Join(messages, "\n  - "))
-}
-
-func (e ConversionErrors) HasErrors() bool {
-	return len(e) > 0
 }
