@@ -112,7 +112,11 @@ func (p *YAMLParser) ConvertToMonitorDefinitions() ([]*pb.MonitorDefinition, err
 		}
 	}
 
-	return protoMonitors, errors
+	if len(errors) > 0 {
+		return protoMonitors, errors
+	}
+
+	return protoMonitors, nil
 }
 
 func (p *YAMLParser) convertTestToMonitors(
