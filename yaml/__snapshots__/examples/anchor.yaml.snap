@@ -1,0 +1,79 @@
+
+[TestYAMLParserSuite/TestExamples - 1]
+{
+ "anomalyEngine": {
+  "sensitivity": "SENSITIVITY_BALANCED"
+ },
+ "configId": "data-team-pipeline",
+ "daily": {
+  "minutesSinceMidnight": 60,
+  "onlyScheduleDelay": true
+ },
+ "id": "b8f6ad92-c6d6-5ada-b074-58c5e6459d43",
+ "monitoredId": {
+  "synqPath": {
+   "path": "ch-prod::anomalies::corrections_v2"
+  }
+ },
+ "name": "freshness_on_orders",
+ "severity": "SEVERITY_ERROR",
+ "timePartitioning": {
+  "expression": "created_at"
+ },
+ "volume": {}
+}
+---
+
+[TestYAMLParserSuite/TestExamples - 2]
+{
+ "anomalyEngine": {
+  "sensitivity": "SENSITIVITY_BALANCED"
+ },
+ "configId": "data-team-pipeline",
+ "daily": {
+  "minutesSinceMidnight": 60,
+  "onlyScheduleDelay": true
+ },
+ "id": "97511b5d-02cb-5198-9ca7-bcf2b83a80bf",
+ "monitoredId": {
+  "synqPath": {
+   "path": "ch-prod::anomalies::external_sqltests"
+  }
+ },
+ "name": "freshness_on_orders",
+ "severity": "SEVERITY_ERROR",
+ "timePartitioning": {
+  "expression": "created_at"
+ },
+ "volume": {}
+}
+---
+
+[TestYAMLParserSuite/TestExamples - 3]
+{
+ "anomalyEngine": {
+  "sensitivity": "SENSITIVITY_BALANCED"
+ },
+ "configId": "data-team-pipeline",
+ "daily": {
+  "minutesSinceMidnight": 60,
+  "onlyScheduleDelay": true
+ },
+ "filter": "country IN ('US', 'CA')",
+ "id": "77c55553-f60b-58f5-83b8-fe27833a86af",
+ "monitoredId": {
+  "synqPath": {
+   "path": "bq-synq-dwh::petr::kernel_assets__stg_assets"
+  }
+ },
+ "name": "volume_on_logs",
+ "segmentation": {
+  "expression": "country"
+ },
+ "severity": "SEVERITY_WARNING",
+ "timePartitioning": {
+  "expression": "created_at"
+ },
+ "volume": {}
+}
+---

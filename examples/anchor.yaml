@@ -1,0 +1,27 @@
+namespace: "data-team-pipeline"
+
+volume_config: &volume_config
+  type: volume
+  time_partitioning: created_at
+  daily:
+    query_delay: 1h
+  mode:
+    anomaly_engine:
+      sensitivity: BALANCED
+
+monitors:
+  - id: freshness_on_orders
+    <<: *volume_config
+    severity: ERROR
+    monitored_ids:
+      - ch-prod.anomalies.corrections_v2
+      - ch-prod.anomalies.external_sqltests
+
+  - id: volume_on_logs
+    <<: *volume_config
+    severity: WARNING
+    monitored_ids:
+      - bq-synq-dwh.petr.kernel_assets__stg_assets
+    segmentation:
+      expression: "country"
+    filter: "country IN ('US', 'CA')"
