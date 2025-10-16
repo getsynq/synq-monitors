@@ -22,60 +22,50 @@ type MonitorWrapper struct {
 	Monitor Monitor
 }
 
-func (w *MonitorWrapper) UnmarshalYAML(n *goyaml.Node) error {
-	if n.Kind != goyaml.MappingNode {
-		return fmt.Errorf("monitor must be a map")
+func decodeMonitor[T Monitor](n *goyaml.Node) (Monitor, error) {
+	var t T
+	err := n.Decode(&t)
+	if err != nil {
+		return nil, err
 	}
 
-	if len(n.Content) != 2 {
-		return fmt.Errorf("monitor must have exactly one type key")
-	}
-
-	typeKey := n.Content[0].Value
-	valueNode := n.Content[1]
-
-	var err error
-	switch typeKey {
-	case "volume":
-		var m Monitor_Volume
-		err = valueNode.Decode(&m)
-		w.Monitor = &m
-	case "freshness":
-		var m Monitor_Freshness
-		err = valueNode.Decode(&m)
-		w.Monitor = &m
-	case "custom_numeric":
-		var m Monitor_CustomNumeric
-		err = valueNode.Decode(&m)
-		w.Monitor = &m
-	case "field_stats":
-		var m Monitor_FieldStats
-		err = valueNode.Decode(&m)
-		w.Monitor = &m
-	default:
-		return fmt.Errorf("unknown monitor type: %s", typeKey)
-	}
-
-	return err
+	return t, nil
 }
 
-func (w MonitorWrapper) MarshalYAML() (interface{}, error) {
-	result := make(map[string]interface{})
-
-	switch m := w.Monitor.(type) {
-	case *Monitor_Volume:
-		result["volume"] = m
-	case *Monitor_Freshness:
-		result["freshness"] = m
-	case *Monitor_CustomNumeric:
-		result["custom_numeric"] = m
-	case *Monitor_FieldStats:
-		result["field_stats"] = m
-	default:
-		return nil, fmt.Errorf("unknown monitor type: %T", m)
+func (w *MonitorWrapper) UnmarshalYAML(n *goyaml.Node) error {
+	type Typed struct {
+		Type string `yaml:"type"`
 	}
 
-	return result, nil
+	var t Typed
+	err := n.Decode(&t)
+	if err != nil {
+		return err
+	}
+
+	var m Monitor
+	switch t.Type {
+	case "volume":
+		m, err = decodeMonitor[*Monitor_Volume](n)
+	case "freshness":
+		m, err = decodeMonitor[*Monitor_Freshness](n)
+	case "custom_numeric":
+		m, err = decodeMonitor[*Monitor_CustomNumeric](n)
+	case "field_stats":
+		m, err = decodeMonitor[*Monitor_FieldStats](n)
+	default:
+		return fmt.Errorf("unsupported type: %s", t.Type)
+	}
+	if err != nil {
+		return err
+	}
+	w.Monitor = m
+
+	return nil
+}
+
+func (w MonitorWrapper) MarshalYAML() (any, error) {
+	return w.Monitor, nil
 }
 
 var (
@@ -88,6 +78,7 @@ var (
 type BaseMonitor struct {
 	ID       string `yaml:"id"`
 	Name     string `yaml:"name"`
+	Type     string `yaml:"type"`
 	Filter   string `yaml:"filter,omitempty"`
 	Severity string `yaml:"severity,omitempty"`
 	Timezone string `yaml:"timezone,omitempty"`
@@ -137,14 +128,13 @@ func (b BaseMonitor) GetMonitorHourly() *YAMLSchedule {
 type (
 	Monitor_Freshness struct {
 		BaseMonitor `yaml:",inline"`
-
-		Expression string `yaml:"expression"`
+		Expression  string `yaml:"expression" `
 	}
 	Monitor_Volume struct {
 		BaseMonitor `yaml:",inline"`
 	}
 	Monitor_CustomNumeric struct {
-		BaseMonitor       `yaml:",inline"`
+		BaseMonitor       `       yaml:",inline"`
 		MetricAggregation string `yaml:"metric_aggregation"`
 	}
 	Monitor_FieldStats struct {

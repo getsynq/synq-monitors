@@ -161,20 +161,24 @@ func (p *YAMLGenerator) generateSingleMonitor(
 	if protoMonitor.Monitor != nil {
 		switch t := protoMonitor.Monitor.(type) {
 		case *pb.MonitorDefinition_Freshness:
+			base.Type = "freshness"
 			monitor = &Monitor_Freshness{
 				BaseMonitor: base,
 				Expression:  t.Freshness.Expression,
 			}
 		case *pb.MonitorDefinition_Volume:
+			base.Type = "volume"
 			monitor = &Monitor_Volume{
 				BaseMonitor: base,
 			}
 		case *pb.MonitorDefinition_CustomNumeric:
+			base.Type = "custom_numeric"
 			monitor = &Monitor_CustomNumeric{
 				BaseMonitor:       base,
 				MetricAggregation: t.CustomNumeric.MetricAggregation,
 			}
 		case *pb.MonitorDefinition_FieldStats:
+			base.Type = "field_stats"
 			monitor = &Monitor_FieldStats{
 				BaseMonitor: base,
 				Fields:      t.FieldStats.Fields,
