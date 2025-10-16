@@ -10,10 +10,8 @@ import (
 	"testing"
 
 	"github.com/getsynq/monitors_mgmt/uuid"
-	v1beta2pkg "github.com/getsynq/monitors_mgmt/yaml/v1beta2"
 	"github.com/gkampitakis/go-snaps/snaps"
 	"github.com/stretchr/testify/suite"
-	"gopkg.in/yaml.v3"
 )
 
 type YAMLGeneratorSuite struct {
@@ -57,6 +55,10 @@ func (s *YAMLGeneratorSuite) TestExamples() {
 		protoMonitors, err := yamlParser.ConvertToMonitorDefinitions()
 		s.Require().NoError(err)
 
+		sort.SliceStable(protoMonitors, func(i, j int) bool {
+			return protoMonitors[i].Id < protoMonitors[j].Id
+		})
+
 		uuidGenerator := uuid.NewUUIDGenerator(s.workspace)
 		for i := range protoMonitors {
 			protoMonitors[i] = sanitize(protoMonitors[i], uuidGenerator)
@@ -70,32 +72,10 @@ func (s *YAMLGeneratorSuite) TestExamples() {
 		yamlBytes, err := generator.GenerateYAML()
 		s.Require().NoError(err)
 
-		yamlBytes = sortEntitiesInYAML(s.T(), yamlBytes, version)
-
 		snapFileName := filepath.Join("exports", version, filepath.Base(file))
 		snaps.WithConfig(snaps.Filename(snapFileName)).MatchSnapshot(
 			s.T(),
 			string(yamlBytes),
 		)
 	}
-}
-
-func sortEntitiesInYAML(t *testing.T, yamlBytes []byte, version string) []byte {
-	if version == "v1beta2" {
-		var config v1beta2pkg.YAMLConfig
-		if err := yaml.Unmarshal(yamlBytes, &config); err != nil {
-			t.Fatalf("Failed to unmarshal YAML: %v", err)
-		}
-
-		sort.Slice(config.Entities, func(i, j int) bool {
-			return config.Entities[i].Id < config.Entities[j].Id
-		})
-
-		sorted, err := yaml.Marshal(&config)
-		if err != nil {
-			t.Fatalf("Failed to marshal YAML: %v", err)
-		}
-		return sorted
-	}
-	return yamlBytes
 }
