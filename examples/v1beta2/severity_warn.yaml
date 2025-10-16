@@ -1,0 +1,12 @@
+# Create a single volume monitor for runs table with severity=WARNING
+
+version: v1beta2
+
+entities:
+  - id: ch-prod.default.runs
+    time_partitioning_column: created_at
+
+    monitors:
+      - id: runs_volume_warn
+        type: volume
+        severity: WARNING

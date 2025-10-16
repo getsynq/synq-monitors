@@ -101,20 +101,22 @@
  "anomalyEngine": {
   "sensitivity": "SENSITIVITY_BALANCED"
  },
+ "configId": "financial_data",
  "daily": {},
- "id": "0f3f24bc-dc6b-5e16-b99c-b292dbad45b7",
+ "freshness": {
+  "expression": "month"
+ },
+ "id": "614ff05c-176a-5a79-abdf-a7e1d904d24f",
  "monitoredId": {
   "synqPath": {
-   "path": "ch-prod::default::orders"
+   "path": "bq-synq-demo::nyc_taxi::financial_statement"
   }
  },
- "name": "Orders Volume Monitor",
+ "name": "freshness_financial_statement",
  "severity": "SEVERITY_ERROR",
  "timePartitioning": {
-  "expression": "created_at"
- },
- "timezone": "UTC",
- "volume": {}
+  "expression": "month"
+ }
 }
 ---
 
@@ -123,22 +125,20 @@
  "anomalyEngine": {
   "sensitivity": "SENSITIVITY_BALANCED"
  },
+ "configId": "financial_data",
  "daily": {},
- "freshness": {
-  "expression": "created_at"
- },
- "id": "eedf42d7-dd78-5a1d-a2e5-9b188c04275c",
+ "id": "0dbdc387-8445-5aa0-981a-8b4728e0af60",
  "monitoredId": {
   "synqPath": {
-   "path": "ch-prod::default::orders"
+   "path": "bq-synq-demo::nyc_taxi::financial_statement"
   }
  },
- "name": "Orders Freshness Monitor",
+ "name": "volume_financial_statement",
  "severity": "SEVERITY_ERROR",
  "timePartitioning": {
-  "expression": "created_at"
+  "expression": "month"
  },
- "timezone": "UTC"
+ "volume": {}
 }
 ---
 
@@ -147,48 +147,48 @@
  "anomalyEngine": {
   "sensitivity": "SENSITIVITY_BALANCED"
  },
- "customNumeric": {
-  "metricAggregation": "SUM(amount)"
- },
+ "configId": "financial_data",
  "daily": {},
- "id": "db45f178-3286-5039-b488-b81670bcfaac",
+ "fieldStats": {
+  "fields": [
+   "total_revenue",
+   "total_tips"
+  ]
+ },
+ "id": "f145c74e-6470-50b7-914f-6236204edc0f",
  "monitoredId": {
   "synqPath": {
-   "path": "ch-prod::default::orders"
+   "path": "bq-synq-demo::nyc_taxi::financial_statement"
   }
  },
- "name": "Orders Revenue Monitor",
+ "name": "stats_financial_statement",
  "severity": "SEVERITY_ERROR",
  "timePartitioning": {
-  "expression": "created_at"
- },
- "timezone": "UTC"
+  "expression": "month"
+ }
 }
 ---
 
 [TestYAMLParserSuite/TestExamples - 8]
 {
- "anomalyEngine": {
-  "sensitivity": "SENSITIVITY_BALANCED"
+ "configId": "financial_data",
+ "customNumeric": {
+  "metricAggregation": "MIN(total_revenue)"
  },
  "daily": {},
- "fieldStats": {
-  "fields": [
-   "status",
-   "payment_method"
-  ]
+ "fixedThresholds": {
+  "min": 0
  },
- "id": "4154da43-3170-55ed-937e-e04d515da045",
+ "id": "9fb70d1d-274e-517c-b599-e910086b73c5",
  "monitoredId": {
   "synqPath": {
-   "path": "ch-prod::default::orders"
+   "path": "bq-synq-demo::nyc_taxi::financial_statement"
   }
  },
- "name": "Orders Field Statistics",
+ "name": "custom_financial_statement_revenue_nonnegative",
  "severity": "SEVERITY_ERROR",
  "timePartitioning": {
-  "expression": "created_at"
- },
- "timezone": "UTC"
+  "expression": "month"
+ }
 }
 ---

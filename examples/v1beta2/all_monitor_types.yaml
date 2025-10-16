@@ -1,31 +1,34 @@
 version: v1beta2
+namespace: financial_data
 
 defaults:
   severity: ERROR
-  timezone: UTC
 
 entities:
-  - id: ch-prod.default.orders
-    time_partitioning_column: created_at
+  - id: bq-synq-demo.nyc_taxi.financial_statement
+    time_partitioning_column: month
 
     monitors:
-      - type: volume
-        id: orders_volume
-        name: Orders Volume Monitor
+      - id: freshness_financial_statement
+        type: freshness
+        expression: month
 
-      - type: freshness
-        id: orders_freshness
-        name: Orders Freshness Monitor
-        expression: created_at
+      - id: volume_financial_statement
+        type: volume
 
-      - type: custom_numeric
-        id: orders_revenue
-        name: Orders Revenue Monitor
-        metric_aggregation: SUM(amount)
-
-      - type: field_stats
-        id: orders_field_stats
-        name: Orders Field Statistics
+      - id: stats_financial_statement
+        type: field_stats
         columns:
-          - status
-          - payment_method
+          - total_revenue
+          - total_tips
+        mode:
+          anomaly_engine:
+            sensitivity: BALANCED
+
+      - id: custom_financial_statement_revenue_nonnegative
+        type: custom_numeric
+        metric_aggregation: MIN(total_revenue)
+        mode:
+          fixed_thresholds:
+            min: 0
+

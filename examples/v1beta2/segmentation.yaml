@@ -1,0 +1,16 @@
+# Create a single volume monitor for runs table with segmentation by run_status. It will create specific time series for every possible value of run_status.
+
+version: v1beta2
+
+entities:
+  - id: ch-prod::default::runs
+    time_partitioning_column: created_at
+
+    monitors:
+      - id: runs_volume_daily_by_status
+        type: volume
+        segmentation:
+          expression: run_status
+          include_values:
+            - ERROR
+            - CRITICAL

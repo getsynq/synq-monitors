@@ -1,0 +1,14 @@
+# Create a single volume monitor for runs table running hourly with query delay.
+
+version: v1beta2
+
+entities:
+  - id: ch-prod.default.runs
+    time_partitioning_column: created_at
+
+    monitors:
+      - id: runs_volume_hourly
+        type: volume
+        timezone: Europe/Prague
+        hourly:
+          query_delay: 15m

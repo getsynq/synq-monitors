@@ -1,0 +1,20 @@
+
+[TestYAMLGeneratorSuite/TestExamples - 1]
+version: v1beta2
+namespace: ""
+entities:
+    - id: ch-prod::default::runs
+      time_partitioning_column: created_at
+      monitors:
+        - id: cd7a6968-78a3-5c9a-8f0e-e2a6bbaae074
+          name: runs_volume_daily
+          type: volume
+          severity: ERROR
+          timezone: Europe/Prague
+          mode:
+            anomaly_engine:
+                sensitivity: BALANCED
+          daily:
+            query_delay: 1h0m0s
+
+---

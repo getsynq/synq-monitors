@@ -19,3 +19,24 @@
  "volume": {}
 }
 ---
+
+[TestYAMLParserSuite/TestExamples - 2]
+{
+ "anomalyEngine": {
+  "sensitivity": "SENSITIVITY_BALANCED"
+ },
+ "daily": {},
+ "id": "a17b472c-59f3-5d64-87cf-71f3485a4f88",
+ "monitoredId": {
+  "synqPath": {
+   "path": "ch-prod::default::runs"
+  }
+ },
+ "name": "runs_volume_warn",
+ "severity": "SEVERITY_WARNING",
+ "timePartitioning": {
+  "expression": "created_at"
+ },
+ "volume": {}
+}
+---

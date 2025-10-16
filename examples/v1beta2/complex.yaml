@@ -1,0 +1,67 @@
+version: v1beta2
+
+namespace: "data-team-pipeline"
+
+defaults:
+  severity: ERROR
+  daily:
+    query_delay: 2h
+  mode:
+    anomaly_engine:
+      sensitivity: BALANCED
+
+entities:
+  - id: ch-prod.anomalies.corrections_v2
+    time_partitioning_column: created_at
+
+    monitors:
+      - id: freshness_on_orders
+        type: freshness
+        expression: "created_at"
+        severity: WARNING
+
+  - id: ch-prod.anomalies.external_sqltests
+    time_partitioning_column: created_at
+
+    monitors:
+      - id: freshness_on_orders
+        type: freshness
+        expression: "created_at"
+        severity: WARNING
+
+  - id: bq-synq-dwh.petr.kernel_assets__stg_assets
+    time_partitioning_column: created_at
+
+    monitors:
+      - id: volume_on_logs
+        type: volume
+        severity: WARNING
+        segmentation:
+          expression: "country"
+        filter: "country IN ('US', 'CA')"
+
+  - id: bq-synq-dwh.test.orders
+    time_partitioning_column: created_at
+
+    monitors:
+      - id: stats_on_user_fields
+        type: field_stats
+        columns:
+          - status
+          - order_date
+        mode:
+          anomaly_engine:
+            sensitivity: BALANCED
+        daily: {}
+
+  - id: bq-synq-dwh.test.orders
+    time_partitioning_column: order_date
+
+    monitors:
+      - id: custom_numeric_active_users
+        type: custom_numeric
+        metric_aggregation: "COUNT(DISTINCT user_id)"
+        mode:
+          fixed_thresholds:
+            min: 100
+            max: 10000
