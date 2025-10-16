@@ -6,7 +6,6 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
-	"sort"
 	"testing"
 
 	"github.com/getsynq/monitors_mgmt/uuid"
@@ -54,10 +53,6 @@ func (s *YAMLGeneratorSuite) TestExamples() {
 		// Convert to protobuf
 		protoMonitors, err := yamlParser.ConvertToMonitorDefinitions()
 		s.Require().NoError(err)
-
-		sort.SliceStable(protoMonitors, func(i, j int) bool {
-			return protoMonitors[i].Id < protoMonitors[j].Id
-		})
 
 		uuidGenerator := uuid.NewUUIDGenerator(s.workspace)
 		for i := range protoMonitors {

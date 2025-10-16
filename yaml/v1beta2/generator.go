@@ -2,6 +2,7 @@ package v1beta2
 
 import (
 	"fmt"
+	"sort"
 	"strings"
 	"time"
 
@@ -73,6 +74,10 @@ func (p *YAMLGenerator) GenerateYAML() ([]byte, error) {
 	for _, entity := range entitiesByPath {
 		config.Entities = append(config.Entities, *entity)
 	}
+
+	sort.SliceStable(config.Entities, func(i, j int) bool {
+		return config.Entities[i].Id < config.Entities[j].Id
+	})
 
 	if len(errors) > 0 {
 		return nil, errors

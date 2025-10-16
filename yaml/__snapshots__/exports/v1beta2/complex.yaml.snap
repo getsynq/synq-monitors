@@ -3,19 +3,6 @@
 version: v1beta2
 namespace: data-team-pipeline
 entities:
-    - id: ch-prod::anomalies::external_sqltests
-      time_partitioning_column: created_at
-      monitors:
-        - id: 24a0e18e-5ef3-5269-ba2b-fbec88270430
-          name: freshness_on_orders
-          type: freshness
-          severity: WARNING
-          mode:
-            anomaly_engine:
-                sensitivity: BALANCED
-          daily:
-            query_delay: 2h0m0s
-          expression: created_at
     - id: bq-synq-dwh::petr::kernel_assets__stg_assets
       time_partitioning_column: created_at
       monitors:
@@ -32,19 +19,8 @@ entities:
           daily:
             query_delay: 2h0m0s
     - id: bq-synq-dwh::test::orders
-      time_partitioning_column: order_date
+      time_partitioning_column: created_at
       monitors:
-        - id: 9769be77-e584-5bd5-8289-8321b4a01f4f
-          name: custom_numeric_active_users
-          type: custom_numeric
-          severity: ERROR
-          mode:
-            fixed_thresholds:
-                min: 100
-                max: 10000
-          daily:
-            query_delay: 2h0m0s
-          metric_aggregation: COUNT(DISTINCT user_id)
         - id: 911f832a-8ce5-5b14-930d-28d37a4f37b3
           name: stats_on_user_fields
           type: field_stats
@@ -56,10 +32,34 @@ entities:
           columns:
             - status
             - order_date
+        - id: 9769be77-e584-5bd5-8289-8321b4a01f4f
+          name: custom_numeric_active_users
+          type: custom_numeric
+          severity: ERROR
+          mode:
+            fixed_thresholds:
+                min: 100
+                max: 10000
+          daily:
+            query_delay: 2h0m0s
+          metric_aggregation: COUNT(DISTINCT user_id)
     - id: ch-prod::anomalies::corrections_v2
       time_partitioning_column: created_at
       monitors:
         - id: e90ecd7b-111d-5f14-9da7-e94c08f67655
+          name: freshness_on_orders
+          type: freshness
+          severity: WARNING
+          mode:
+            anomaly_engine:
+                sensitivity: BALANCED
+          daily:
+            query_delay: 2h0m0s
+          expression: created_at
+    - id: ch-prod::anomalies::external_sqltests
+      time_partitioning_column: created_at
+      monitors:
+        - id: 24a0e18e-5ef3-5269-ba2b-fbec88270430
           name: freshness_on_orders
           type: freshness
           severity: WARNING

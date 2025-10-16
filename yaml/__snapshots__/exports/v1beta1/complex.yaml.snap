@@ -3,19 +3,6 @@
 version: v1beta1
 namespace: data-team-pipeline
 monitors:
-    - id: 9769be77-e584-5bd5-8289-8321b4a01f4f
-      name: custom_numeric_active_users
-      type: custom_numeric
-      metric_aggregation: COUNT(DISTINCT user_id)
-      monitored_id: bq-synq-dwh::test::orders
-      severity: ERROR
-      time_partitioning: order_date
-      mode:
-        fixed_thresholds:
-            min: 100
-            max: 10000
-      daily:
-        query_delay: 2h0m0s
     - id: e90ecd7b-111d-5f14-9da7-e94c08f67655
       name: freshness_on_orders
       type: freshness
@@ -40,6 +27,20 @@ monitors:
             sensitivity: BALANCED
       daily:
         query_delay: 2h0m0s
+    - id: c20b07ae-27f5-50ff-ab17-7b11bed097dd
+      name: volume_on_logs
+      type: volume
+      monitored_id: bq-synq-dwh::petr::kernel_assets__stg_assets
+      segmentation:
+        expression: country
+      filter: country IN ('US', 'CA')
+      severity: WARNING
+      time_partitioning: created_at
+      mode:
+        anomaly_engine:
+            sensitivity: BALANCED
+      daily:
+        query_delay: 2h0m0s
     - id: 911f832a-8ce5-5b14-930d-28d37a4f37b3
       name: stats_on_user_fields
       type: field_stats
@@ -53,18 +54,17 @@ monitors:
         anomaly_engine:
             sensitivity: BALANCED
       daily: {}
-    - id: c20b07ae-27f5-50ff-ab17-7b11bed097dd
-      name: volume_on_logs
-      type: volume
-      monitored_id: bq-synq-dwh::petr::kernel_assets__stg_assets
-      segmentation:
-        expression: country
-      filter: country IN ('US', 'CA')
-      severity: WARNING
-      time_partitioning: created_at
+    - id: 9769be77-e584-5bd5-8289-8321b4a01f4f
+      name: custom_numeric_active_users
+      type: custom_numeric
+      metric_aggregation: COUNT(DISTINCT user_id)
+      monitored_id: bq-synq-dwh::test::orders
+      severity: ERROR
+      time_partitioning: order_date
       mode:
-        anomaly_engine:
-            sensitivity: BALANCED
+        fixed_thresholds:
+            min: 100
+            max: 10000
       daily:
         query_delay: 2h0m0s
 

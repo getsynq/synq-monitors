@@ -68,13 +68,6 @@ func (w MonitorWrapper) MarshalYAML() (any, error) {
 	return w.Monitor, nil
 }
 
-var (
-	_ Monitor = &Monitor_Freshness{}
-	_ Monitor = &Monitor_Volume{}
-	_ Monitor = &Monitor_CustomNumeric{}
-	_ Monitor = &Monitor_FieldStats{}
-)
-
 type BaseMonitor struct {
 	ID       string `yaml:"id"`
 	Name     string `yaml:"name"`
