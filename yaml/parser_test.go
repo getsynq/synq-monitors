@@ -36,40 +36,128 @@ func (s *YAMLParserSuite) TestExamples() {
 	_, thisfile, _, ok := runtime.Caller(0)
 	s.Require().True(ok)
 	examplesFolder := filepath.Join(filepath.Dir(thisfile), "../examples")
-	files := []string{}
+
+	type fileInfo struct {
+		path    string
+		version string
+		name    string
+	}
+
+	filesByName := make(map[string][]fileInfo)
+
 	err := filepath.WalkDir(examplesFolder, func(path string, d fs.DirEntry, err error) error {
 		s.Require().NoError(err)
 		if filepath.Ext(d.Name()) == ".yaml" || filepath.Ext(d.Name()) == ".yml" {
-			files = append(files, path)
+			relPath, err := filepath.Rel(examplesFolder, path)
+			s.Require().NoError(err)
+
+			version := filepath.Dir(relPath)
+			name := filepath.Base(path)
+
+			filesByName[name] = append(filesByName[name], fileInfo{
+				path:    path,
+				version: version,
+				name:    name,
+			})
 		}
 		return nil
 	})
 	s.Require().NoError(err)
 
-	for _, file := range files {
-		fmt.Printf("Parsing file: %s\n", file)
-		yamlContent, err := os.ReadFile(file)
-		s.Require().NoError(err)
+	for fileName, files := range filesByName {
+		if len(files) > 1 {
+			fmt.Printf("Comparing file '%s' across versions\n", fileName)
 
-		yamlParser, err := NewVersionedParser(yamlContent)
-		s.Require().NoError(err)
+			type versionMonitors struct {
+				version  string
+				monitors map[string][]byte
+			}
 
-		// Convert to protobuf
-		protoMonitors, err := yamlParser.ConvertToMonitorDefinitions()
-		s.Require().NoError(err)
+			allVersionMonitors := []versionMonitors{}
 
-		for _, monitor := range protoMonitors {
-			monitor = sanitize(monitor, s.uuidGenerator)
-			monitorJson, err := protojson.Marshal(monitor)
+			for _, file := range files {
+				yamlContent, err := os.ReadFile(file.path)
+				s.Require().NoError(err)
+
+				yamlParser, err := NewVersionedParser(yamlContent)
+				s.Require().NoError(err)
+
+				protoMonitors, err := yamlParser.ConvertToMonitorDefinitions()
+				s.Require().NoError(err)
+
+				versionMons := versionMonitors{
+					version:  file.version,
+					monitors: make(map[string][]byte),
+				}
+
+				for _, monitor := range protoMonitors {
+					monitor = sanitize(monitor, s.uuidGenerator)
+					monitorJson, err := protojson.Marshal(monitor)
+					s.Require().NoError(err)
+
+					entityPath := monitor.MonitoredId.GetSynqPath().GetPath()
+					versionMons.monitors[entityPath] = monitorJson
+
+					snapFileName := filepath.Join("examples", filepath.Base(file.path))
+					snaps.WithConfig(snaps.Filename(snapFileName)).MatchJSON(
+						s.T(),
+						monitorJson,
+					)
+				}
+
+				allVersionMonitors = append(allVersionMonitors, versionMons)
+			}
+
+			if len(allVersionMonitors) > 1 {
+				referenceVersion := allVersionMonitors[0]
+				for i := 1; i < len(allVersionMonitors); i++ {
+					compareVersion := allVersionMonitors[i]
+
+					for entityPath, referenceJSON := range referenceVersion.monitors {
+						compareJSON, found := compareVersion.monitors[entityPath]
+						s.Require().True(found, "Entity %s not found in %s version of %s", entityPath, compareVersion.version, fileName)
+
+						s.Require().JSONEq(
+							string(referenceJSON),
+							string(compareJSON),
+							"Monitor output differs between %s and %s for file %s, entity %s",
+							referenceVersion.version,
+							compareVersion.version,
+							fileName,
+							entityPath,
+						)
+					}
+
+					for entityPath := range compareVersion.monitors {
+						_, found := referenceVersion.monitors[entityPath]
+						s.Require().True(found, "Entity %s found in %s but not in %s version of %s", entityPath, compareVersion.version, referenceVersion.version, fileName)
+					}
+				}
+			}
+		} else {
+			file := files[0]
+			fmt.Printf("Parsing file: %s\n", file.path)
+			yamlContent, err := os.ReadFile(file.path)
 			s.Require().NoError(err)
 
-			snapFileName := filepath.Join(filepath.Base(filepath.Dir(file)), filepath.Base(file))
-			snaps.WithConfig(snaps.Filename(snapFileName)).MatchJSON(
-				s.T(),
-				monitorJson,
-			)
-		}
+			yamlParser, err := NewVersionedParser(yamlContent)
+			s.Require().NoError(err)
 
+			protoMonitors, err := yamlParser.ConvertToMonitorDefinitions()
+			s.Require().NoError(err)
+
+			for _, monitor := range protoMonitors {
+				monitor = sanitize(monitor, s.uuidGenerator)
+				monitorJson, err := protojson.Marshal(monitor)
+				s.Require().NoError(err)
+
+				snapFileName := filepath.Join("examples", filepath.Base(file.path))
+				snaps.WithConfig(snaps.Filename(snapFileName)).MatchJSON(
+					s.T(),
+					monitorJson,
+				)
+			}
+		}
 	}
 }
 

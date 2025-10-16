@@ -1,0 +1,11 @@
+version: v1beta2
+
+entities:
+  - id: ch-prod.default.orders
+    time_partitioning_column: created_at
+
+    monitors:
+      - type: freshness
+        id: orders_freshness_check
+        name: Orders Table Freshness
+        expression: created_at

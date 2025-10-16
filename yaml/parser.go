@@ -5,6 +5,7 @@ import (
 
 	"github.com/getsynq/monitors_mgmt/yaml/core"
 	"github.com/getsynq/monitors_mgmt/yaml/v1beta1"
+	"github.com/getsynq/monitors_mgmt/yaml/v1beta2"
 	"github.com/samber/lo"
 	goyaml "gopkg.in/yaml.v3"
 )
@@ -15,12 +16,11 @@ type VersionedParser struct {
 
 var parserConstructors = map[string]func([]byte) (core.Parser, error){
 	core.Version_V1Beta1: v1beta1.NewYAMLParserFromBytes,
+	core.Version_V1Beta2: v1beta2.NewYAMLParserFromBytes,
 }
 
 func NewVersionedParser(yamlContent []byte) (*VersionedParser, error) {
-	var versionCheck struct {
-		Version string `yaml:"version"`
-	}
+	var versionCheck core.Config
 
 	err := goyaml.Unmarshal(yamlContent, &versionCheck)
 	if err != nil {
@@ -29,7 +29,7 @@ func NewVersionedParser(yamlContent []byte) (*VersionedParser, error) {
 
 	version := versionCheck.Version
 	if version == "" {
-		version = core.Version_Default
+		version = core.Version_DefaultParser
 	}
 
 	constructor, ok := parserConstructors[version]

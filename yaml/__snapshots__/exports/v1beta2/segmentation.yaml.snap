@@ -1,0 +1,23 @@
+
+[TestYAMLGeneratorSuite/TestExamples - 1]
+version: v1beta2
+namespace: ""
+entities:
+    - id: ch-prod::default::runs
+      time_partitioning_column: created_at
+      monitors:
+        - id: 3251e5ce-e5da-5574-b39b-54f876e3a111
+          name: runs_volume_daily_by_status
+          type: volume
+          severity: ERROR
+          mode:
+            anomaly_engine:
+                sensitivity: BALANCED
+          segmentation:
+            expression: run_status
+            include_values:
+                - ERROR
+                - CRITICAL
+          daily: {}
+
+---
