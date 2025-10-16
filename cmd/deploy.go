@@ -9,6 +9,7 @@ import (
 
 	iamv1grpc "buf.build/gen/go/getsynq/api/grpc/go/synq/auth/iam/v1/iamv1grpc"
 	iamv1 "buf.build/gen/go/getsynq/api/protocolbuffers/go/synq/auth/iam/v1"
+	testsuggestionsv1 "buf.build/gen/go/getsynq/api/protocolbuffers/go/synq/datachecks/testsuggestions/v1"
 	entitiesv1 "buf.build/gen/go/getsynq/api/protocolbuffers/go/synq/entities/v1"
 	pb "buf.build/gen/go/getsynq/api/protocolbuffers/go/synq/monitors/custom_monitors/v1"
 	"github.com/getsynq/monitors_mgmt/mgmt"
@@ -98,7 +99,7 @@ func deployFromYaml(cmd *cobra.Command, args []string) {
 	}
 
 	// parse
-	yamlParser, protoMonitors, err := parse(filePath)
+	yamlParser, protoMonitors, protoTests, err := parse(filePath)
 	if err != nil {
 		exitWithError(err)
 	}
@@ -116,9 +117,28 @@ func deployFromYaml(cmd *cobra.Command, args []string) {
 		protoMonitor.Id = uuidGenerator.GenerateMonitorUUID(protoMonitor)
 	}
 
+	// Resolve test entity paths and generate UUIDs
+	if len(protoTests) > 0 {
+		protoTests, err = resolveTests(pathsConverter, protoTests)
+		if err != nil {
+			exitWithError(err)
+		}
+
+		for _, protoTest := range protoTests {
+			uuidStr := uuidGenerator.GenerateTestUUID(protoTest)
+			// Store UUID in the Id field (which is a *string)
+			protoTest.Id = &uuidStr
+		}
+	}
+
 	// Conditionally show protobuf output based on the -p flag
 	if deployCmd_printProtobuf {
-		PrintMonitorDefs(protoMonitors)
+		if len(protoMonitors) > 0 {
+			PrintMonitorDefs(protoMonitors)
+		}
+		if len(protoTests) > 0 {
+			PrintTestSuggestions(protoTests)
+		}
 	} else {
 		fmt.Println("\n💡 Use -p flag to print protobuf messages in JSON format")
 	}
@@ -174,30 +194,39 @@ func deployFromYaml(cmd *cobra.Command, args []string) {
 	fmt.Println("✅ Deployment complete!")
 }
 
-func parse(filePath string) (*yaml.VersionedParser, []*pb.MonitorDefinition, error) {
+func parse(filePath string) (*yaml.VersionedParser, []*pb.MonitorDefinition, []*testsuggestionsv1.TestSuggestion, error) {
 	// Read YAML file
 	fmt.Println("🔍 Parsing YAML structure...")
 	yamlContent, err := os.ReadFile(filePath)
 	if err != nil {
-		return nil, nil, fmt.Errorf("❌ Error reading file: %v\n", err)
+		return nil, nil, nil, fmt.Errorf("❌ Error reading file: %v\n", err)
 	}
 
 	yamlParser, err := yaml.NewVersionedParser(yamlContent)
 	if err != nil {
-		return nil, nil, fmt.Errorf("❌ YAML parsing failed: %v\n", err)
+		return nil, nil, nil, fmt.Errorf("❌ YAML parsing failed: %v\n", err)
 	}
 	fmt.Println("✅ YAML syntax is valid!")
 
-	// Convert to protobuf
-	fmt.Println("\n🔄 Converting to protobuf format...")
+	// Convert monitors to protobuf
+	fmt.Println("\n🔄 Converting monitors to protobuf format...")
 	protoMonitors, err := yamlParser.ConvertToMonitorDefinitions()
 	if err != nil {
-		return nil, nil, fmt.Errorf("❌ Conversion errors found: %s\n", err.Error())
+		return nil, nil, nil, fmt.Errorf("❌ Conversion errors found: %s\n", err.Error())
 	}
 
 	fmt.Printf("✅ Successfully converted to %d protobuf MonitorDefinition(s)\n", len(protoMonitors))
 
-	return yamlParser, protoMonitors, nil
+	// Convert tests to protobuf
+	fmt.Println("\n🔄 Converting tests to protobuf format...")
+	protoTests, err := yamlParser.ConvertToTestSuggestions()
+	if err != nil {
+		return nil, nil, nil, fmt.Errorf("❌ Test conversion errors found: %s\n", err.Error())
+	}
+
+	fmt.Printf("✅ Successfully converted to %d TestSuggestion(s)\n", len(protoTests))
+
+	return yamlParser, protoMonitors, protoTests, nil
 }
 
 func resolve(pathsConverter paths.PathConverter, protoMonitors []*pb.MonitorDefinition) ([]*pb.MonitorDefinition, error) {
@@ -233,6 +262,34 @@ func resolve(pathsConverter paths.PathConverter, protoMonitors []*pb.MonitorDefi
 	fmt.Println("✅ Monitored entities resolved!")
 
 	return protoMonitors, nil
+}
+
+func resolveTests(pathsConverter paths.PathConverter, protoTests []*testsuggestionsv1.TestSuggestion) ([]*testsuggestionsv1.TestSuggestion, error) {
+	fmt.Println("\n🔍 Resolving test entity paths...")
+	pathsToConvert := []string{}
+	for _, test := range protoTests {
+		if test.EntitySynqPath != nil && len(test.GetEntitySynqPath()) > 0 {
+			pathsToConvert = append(pathsToConvert, test.GetEntitySynqPath())
+		}
+	}
+	pathsToConvert = lo.Uniq(pathsToConvert)
+
+	resolvedPaths, err := pathsConverter.SimpleToPath(pathsToConvert)
+	if err != nil && err.HasErrors() {
+		return protoTests, errors.New(err.Error())
+	}
+
+	// set resolved paths back to tests
+	for i := range protoTests {
+		path := protoTests[i].GetEntitySynqPath()
+		if resolved, ok := resolvedPaths[path]; ok && len(resolved) > 0 {
+			protoTests[i].EntitySynqPath = &resolved
+		}
+	}
+
+	fmt.Println("✅ Test entity paths resolved!")
+
+	return protoTests, nil
 }
 
 func getHostAndPort(apiUrl string) (string, string) {

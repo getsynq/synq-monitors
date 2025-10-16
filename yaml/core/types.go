@@ -2,6 +2,7 @@ package core
 
 import (
 	pb "buf.build/gen/go/getsynq/api/protocolbuffers/go/synq/monitors/custom_monitors/v1"
+	testsuggestionsv1 "buf.build/gen/go/getsynq/api/protocolbuffers/go/synq/datachecks/testsuggestions/v1"
 )
 
 const (
@@ -24,6 +25,7 @@ type MetadataProvider interface {
 type Parser interface {
 	MetadataProvider
 	ConvertToMonitorDefinitions() ([]*pb.MonitorDefinition, error)
+	ConvertToTestSuggestions() ([]*testsuggestionsv1.TestSuggestion, error)
 }
 
 type Generator interface {
