@@ -6,7 +6,6 @@ entities:
   - id: ch-prod.default.runs
     time_partitioning_column: created_at
 
-    tests: []
     monitors:
-      - type: volume
-        id: runs_volume_daily
+      - volume:
+          id: runs_volume_daily

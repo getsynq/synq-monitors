@@ -46,7 +46,8 @@ func (p *YAMLParser) GetYAMLConfig() *YAMLConfig {
 
 func (p *YAMLParser) ConvertToMonitorDefinitions() ([]*pb.MonitorDefinition, error) {
 	var errors ConversionErrors
-	var protoMonitors []*pb.MonitorDefinition
+	var monitors []*pb.MonitorDefinition
+
 	existingMonitorIds := make(map[string]bool)
 
 	for _, entity := range p.yamlConfig.Entities {
@@ -64,317 +65,82 @@ func (p *YAMLParser) ConvertToMonitorDefinitions() ([]*pb.MonitorDefinition, err
 			timePartitioning = p.yamlConfig.Defaults.TimePartitioning
 		}
 
-		for _, test := range entity.Tests {
-			monitors, convErrors := p.convertTestToMonitors(&test, &entity, timePartitioning)
-			if convErrors.HasErrors() {
-				errors = append(errors, convErrors...)
-				continue
-			}
-
-			for _, monitor := range monitors {
-				if _, ok := existingMonitorIds[monitor.Id]; ok {
-					errors = append(errors, ConversionError{
-						Field:   "id",
-						Message: "must be unique",
-						Monitor: monitor.Id,
-						Entity:  entityId,
-					})
-				} else {
-					existingMonitorIds[monitor.Id] = true
+		for _, wrapper := range entity.Monitors {
+			yamlMonitor := wrapper.Monitor
+			monitorID := yamlMonitor.GetMonitorID()
+			monitor := p.createBaseMonitor(monitorID, yamlMonitor.GetMonitorName(), entity.Id, timePartitioning)
+			switch t := yamlMonitor.(type) {
+			case *Monitor_Freshness:
+				if t.Expression == "" {
+					errors = append(
+						errors,
+						ConversionError{Field: "expression", Message: "expression is required for freshness monitors", Monitor: monitorID, Entity: entity.Id},
+					)
 				}
-				protoMonitors = append(protoMonitors, monitor)
-			}
-		}
-
-		for _, yamlMonitor := range entity.Monitors {
-			monitors, convErrors := p.convertMonitor(&yamlMonitor, &entity, timePartitioning)
-			if convErrors.HasErrors() {
-				errors = append(errors, convErrors...)
-				continue
-			}
-
-			for _, monitor := range monitors {
-				id := monitor.Id
-				if id != "" {
-					if _, ok := existingMonitorIds[id]; ok {
-						errors = append(errors, ConversionError{
-							Field:   "id",
-							Message: "must be unique",
-							Monitor: id,
-							Entity:  entityId,
-						})
-					} else {
-						existingMonitorIds[id] = true
-					}
+				monitor.Monitor = &pb.MonitorDefinition_Freshness{Freshness: &pb.MonitorFreshness{Expression: t.Expression}}
+			case *Monitor_Volume:
+				monitor.Monitor = &pb.MonitorDefinition_Volume{Volume: &pb.MonitorVolume{}}
+			case *Monitor_CustomNumeric:
+				if t.MetricAggregation == "" {
+					errors = append(
+						errors,
+						ConversionError{Field: "sql", Message: "sql is required for custom_numeric monitors", Monitor: monitorID, Entity: entity.Id},
+					)
 				}
-				protoMonitors = append(protoMonitors, monitor)
-			}
-		}
-	}
-
-	if len(errors) > 0 {
-		return protoMonitors, errors
-	}
-
-	return protoMonitors, nil
-}
-
-func (p *YAMLParser) convertTestToMonitors(
-	test *YAMLTest,
-	entity *YAMLEntity,
-	timePartitioning string,
-) ([]*pb.MonitorDefinition, ConversionErrors) {
-	var errors ConversionErrors
-	var monitors []*pb.MonitorDefinition
-
-	switch test.Type {
-	case "not_null":
-		if len(test.Columns) == 0 {
-			errors = append(errors, ConversionError{
-				Field:   "columns",
-				Message: "columns are required for not_null tests",
-				Entity:  entity.Id,
-			})
-			return nil, errors
-		}
-
-		for _, column := range test.Columns {
-			monitorId := fmt.Sprintf("%s_not_null_%s", sanitizeIdPart(entity.Id), column)
-			monitor := p.createBaseMonitor(monitorId, monitorId, entity.Id, timePartitioning)
-
-			monitor.Monitor = &pb.MonitorDefinition_CustomNumeric{
-				CustomNumeric: &pb.MonitorCustomNumeric{
-					MetricAggregation: fmt.Sprintf("COUNT(*) FILTER (WHERE %s IS NULL)", column),
-				},
-			}
-
-			monitor.Mode = &pb.MonitorDefinition_FixedThresholds{
-				FixedThresholds: &pb.ModeFixedThresholds{
-					Max: wrapperspb.Double(0),
-				},
-			}
-
-			p.applySeverity(monitor, "")
-			p.applySchedule(monitor, nil)
-
-			monitors = append(monitors, monitor)
-		}
-
-	case "unique":
-		if len(test.Columns) == 0 {
-			errors = append(errors, ConversionError{
-				Field:   "columns",
-				Message: "columns are required for unique tests",
-				Entity:  entity.Id,
-			})
-			return nil, errors
-		}
-
-		columnList := strings.Join(test.Columns, ", ")
-		monitorId := fmt.Sprintf("%s_unique_%s", sanitizeIdPart(entity.Id), strings.Join(test.Columns, "_"))
-		monitor := p.createBaseMonitor(monitorId, monitorId, entity.Id, timePartitioning)
-
-		monitor.Monitor = &pb.MonitorDefinition_CustomNumeric{
-			CustomNumeric: &pb.MonitorCustomNumeric{
-				MetricAggregation: fmt.Sprintf("COUNT(*) - COUNT(DISTINCT %s)", columnList),
-			},
-		}
-
-		monitor.Mode = &pb.MonitorDefinition_FixedThresholds{
-			FixedThresholds: &pb.ModeFixedThresholds{
-				Max: wrapperspb.Double(0),
-			},
-		}
-
-		p.applySeverity(monitor, "")
-		p.applySchedule(monitor, nil)
-
-		monitors = append(monitors, monitor)
-
-	case "accepted_values":
-		if test.Column == "" {
-			errors = append(errors, ConversionError{
-				Field:   "column",
-				Message: "column is required for accepted_values tests",
-				Entity:  entity.Id,
-			})
-			return nil, errors
-		}
-		if len(test.Values) == 0 {
-			errors = append(errors, ConversionError{
-				Field:   "values",
-				Message: "values are required for accepted_values tests",
-				Entity:  entity.Id,
-			})
-			return nil, errors
-		}
-
-		quotedValues := make([]string, len(test.Values))
-		for i, v := range test.Values {
-			quotedValues[i] = fmt.Sprintf("'%s'", strings.ReplaceAll(v, "'", "''"))
-		}
-		valueList := strings.Join(quotedValues, ", ")
-
-		monitorId := fmt.Sprintf("%s_accepted_values_%s", sanitizeIdPart(entity.Id), test.Column)
-		monitor := p.createBaseMonitor(monitorId, monitorId, entity.Id, timePartitioning)
-
-		monitor.Monitor = &pb.MonitorDefinition_CustomNumeric{
-			CustomNumeric: &pb.MonitorCustomNumeric{
-				MetricAggregation: fmt.Sprintf("COUNT(*) FILTER (WHERE %s NOT IN (%s))", test.Column, valueList),
-			},
-		}
-
-		monitor.Mode = &pb.MonitorDefinition_FixedThresholds{
-			FixedThresholds: &pb.ModeFixedThresholds{
-				Max: wrapperspb.Double(0),
-			},
-		}
-
-		p.applySeverity(monitor, "")
-		p.applySchedule(monitor, nil)
-
-		monitors = append(monitors, monitor)
-
-	default:
-		errors = append(errors, ConversionError{
-			Field:   "type",
-			Message: fmt.Sprintf("unsupported test type: %s", test.Type),
-			Entity:  entity.Id,
-		})
-	}
-
-	return monitors, errors
-}
-
-func (p *YAMLParser) convertMonitor(
-	yamlMonitor *YAMLMonitor,
-	entity *YAMLEntity,
-	timePartitioning string,
-) ([]*pb.MonitorDefinition, ConversionErrors) {
-	var errors ConversionErrors
-	var monitors []*pb.MonitorDefinition
-
-	if yamlMonitor.Type == "table" && len(yamlMonitor.Metrics) > 0 {
-		for _, metric := range yamlMonitor.Metrics {
-			monitorId := yamlMonitor.Id
-			if monitorId == "" {
-				monitorId = fmt.Sprintf("%s_%s", sanitizeIdPart(entity.Id), metric)
-			} else {
-				monitorId = fmt.Sprintf("%s_%s", yamlMonitor.Id, metric)
-			}
-
-			monitor := p.createBaseMonitor(monitorId, yamlMonitor.Name, entity.Id, timePartitioning)
-
-			switch metric {
-			case "freshness":
-				if timePartitioning == "" {
-					errors = append(errors, ConversionError{
-						Field:   "time_partitioning_column",
-						Message: "time_partitioning_column is required for freshness monitors",
-						Monitor: monitorId,
-						Entity:  entity.Id,
-					})
-					continue
+				monitor.Monitor = &pb.MonitorDefinition_CustomNumeric{CustomNumeric: &pb.MonitorCustomNumeric{MetricAggregation: t.MetricAggregation}}
+			case *Monitor_FieldStats:
+				if len(t.Fields) == 0 {
+					errors = append(
+						errors,
+						ConversionError{
+							Field:   "columns",
+							Message: "columns are required for field_stats monitors",
+							Monitor: monitorID,
+							Entity:  entity.Id,
+						},
+					)
 				}
-				monitor.Monitor = &pb.MonitorDefinition_Freshness{
-					Freshness: &pb.MonitorFreshness{
-						Expression: timePartitioning,
-					},
-				}
-			case "volume":
-				monitor.Monitor = &pb.MonitorDefinition_Volume{
-					Volume: &pb.MonitorVolume{},
-				}
-			case "change_delay":
-				errors = append(errors, ConversionError{
-					Field:   "metrics",
-					Message: "change_delay metric is not yet supported",
-					Monitor: monitorId,
-					Entity:  entity.Id,
-				})
-				continue
+				monitor.Monitor = &pb.MonitorDefinition_FieldStats{FieldStats: &pb.MonitorFieldStats{Fields: t.Fields}}
 			default:
+				errors = append(
+					errors,
+					ConversionError{
+						Field:   "type",
+						Message: fmt.Sprintf("unsupported monitor type: %v", t),
+						Monitor: monitorID,
+						Entity:  entity.Id,
+					},
+				)
+			}
+
+			p.applySeverity(monitor, yamlMonitor.GetMonitorSeverity())
+
+			err := p.applyMode(monitor, yamlMonitor.GetMonitorMode(), &entity)
+			if err.HasErrors() {
+				errors = append(errors, err...)
+			}
+			p.applySchedule(monitor, yamlMonitor.GetMonitorDaily(), yamlMonitor.GetMonitorHourly())
+			p.applyTimezone(monitor, yamlMonitor.GetMonitorTimezone())
+			err = p.applyOptionalFields(monitor, yamlMonitor)
+			if err.HasErrors() {
+				errors = append(errors, err...)
+			}
+
+			if _, ok := existingMonitorIds[monitor.Id]; ok {
 				errors = append(errors, ConversionError{
-					Field:   "metrics",
-					Message: fmt.Sprintf("unsupported metric: %s", metric),
-					Monitor: monitorId,
-					Entity:  entity.Id,
+					Field:   "id",
+					Message: "must be unique",
+					Monitor: monitor.Id,
+					Entity:  entityId,
 				})
-				continue
+			} else {
+				existingMonitorIds[monitor.Id] = true
+				monitors = append(monitors, monitor)
 			}
-
-			p.applySeverity(monitor, yamlMonitor.Severity)
-			p.applyMode(monitor, yamlMonitor.Mode, entity, &errors, monitorId)
-			p.applySchedule(monitor, yamlMonitor)
-			p.applyOptionalFields(monitor, yamlMonitor, &errors, monitorId)
-
-			monitors = append(monitors, monitor)
 		}
-	} else {
-		monitorId := yamlMonitor.Id
-		if monitorId == "" {
-			monitorId = fmt.Sprintf("%s_%s", sanitizeIdPart(entity.Id), yamlMonitor.Type)
-		}
-
-		monitor := p.createBaseMonitor(monitorId, yamlMonitor.Name, entity.Id, timePartitioning)
-
-		switch yamlMonitor.Type {
-		case "volume":
-			monitor.Monitor = &pb.MonitorDefinition_Volume{
-				Volume: &pb.MonitorVolume{},
-			}
-
-		case "field_stats":
-			if len(yamlMonitor.Columns) == 0 {
-				errors = append(errors, ConversionError{
-					Field:   "columns",
-					Message: "columns are required for field_stats monitors",
-					Monitor: monitorId,
-					Entity:  entity.Id,
-				})
-				return nil, errors
-			}
-			monitor.Monitor = &pb.MonitorDefinition_FieldStats{
-				FieldStats: &pb.MonitorFieldStats{
-					Fields: yamlMonitor.Columns,
-				},
-			}
-
-		case "custom_numeric":
-			if yamlMonitor.Sql == "" {
-				errors = append(errors, ConversionError{
-					Field:   "sql",
-					Message: "sql is required for custom_numeric monitors",
-					Monitor: monitorId,
-					Entity:  entity.Id,
-				})
-				return nil, errors
-			}
-			monitor.Monitor = &pb.MonitorDefinition_CustomNumeric{
-				CustomNumeric: &pb.MonitorCustomNumeric{
-					MetricAggregation: yamlMonitor.Sql,
-				},
-			}
-
-		default:
-			errors = append(errors, ConversionError{
-				Field:   "type",
-				Message: fmt.Sprintf("unsupported monitor type: %s", yamlMonitor.Type),
-				Monitor: monitorId,
-				Entity:  entity.Id,
-			})
-			return nil, errors
-		}
-
-		p.applySeverity(monitor, yamlMonitor.Severity)
-		p.applyMode(monitor, yamlMonitor.Mode, entity, &errors, monitorId)
-		p.applySchedule(monitor, yamlMonitor)
-		p.applyOptionalFields(monitor, yamlMonitor, &errors, monitorId)
-
-		monitors = append(monitors, monitor)
 	}
 
-	return monitors, errors
+	return monitors, errors.Coalesce()
 }
 
 func (p *YAMLParser) createBaseMonitor(id, name, entityId, timePartitioning string) *pb.MonitorDefinition {
@@ -404,22 +170,20 @@ func (p *YAMLParser) createBaseMonitor(id, name, entityId, timePartitioning stri
 	return monitor
 }
 
-func (p *YAMLParser) applySeverity(monitor *pb.MonitorDefinition, monitorSeverity string) {
-	severity := monitorSeverity
+func (p *YAMLParser) applySeverity(monitor *pb.MonitorDefinition, severity string) {
 	if severity == "" {
 		severity = p.yamlConfig.Defaults.Severity
 	}
 
-	parsedSeverity, ok := parseSeverity(severity)
-	if ok {
+	if parsedSeverity, ok := parseSeverity(severity); ok {
 		monitor.Severity = parsedSeverity
 	} else {
 		monitor.Severity = pb.Severity_SEVERITY_ERROR
 	}
 }
 
-func (p *YAMLParser) applyMode(monitor *pb.MonitorDefinition, yamlMode *YAMLMode, entity *YAMLEntity, errors *ConversionErrors, monitorId string) {
-	mode := yamlMode
+func (p *YAMLParser) applyMode(monitor *pb.MonitorDefinition, mode *YAMLMode, entity *YAMLEntity) ConversionErrors {
+	var errors ConversionErrors
 	if mode == nil {
 		mode = p.yamlConfig.Defaults.Mode
 	}
@@ -430,98 +194,100 @@ func (p *YAMLParser) applyMode(monitor *pb.MonitorDefinition, yamlMode *YAMLMode
 				Sensitivity: pb.Sensitivity_SENSITIVITY_BALANCED,
 			},
 		}
-	} else {
-		if mode.AnomalyEngine != nil {
-			sensitivity, ok := parseSensitivity(mode.AnomalyEngine.Sensitivity)
-			if !ok {
-				*errors = append(*errors, ConversionError{
-					Field:   "mode.anomaly_engine.sensitivity",
-					Message: fmt.Sprintf("invalid sensitivity: %s", mode.AnomalyEngine.Sensitivity),
-					Monitor: monitorId,
-					Entity:  entity.Id,
-				})
-			} else {
-				monitor.Mode = &pb.MonitorDefinition_AnomalyEngine{
-					AnomalyEngine: &pb.ModeAnomalyEngine{
-						Sensitivity: sensitivity,
-					},
-				}
-			}
-		} else if mode.FixedThresholds != nil {
-			fixedThresholds := &pb.ModeFixedThresholds{}
-			if mode.FixedThresholds.Min != nil {
-				fixedThresholds.Min = wrapperspb.Double(*mode.FixedThresholds.Min)
-			}
-			if mode.FixedThresholds.Max != nil {
-				fixedThresholds.Max = wrapperspb.Double(*mode.FixedThresholds.Max)
-			}
-			monitor.Mode = &pb.MonitorDefinition_FixedThresholds{
-				FixedThresholds: fixedThresholds,
-			}
+
+		return nil
+	}
+
+	if mode.AnomalyEngine != nil {
+		sensitivity, ok := parseSensitivity(mode.AnomalyEngine.Sensitivity)
+		if !ok {
+			errors = append(errors, ConversionError{
+				Field:   "mode.anomaly_engine.sensitivity",
+				Message: fmt.Sprintf("invalid sensitivity: %s", mode.AnomalyEngine.Sensitivity),
+				Monitor: monitor.Id,
+				Entity:  entity.Id,
+			})
+		}
+
+		monitor.Mode = &pb.MonitorDefinition_AnomalyEngine{
+			AnomalyEngine: &pb.ModeAnomalyEngine{
+				Sensitivity: sensitivity,
+			},
+		}
+
+	}
+
+	if mode.FixedThresholds != nil {
+		fixedThresholds := &pb.ModeFixedThresholds{}
+		if mode.FixedThresholds.Min != nil {
+			fixedThresholds.Min = wrapperspb.Double(*mode.FixedThresholds.Min)
+		}
+		if mode.FixedThresholds.Max != nil {
+			fixedThresholds.Max = wrapperspb.Double(*mode.FixedThresholds.Max)
+		}
+		monitor.Mode = &pb.MonitorDefinition_FixedThresholds{
+			FixedThresholds: fixedThresholds,
 		}
 	}
+
+	return errors
 }
 
-func (p *YAMLParser) applySchedule(monitor *pb.MonitorDefinition, yamlMonitor *YAMLMonitor) {
-	var daily *YAMLSchedule
-	var hourly *YAMLSchedule
-
-	if yamlMonitor != nil {
-		daily = yamlMonitor.Daily
-		hourly = yamlMonitor.Hourly
-	}
-
-	if daily == nil && hourly == nil {
-		daily = p.yamlConfig.Defaults.Daily
-		hourly = p.yamlConfig.Defaults.Hourly
-	}
-
-	if daily != nil {
+func (p *YAMLParser) applySchedule(monitor *pb.MonitorDefinition, daily *YAMLSchedule, hourly *YAMLSchedule) {
+	switch {
+	case daily != nil:
 		monitor.Schedule = convertDailySchedule(daily)
-	} else if hourly != nil {
+	case hourly != nil:
 		monitor.Schedule = convertHourlySchedule(hourly)
-	} else {
+	case p.yamlConfig.Defaults.Daily != nil:
+		monitor.Schedule = convertDailySchedule(p.yamlConfig.Defaults.Daily)
+	case p.yamlConfig.Defaults.Hourly != nil:
+		monitor.Schedule = convertHourlySchedule(p.yamlConfig.Defaults.Hourly)
+	default:
 		monitor.Schedule = &pb.MonitorDefinition_Daily{
 			Daily: &pb.ScheduleDaily{
 				MinutesSinceMidnight: int32(0),
 			},
 		}
-	}
 
-	var timezone string
-	if yamlMonitor != nil && yamlMonitor.Timezone != "" {
-		timezone = yamlMonitor.Timezone
-	} else {
+	}
+}
+
+func (p *YAMLParser) applyTimezone(monitor *pb.MonitorDefinition, timezone string) {
+	if timezone == "" {
 		timezone = p.yamlConfig.Defaults.Timezone
 	}
+
 	monitor.Timezone = timezone
 }
 
-func (p *YAMLParser) applyOptionalFields(monitor *pb.MonitorDefinition, yamlMonitor *YAMLMonitor, errors *ConversionErrors, monitorId string) {
-	if yamlMonitor.Segmentation != nil {
-		expression := strings.TrimSpace(yamlMonitor.Segmentation.Expression)
+func (p *YAMLParser) applyOptionalFields(monitor *pb.MonitorDefinition, yamlMonitor Monitor) ConversionErrors {
+	var errors ConversionErrors
+
+	if segmentation := yamlMonitor.GetMonitorSegmentation(); segmentation != nil {
+		expression := strings.TrimSpace(segmentation.Expression)
 		if len(expression) == 0 {
-			*errors = append(*errors, ConversionError{
+			errors = append(errors, ConversionError{
 				Field:   "segmentation",
 				Message: "segmentation expression is required",
-				Monitor: monitorId,
+				Monitor: monitor.Id,
 			})
 		}
 
 		includeValues := []string{}
 		excludeValues := []string{}
-		if yamlMonitor.Segmentation.IncludeValues != nil {
-			includeValues = *yamlMonitor.Segmentation.IncludeValues
+		if include := segmentation.IncludeValues; include != nil {
+			includeValues = *include
 		}
-		if yamlMonitor.Segmentation.ExcludeValues != nil {
-			excludeValues = *yamlMonitor.Segmentation.ExcludeValues
+		if exclude := segmentation.ExcludeValues; exclude != nil {
+			excludeValues = *exclude
 		}
 
 		if len(includeValues) > 0 && len(excludeValues) > 0 {
-			*errors = append(*errors, ConversionError{
+			errors = append(errors, ConversionError{
 				Field:   "segmentation",
 				Message: "cannot use segmentation include_values and exclude_values simultaneously",
-				Monitor: monitorId,
+				Monitor: monitor.Id,
 			})
 		}
 
@@ -540,18 +306,18 @@ func (p *YAMLParser) applyOptionalFields(monitor *pb.MonitorDefinition, yamlMoni
 		}
 	}
 
-	if yamlMonitor.Filter != "" {
-		monitor.Filter = &yamlMonitor.Filter
+	if filter := yamlMonitor.GetMonitorFilter(); filter != "" {
+		monitor.Filter = &filter
 	}
+
+	return errors
 }
 
 func parseSeverity(severity string) (pb.Severity, bool) {
 	switch strings.ToUpper(severity) {
 	case "WARNING", "WARN":
 		return pb.Severity_SEVERITY_WARNING, true
-	case "ERROR":
-		return pb.Severity_SEVERITY_ERROR, true
-	case "":
+	case "ERROR", "":
 		return pb.Severity_SEVERITY_ERROR, true
 	default:
 		return pb.Severity_SEVERITY_UNSPECIFIED, false
@@ -562,12 +328,10 @@ func parseSensitivity(sensitivity string) (pb.Sensitivity, bool) {
 	switch strings.ToUpper(sensitivity) {
 	case "PRECISE":
 		return pb.Sensitivity_SENSITIVITY_PRECISE, true
-	case "BALANCED":
+	case "BALANCED", "":
 		return pb.Sensitivity_SENSITIVITY_BALANCED, true
 	case "RELAXED":
 		return pb.Sensitivity_SENSITIVITY_RELAXED, true
-	case "":
-		return pb.Sensitivity_SENSITIVITY_BALANCED, true
 	default:
 		return pb.Sensitivity_SENSITIVITY_UNSPECIFIED, false
 	}
@@ -592,18 +356,20 @@ func (p *YAMLParser) GetYAMLSummary() map[string]any {
 
 	for _, entity := range p.yamlConfig.Entities {
 		totalTests += len(entity.Tests)
-		for _, test := range entity.Tests {
-			testTypeCount[test.Type]++
+		for range entity.Tests {
 		}
 
 		totalMonitors += len(entity.Monitors)
-		for _, monitor := range entity.Monitors {
-			if monitor.Type == "table" && len(monitor.Metrics) > 0 {
-				for _, metric := range monitor.Metrics {
-					monitorTypeCount[metric]++
-				}
-			} else {
-				monitorTypeCount[monitor.Type]++
+		for _, wrapper := range entity.Monitors {
+			switch wrapper.Monitor.(type) {
+			case *Monitor_Freshness:
+				monitorTypeCount["freshness"]++
+			case *Monitor_Volume:
+				monitorTypeCount["volume"]++
+			case *Monitor_CustomNumeric:
+				monitorTypeCount["custom_numeric"]++
+			case *Monitor_FieldStats:
+				monitorTypeCount["field_stats"]++
 			}
 		}
 	}

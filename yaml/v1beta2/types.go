@@ -1,8 +1,6 @@
 package v1beta2
 
 import (
-	"fmt"
-	"strings"
 	"time"
 
 	"github.com/getsynq/monitors_mgmt/yaml/core"
@@ -23,17 +21,14 @@ type YAMLConfig struct {
 }
 
 type YAMLEntity struct {
-	Id                     string        `yaml:"id"`
-	TimePartitioningColumn string        `yaml:"time_partitioning_column,omitempty"`
-	Tests                  []YAMLTest    `yaml:"tests,omitempty"`
-	Monitors               []YAMLMonitor `yaml:"monitors,omitempty"`
+	Id                     string           `yaml:"id"`
+	TimePartitioningColumn string           `yaml:"time_partitioning_column,omitempty"`
+	Tests                  []Test           `yaml:"tests,omitempty"`
+	Monitors               []MonitorWrapper `yaml:"monitors,omitempty"`
 }
 
-type YAMLTest struct {
-	Type    string   `yaml:"type"`
-	Columns []string `yaml:"columns,omitempty"`
-	Column  string   `yaml:"column,omitempty"`
-	Values  []string `yaml:"values,omitempty"`
+type Test interface {
+	IsTest()
 }
 
 type YAMLMonitor struct {
@@ -76,45 +71,4 @@ type YAMLSchedule struct {
 	TimePartitioningShift *time.Duration `yaml:"time_partitioning_shift,omitempty"`
 	QueryDelay            *time.Duration `yaml:"query_delay,omitempty"`
 	IgnoreLast            *int32         `yaml:"ignore_last,omitempty"`
-}
-
-type ConversionError struct {
-	Field   string
-	Message string
-	Monitor string
-	Entity  string
-}
-
-func (e ConversionError) Error() string {
-	if e.Entity != "" && e.Monitor != "" {
-		return fmt.Sprintf("Entity '%s', Monitor '%s': %s - %s", e.Entity, e.Monitor, e.Field, e.Message)
-	}
-	if e.Entity != "" {
-		return fmt.Sprintf("Entity '%s': %s - %s", e.Entity, e.Field, e.Message)
-	}
-	if e.Monitor != "" {
-		return fmt.Sprintf("Monitor '%s': %s - %s", e.Monitor, e.Field, e.Message)
-	}
-	return fmt.Sprintf("%s - %s", e.Field, e.Message)
-}
-
-type ConversionErrors []ConversionError
-
-func (e ConversionErrors) Error() string {
-	if len(e) == 0 {
-		return ""
-	}
-	if len(e) == 1 {
-		return e[0].Error()
-	}
-
-	var messages []string
-	for _, err := range e {
-		messages = append(messages, err.Error())
-	}
-	return fmt.Sprintf("Multiple conversion errors:\n  - %s", strings.Join(messages, "\n  - "))
-}
-
-func (e ConversionErrors) HasErrors() bool {
-	return len(e) > 0
 }

@@ -67,7 +67,7 @@ func (p *YAMLGenerator) GenerateYAML() ([]byte, error) {
 			continue
 		}
 
-		entity.Monitors = append(entity.Monitors, monitor)
+		entity.Monitors = append(entity.Monitors, MonitorWrapper{Monitor: monitor})
 	}
 
 	for _, entity := range entitiesByPath {
@@ -83,57 +83,18 @@ func (p *YAMLGenerator) GenerateYAML() ([]byte, error) {
 
 func (p *YAMLGenerator) generateSingleMonitor(
 	protoMonitor *pb.MonitorDefinition,
-) (YAMLMonitor, ConversionErrors) {
+) (Monitor, ConversionErrors) {
 	var errors ConversionErrors
 
-	yamlMonitor := YAMLMonitor{
+	base := BaseMonitor{
+		ID:   protoMonitor.Id,
 		Name: protoMonitor.Name,
-		Id:   protoMonitor.Id,
-	}
-
-	if protoMonitor.Segmentation != nil && len(protoMonitor.Segmentation.Expression) > 0 {
-		yamlMonitor.Segmentation = &YAMLSegmentation{
-			Expression: protoMonitor.Segmentation.Expression,
-		}
-		if protoMonitor.Segmentation.IncludeValues != nil {
-			yamlMonitor.Segmentation.IncludeValues = &protoMonitor.Segmentation.IncludeValues.Values
-		}
-		if protoMonitor.Segmentation.ExcludeValues != nil {
-			yamlMonitor.Segmentation.ExcludeValues = &protoMonitor.Segmentation.ExcludeValues.Values
-		}
-	}
-
-	if protoMonitor.Filter != nil && len(*protoMonitor.Filter) > 0 {
-		yamlMonitor.Filter = string(*protoMonitor.Filter)
-	}
-
-	yamlMonitor.Severity = strings.TrimPrefix(protoMonitor.Severity.String(), "SEVERITY_")
-
-	if protoMonitor.Monitor != nil {
-		switch t := protoMonitor.Monitor.(type) {
-		case *pb.MonitorDefinition_Freshness:
-			yamlMonitor.Type = "freshness"
-		case *pb.MonitorDefinition_Volume:
-			yamlMonitor.Type = "volume"
-		case *pb.MonitorDefinition_CustomNumeric:
-			yamlMonitor.Type = "custom_numeric"
-			yamlMonitor.Sql = t.CustomNumeric.MetricAggregation
-		case *pb.MonitorDefinition_FieldStats:
-			yamlMonitor.Type = "field_stats"
-			yamlMonitor.Columns = t.FieldStats.Fields
-		default:
-			errors = append(errors, ConversionError{
-				Field:   "type",
-				Message: fmt.Sprintf("unsupported monitor type: %T", t),
-				Monitor: protoMonitor.Name,
-			})
-		}
 	}
 
 	if protoMonitor.Mode != nil {
 		switch t := protoMonitor.Mode.(type) {
 		case *pb.MonitorDefinition_AnomalyEngine:
-			yamlMonitor.Mode = &YAMLMode{
+			base.Mode = &YAMLMode{
 				AnomalyEngine: &YAMLAnomalyEngine{
 					Sensitivity: strings.TrimPrefix(t.AnomalyEngine.Sensitivity.String(), "SENSITIVITY_"),
 				},
@@ -146,7 +107,7 @@ func (p *YAMLGenerator) generateSingleMonitor(
 			if t.FixedThresholds.Min != nil {
 				fixedThresholds.Min = lo.ToPtr(t.FixedThresholds.Min.Value)
 			}
-			yamlMonitor.Mode = &YAMLMode{
+			base.Mode = &YAMLMode{
 				FixedThresholds: fixedThresholds,
 			}
 		default:
@@ -154,20 +115,39 @@ func (p *YAMLGenerator) generateSingleMonitor(
 				Field:   "mode",
 				Message: fmt.Sprintf("unsupported monitor mode: %T", t),
 				Monitor: protoMonitor.Name,
+				Entity:  protoMonitor.MonitoredId.String(),
 			})
 		}
 	}
 
+	if protoMonitor.Filter != nil && len(*protoMonitor.Filter) > 0 {
+		base.Filter = *protoMonitor.Filter
+	}
+
+	if protoMonitor.Segmentation != nil && len(protoMonitor.Segmentation.Expression) > 0 {
+		base.Segmentation = &YAMLSegmentation{
+			Expression: protoMonitor.Segmentation.Expression,
+		}
+		if protoMonitor.Segmentation.IncludeValues != nil {
+			base.Segmentation.IncludeValues = &protoMonitor.Segmentation.IncludeValues.Values
+		}
+		if protoMonitor.Segmentation.ExcludeValues != nil {
+			base.Segmentation.ExcludeValues = &protoMonitor.Segmentation.ExcludeValues.Values
+		}
+	}
+
+	base.Severity = strings.TrimPrefix(protoMonitor.Severity.String(), "SEVERITY_")
+
 	if protoMonitor.Timezone != "" {
-		yamlMonitor.Timezone = protoMonitor.Timezone
+		base.Timezone = protoMonitor.Timezone
 	}
 
 	if protoMonitor.Schedule != nil {
 		switch t := protoMonitor.Schedule.(type) {
 		case *pb.MonitorDefinition_Daily:
-			yamlMonitor.Daily = convertProtoToDailySchedule(t.Daily)
+			base.Daily = convertProtoToDailySchedule(t.Daily)
 		case *pb.MonitorDefinition_Hourly:
-			yamlMonitor.Hourly = convertProtoToHourlySchedule(t.Hourly)
+			base.Hourly = convertProtoToHourlySchedule(t.Hourly)
 		default:
 			errors = append(errors, ConversionError{
 				Field:   "schedule",
@@ -177,7 +157,39 @@ func (p *YAMLGenerator) generateSingleMonitor(
 		}
 	}
 
-	return yamlMonitor, errors
+	var monitor Monitor
+	if protoMonitor.Monitor != nil {
+		switch t := protoMonitor.Monitor.(type) {
+		case *pb.MonitorDefinition_Freshness:
+			monitor = &Monitor_Freshness{
+				BaseMonitor: base,
+				Expression:  t.Freshness.Expression,
+			}
+		case *pb.MonitorDefinition_Volume:
+			monitor = &Monitor_Volume{
+				BaseMonitor: base,
+			}
+		case *pb.MonitorDefinition_CustomNumeric:
+			monitor = &Monitor_CustomNumeric{
+				BaseMonitor:       base,
+				MetricAggregation: t.CustomNumeric.MetricAggregation,
+			}
+		case *pb.MonitorDefinition_FieldStats:
+			monitor = &Monitor_FieldStats{
+				BaseMonitor: base,
+				Fields:      t.FieldStats.Fields,
+			}
+		default:
+			errors = append(errors, ConversionError{
+				Field:   "type",
+				Message: fmt.Sprintf("unsupported monitor type: %T", t),
+				Monitor: protoMonitor.Name,
+				Entity:  protoMonitor.MonitoredId.String(),
+			})
+		}
+	}
+
+	return monitor, errors
 }
 
 func convertProtoToDailySchedule(daily *pb.ScheduleDaily) *YAMLSchedule {

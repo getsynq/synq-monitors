@@ -3,16 +3,17 @@
 version: v1beta2
 namespace: ""
 entities:
-    - id: ch-prod::default::runs
+    - id: ch-prod::default::orders
       time_partitioning_column: created_at
       monitors:
-        - volume:
-            id: cd7a6968-78a3-5c9a-8f0e-e2a6bbaae074
-            name: runs_volume_daily
+        - freshness:
+            id: 0bb96edf-9eb5-5e5c-9545-c3339d95f06c
+            name: Orders Table Freshness
             severity: ERROR
             mode:
                 anomaly_engine:
                     sensitivity: BALANCED
             daily: {}
+            expression: created_at
 
 ---
