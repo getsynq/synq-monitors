@@ -1,0 +1,43 @@
+
+[TestYAMLGeneratorSuite/TestExamples - 1]
+version: v1beta1
+namespace: data-team-pipeline
+monitors:
+    - id: e90ecd7b-111d-5f14-9da7-e94c08f67655
+      name: freshness_on_orders
+      type: volume
+      monitored_id: ch-prod::anomalies::corrections_v2
+      severity: ERROR
+      time_partitioning: created_at
+      mode:
+        anomaly_engine:
+            sensitivity: BALANCED
+      daily:
+        query_delay: 1h0m0s
+    - id: 24a0e18e-5ef3-5269-ba2b-fbec88270430
+      name: freshness_on_orders
+      type: volume
+      monitored_id: ch-prod::anomalies::external_sqltests
+      severity: ERROR
+      time_partitioning: created_at
+      mode:
+        anomaly_engine:
+            sensitivity: BALANCED
+      daily:
+        query_delay: 1h0m0s
+    - id: c20b07ae-27f5-50ff-ab17-7b11bed097dd
+      name: volume_on_logs
+      type: volume
+      monitored_id: bq-synq-dwh::petr::kernel_assets__stg_assets
+      segmentation:
+        expression: country
+      filter: country IN ('US', 'CA')
+      severity: WARNING
+      time_partitioning: created_at
+      mode:
+        anomaly_engine:
+            sensitivity: BALANCED
+      daily:
+        query_delay: 1h0m0s
+
+---
