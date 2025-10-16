@@ -3,21 +3,6 @@
 version: v1beta2
 namespace: data-team-pipeline
 entities:
-    - id: bq-synq-dwh::petr::kernel_assets__stg_assets
-      time_partitioning_column: created_at
-      monitors:
-        - id: c20b07ae-27f5-50ff-ab17-7b11bed097dd
-          name: volume_on_logs
-          type: volume
-          filter: country IN ('US', 'CA')
-          severity: WARNING
-          mode:
-            anomaly_engine:
-                sensitivity: BALANCED
-          segmentation:
-            expression: country
-          daily:
-            query_delay: 1h0m0s
     - id: ch-prod::anomalies::corrections_v2
       time_partitioning_column: created_at
       monitors:
@@ -40,6 +25,21 @@ entities:
           mode:
             anomaly_engine:
                 sensitivity: BALANCED
+          daily:
+            query_delay: 1h0m0s
+    - id: bq-synq-dwh::petr::kernel_assets__stg_assets
+      time_partitioning_column: created_at
+      monitors:
+        - id: c20b07ae-27f5-50ff-ab17-7b11bed097dd
+          name: volume_on_logs
+          type: volume
+          filter: country IN ('US', 'CA')
+          severity: WARNING
+          mode:
+            anomaly_engine:
+                sensitivity: BALANCED
+          segmentation:
+            expression: country
           daily:
             query_delay: 1h0m0s
 

@@ -6,14 +6,6 @@ entities:
     - id: ch-prod::default::runs
       time_partitioning_column: created_at
       monitors:
-        - id: cd7a6968-78a3-5c9a-8f0e-e2a6bbaae074
-          name: runs_volume_daily
-          type: volume
-          severity: ERROR
-          mode:
-            anomaly_engine:
-                sensitivity: BALANCED
-          daily: {}
         - id: 9aac87cd-c2a2-52ff-9493-c3f75e0ce87b
           name: runs_by_workspace
           type: volume
@@ -23,6 +15,14 @@ entities:
                 sensitivity: BALANCED
           segmentation:
             expression: workspace
+          daily: {}
+        - id: cd7a6968-78a3-5c9a-8f0e-e2a6bbaae074
+          name: runs_volume_daily
+          type: volume
+          severity: ERROR
+          mode:
+            anomaly_engine:
+                sensitivity: BALANCED
           daily: {}
 
 ---

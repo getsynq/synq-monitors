@@ -3,20 +3,21 @@
 version: v1beta1
 namespace: financial_data
 monitors:
-    - id: 116844a4-aed0-56b4-bd75-350f26532aae
-      name: freshness_financial_statement
-      type: freshness
-      expression: month
+    - id: e91ae608-1467-5afd-91db-d0ba786197b5
+      name: custom_financial_statement_revenue_nonnegative
+      type: custom_numeric
+      metric_aggregation: MIN(total_revenue)
       monitored_id: bq-synq-demo::nyc_taxi::financial_statement
       severity: ERROR
       time_partitioning: month
       mode:
-        anomaly_engine:
-            sensitivity: BALANCED
+        fixed_thresholds:
+            min: 0
       daily: {}
-    - id: e522340e-088a-5eb8-8ee6-77bebd3fbc57
-      name: volume_financial_statement
-      type: volume
+    - id: 116844a4-aed0-56b4-bd75-350f26532aae
+      name: freshness_financial_statement
+      type: freshness
+      expression: month
       monitored_id: bq-synq-demo::nyc_taxi::financial_statement
       severity: ERROR
       time_partitioning: month
@@ -37,16 +38,15 @@ monitors:
         anomaly_engine:
             sensitivity: BALANCED
       daily: {}
-    - id: e91ae608-1467-5afd-91db-d0ba786197b5
-      name: custom_financial_statement_revenue_nonnegative
-      type: custom_numeric
-      metric_aggregation: MIN(total_revenue)
+    - id: e522340e-088a-5eb8-8ee6-77bebd3fbc57
+      name: volume_financial_statement
+      type: volume
       monitored_id: bq-synq-demo::nyc_taxi::financial_statement
       severity: ERROR
       time_partitioning: month
       mode:
-        fixed_thresholds:
-            min: 0
+        anomaly_engine:
+            sensitivity: BALANCED
       daily: {}
 
 ---
