@@ -31,22 +31,6 @@ type Test interface {
 	IsTest()
 }
 
-type YAMLMonitor struct {
-	Id           string            `yaml:"id,omitempty"`
-	Name         string            `yaml:"name,omitempty"`
-	Type         string            `yaml:"type"`
-	Sql          string            `yaml:"sql,omitempty"`
-	Columns      []string          `yaml:"columns,omitempty"`
-	Metrics      []string          `yaml:"metrics,omitempty"`
-	Segmentation *YAMLSegmentation `yaml:"segmentation,omitempty"`
-	Filter       string            `yaml:"filter,omitempty"`
-	Severity     string            `yaml:"severity,omitempty"`
-	Mode         *YAMLMode         `yaml:"mode,omitempty"`
-	Daily        *YAMLSchedule     `yaml:"daily,omitempty"`
-	Hourly       *YAMLSchedule     `yaml:"hourly,omitempty"`
-	Timezone     string            `yaml:"timezone,omitempty"`
-}
-
 type YAMLSegmentation struct {
 	Expression    string    `yaml:"expression"`
 	IncludeValues *[]string `yaml:"include_values,omitempty"`
