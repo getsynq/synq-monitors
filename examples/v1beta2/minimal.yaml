@@ -7,5 +7,5 @@ entities:
     time_partitioning_column: created_at
 
     monitors:
-      - volume:
-          id: runs_volume_daily
+      - type: volume
+        id: runs_volume_daily

@@ -9,23 +9,23 @@ entities:
     time_partitioning_column: created_at
 
     monitors:
-      - volume:
-          id: orders_volume
-          name: Orders Volume Monitor
+      - type: volume
+        id: orders_volume
+        name: Orders Volume Monitor
 
-      - freshness:
-          id: orders_freshness
-          name: Orders Freshness Monitor
-          expression: created_at
+      - type: freshness
+        id: orders_freshness
+        name: Orders Freshness Monitor
+        expression: created_at
 
-      - custom_numeric:
-          id: orders_revenue
-          name: Orders Revenue Monitor
-          metric_aggregation: SUM(amount)
+      - type: custom_numeric
+        id: orders_revenue
+        name: Orders Revenue Monitor
+        metric_aggregation: SUM(amount)
 
-      - field_stats:
-          id: orders_field_stats
-          name: Orders Field Statistics
-          columns:
-            - status
-            - payment_method
+      - type: field_stats
+        id: orders_field_stats
+        name: Orders Field Statistics
+        columns:
+          - status
+          - payment_method

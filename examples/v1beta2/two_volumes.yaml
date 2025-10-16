@@ -1,0 +1,16 @@
+# Create two volume monitors for runs table with defaults (schedule=daily, severity=Error)
+
+version: v1beta2
+
+entities:
+  - id: ch-prod.default.runs
+    time_partitioning_column: created_at
+
+    monitors:
+      - type: volume
+        id: runs_volume_daily
+
+      - type: volume
+        id: runs_by_workspace
+        segmentation:
+          expression: workspace

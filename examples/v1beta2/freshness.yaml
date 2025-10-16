@@ -5,7 +5,7 @@ entities:
     time_partitioning_column: created_at
 
     monitors:
-      - freshness:
-          id: orders_freshness_check
-          name: Orders Table Freshness
-          expression: created_at
+      - type: freshness
+        id: orders_freshness_check
+        name: Orders Table Freshness
+        expression: created_at
