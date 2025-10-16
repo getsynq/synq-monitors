@@ -48,8 +48,6 @@ func (p *YAMLParser) ConvertToMonitorDefinitions() ([]*pb.MonitorDefinition, err
 	var errors ConversionErrors
 	var monitors []*pb.MonitorDefinition
 
-	existingMonitorIds := make(map[string]bool)
-
 	for _, entity := range p.yamlConfig.Entities {
 		entityId := strings.TrimSpace(entity.Id)
 		if entityId == "" {
@@ -64,6 +62,8 @@ func (p *YAMLParser) ConvertToMonitorDefinitions() ([]*pb.MonitorDefinition, err
 		if timePartitioning == "" {
 			timePartitioning = p.yamlConfig.Defaults.TimePartitioning
 		}
+
+		existingMonitorIds := make(map[string]bool)
 
 		for _, wrapper := range entity.Monitors {
 			yamlMonitor := wrapper.Monitor
@@ -129,7 +129,7 @@ func (p *YAMLParser) ConvertToMonitorDefinitions() ([]*pb.MonitorDefinition, err
 			if _, ok := existingMonitorIds[monitor.Id]; ok {
 				errors = append(errors, ConversionError{
 					Field:   "id",
-					Message: "must be unique",
+					Message: "must be unique within entity",
 					Monitor: monitor.Id,
 					Entity:  entityId,
 				})
