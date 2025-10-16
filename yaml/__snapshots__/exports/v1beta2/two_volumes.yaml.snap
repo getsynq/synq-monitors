@@ -14,5 +14,15 @@ entities:
             anomaly_engine:
                 sensitivity: BALANCED
           daily: {}
+        - id: 9aac87cd-c2a2-52ff-9493-c3f75e0ce87b
+          name: runs_by_workspace
+          type: volume
+          severity: ERROR
+          mode:
+            anomaly_engine:
+                sensitivity: BALANCED
+          segmentation:
+            expression: workspace
+          daily: {}
 
 ---

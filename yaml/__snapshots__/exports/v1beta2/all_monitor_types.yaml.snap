@@ -6,46 +6,46 @@ entities:
     - id: ch-prod::default::orders
       time_partitioning_column: created_at
       monitors:
-        - volume:
-            id: 36072248-1475-52c7-ba6c-dac4602779d7
-            name: Orders Volume Monitor
-            severity: ERROR
-            timezone: UTC
-            mode:
-                anomaly_engine:
-                    sensitivity: BALANCED
-            daily: {}
-        - freshness:
-            id: 1b821682-72c4-5420-a8e3-629d95386c88
-            name: Orders Freshness Monitor
-            severity: ERROR
-            timezone: UTC
-            mode:
-                anomaly_engine:
-                    sensitivity: BALANCED
-            daily: {}
-            expression: created_at
-        - custom_numeric:
-            id: a7e16cff-3f26-51d6-8627-62d2dd559071
-            name: Orders Revenue Monitor
-            severity: ERROR
-            timezone: UTC
-            mode:
-                anomaly_engine:
-                    sensitivity: BALANCED
-            daily: {}
-            metric_aggregation: SUM(amount)
-        - field_stats:
-            id: 9fbc8d63-57e7-5abe-b635-acd186fae9c0
-            name: Orders Field Statistics
-            severity: ERROR
-            timezone: UTC
-            mode:
-                anomaly_engine:
-                    sensitivity: BALANCED
-            daily: {}
-            columns:
-                - status
-                - payment_method
+        - id: 36072248-1475-52c7-ba6c-dac4602779d7
+          name: Orders Volume Monitor
+          type: volume
+          severity: ERROR
+          timezone: UTC
+          mode:
+            anomaly_engine:
+                sensitivity: BALANCED
+          daily: {}
+        - id: 1b821682-72c4-5420-a8e3-629d95386c88
+          name: Orders Freshness Monitor
+          type: freshness
+          severity: ERROR
+          timezone: UTC
+          mode:
+            anomaly_engine:
+                sensitivity: BALANCED
+          daily: {}
+          expression: created_at
+        - id: a7e16cff-3f26-51d6-8627-62d2dd559071
+          name: Orders Revenue Monitor
+          type: custom_numeric
+          severity: ERROR
+          timezone: UTC
+          mode:
+            anomaly_engine:
+                sensitivity: BALANCED
+          daily: {}
+          metric_aggregation: SUM(amount)
+        - id: 9fbc8d63-57e7-5abe-b635-acd186fae9c0
+          name: Orders Field Statistics
+          type: field_stats
+          severity: ERROR
+          timezone: UTC
+          mode:
+            anomaly_engine:
+                sensitivity: BALANCED
+          daily: {}
+          columns:
+            - status
+            - payment_method
 
 ---

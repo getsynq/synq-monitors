@@ -95,3 +95,100 @@
  }
 }
 ---
+
+[TestYAMLParserSuite/TestExamples - 5]
+{
+ "anomalyEngine": {
+  "sensitivity": "SENSITIVITY_BALANCED"
+ },
+ "daily": {},
+ "id": "0f3f24bc-dc6b-5e16-b99c-b292dbad45b7",
+ "monitoredId": {
+  "synqPath": {
+   "path": "ch-prod::default::orders"
+  }
+ },
+ "name": "Orders Volume Monitor",
+ "severity": "SEVERITY_ERROR",
+ "timePartitioning": {
+  "expression": "created_at"
+ },
+ "timezone": "UTC",
+ "volume": {}
+}
+---
+
+[TestYAMLParserSuite/TestExamples - 6]
+{
+ "anomalyEngine": {
+  "sensitivity": "SENSITIVITY_BALANCED"
+ },
+ "daily": {},
+ "freshness": {
+  "expression": "created_at"
+ },
+ "id": "eedf42d7-dd78-5a1d-a2e5-9b188c04275c",
+ "monitoredId": {
+  "synqPath": {
+   "path": "ch-prod::default::orders"
+  }
+ },
+ "name": "Orders Freshness Monitor",
+ "severity": "SEVERITY_ERROR",
+ "timePartitioning": {
+  "expression": "created_at"
+ },
+ "timezone": "UTC"
+}
+---
+
+[TestYAMLParserSuite/TestExamples - 7]
+{
+ "anomalyEngine": {
+  "sensitivity": "SENSITIVITY_BALANCED"
+ },
+ "customNumeric": {
+  "metricAggregation": "SUM(amount)"
+ },
+ "daily": {},
+ "id": "db45f178-3286-5039-b488-b81670bcfaac",
+ "monitoredId": {
+  "synqPath": {
+   "path": "ch-prod::default::orders"
+  }
+ },
+ "name": "Orders Revenue Monitor",
+ "severity": "SEVERITY_ERROR",
+ "timePartitioning": {
+  "expression": "created_at"
+ },
+ "timezone": "UTC"
+}
+---
+
+[TestYAMLParserSuite/TestExamples - 8]
+{
+ "anomalyEngine": {
+  "sensitivity": "SENSITIVITY_BALANCED"
+ },
+ "daily": {},
+ "fieldStats": {
+  "fields": [
+   "status",
+   "payment_method"
+  ]
+ },
+ "id": "4154da43-3170-55ed-937e-e04d515da045",
+ "monitoredId": {
+  "synqPath": {
+   "path": "ch-prod::default::orders"
+  }
+ },
+ "name": "Orders Field Statistics",
+ "severity": "SEVERITY_ERROR",
+ "timePartitioning": {
+  "expression": "created_at"
+ },
+ "timezone": "UTC"
+}
+---
