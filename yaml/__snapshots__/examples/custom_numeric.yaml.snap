@@ -22,3 +22,27 @@
  }
 }
 ---
+
+[TestYAMLParserSuite/TestExamples - 2]
+{
+ "customNumeric": {
+  "metricAggregation": "COUNT(DISTINCT workspace)"
+ },
+ "daily": {},
+ "filter": "created_at > today()",
+ "fixedThresholds": {
+  "max": 1000
+ },
+ "id": "23d78cf3-620a-5458-ad15-89eebb54c273",
+ "monitoredId": {
+  "synqPath": {
+   "path": "ch-prod::default::runs"
+  }
+ },
+ "name": "runs_unique_workspaces",
+ "severity": "SEVERITY_ERROR",
+ "timePartitioning": {
+  "expression": "created_at"
+ }
+}
+---

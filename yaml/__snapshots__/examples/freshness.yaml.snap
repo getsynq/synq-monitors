@@ -1,0 +1,23 @@
+
+[TestYAMLParserSuite/TestExamples - 1]
+{
+ "anomalyEngine": {
+  "sensitivity": "SENSITIVITY_BALANCED"
+ },
+ "daily": {},
+ "freshness": {
+  "expression": "created_at"
+ },
+ "id": "b5683151-17f6-5bef-a8c4-50c5ca7a2101",
+ "monitoredId": {
+  "synqPath": {
+   "path": "ch-prod::default::orders"
+  }
+ },
+ "name": "Orders Table Freshness",
+ "severity": "SEVERITY_ERROR",
+ "timePartitioning": {
+  "expression": "created_at"
+ }
+}
+---

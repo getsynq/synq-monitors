@@ -9,7 +9,6 @@ import (
 	"testing"
 
 	"github.com/getsynq/monitors_mgmt/uuid"
-	"github.com/getsynq/monitors_mgmt/yaml/core"
 	"github.com/gkampitakis/go-snaps/snaps"
 	"github.com/stretchr/testify/suite"
 )
@@ -61,13 +60,14 @@ func (s *YAMLGeneratorSuite) TestExamples() {
 		}
 
 		configID := yamlParser.GetConfigID()
-		generator, err := NewVersionedGenerator(core.Version_Default, configID, protoMonitors)
+		version := yamlParser.GetVersion()
+		generator, err := NewVersionedGenerator(version, configID, protoMonitors)
 		s.Require().NoError(err)
 
 		yamlBytes, err := generator.GenerateYAML()
 		s.Require().NoError(err)
 
-		snapFileName := filepath.Join("exports", filepath.Base(file))
+		snapFileName := filepath.Join("exports", version, filepath.Base(file))
 		snaps.WithConfig(snaps.Filename(snapFileName)).MatchSnapshot(
 			s.T(),
 			string(yamlBytes),

@@ -4,22 +4,18 @@
  "anomalyEngine": {
   "sensitivity": "SENSITIVITY_BALANCED"
  },
- "hourly": {
-  "minuteOfHour": 15,
-  "onlyScheduleDelay": true
- },
- "id": "29b94d55-ba5f-5a55-a201-0b7eb30df29e",
+ "daily": {},
+ "id": "0d447202-5622-5005-aea8-86520caac8f0",
  "monitoredId": {
   "synqPath": {
    "path": "ch-prod::default::runs"
   }
  },
- "name": "runs_volume_hourly",
+ "name": "runs_volume_daily",
  "severity": "SEVERITY_ERROR",
  "timePartitioning": {
   "expression": "created_at"
  },
- "timezone": "Europe/Prague",
  "volume": {}
 }
 ---
@@ -29,22 +25,21 @@
  "anomalyEngine": {
   "sensitivity": "SENSITIVITY_BALANCED"
  },
- "hourly": {
-  "minuteOfHour": 15,
-  "onlyScheduleDelay": true
- },
- "id": "29b94d55-ba5f-5a55-a201-0b7eb30df29e",
+ "daily": {},
+ "id": "ca5fb00b-5ee0-598f-b323-7bcbda8cec0f",
  "monitoredId": {
   "synqPath": {
    "path": "ch-prod::default::runs"
   }
  },
- "name": "runs_volume_hourly",
+ "name": "runs_by_workspace",
+ "segmentation": {
+  "expression": "workspace"
+ },
  "severity": "SEVERITY_ERROR",
  "timePartitioning": {
   "expression": "created_at"
  },
- "timezone": "Europe/Prague",
  "volume": {}
 }
 ---

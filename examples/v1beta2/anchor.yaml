@@ -1,0 +1,40 @@
+version: v1beta2
+
+namespace: "data-team-pipeline"
+
+# Anchor definition for reusable monitor configuration
+volume_config: &volume_config
+  type: volume
+  daily:
+    query_delay: 1h
+  mode:
+    anomaly_engine:
+      sensitivity: BALANCED
+
+entities:
+  - id: ch-prod.anomalies.corrections_v2
+    time_partitioning_column: created_at
+
+    monitors:
+      - id: freshness_on_orders
+        <<: *volume_config
+        severity: ERROR
+
+  - id: ch-prod.anomalies.external_sqltests
+    time_partitioning_column: created_at
+
+    monitors:
+      - id: freshness_on_orders
+        <<: *volume_config
+        severity: ERROR
+
+  - id: bq-synq-dwh.petr.kernel_assets__stg_assets
+    time_partitioning_column: created_at
+
+    monitors:
+      - id: volume_on_logs
+        <<: *volume_config
+        severity: WARNING
+        segmentation:
+          expression: "country"
+        filter: "country IN ('US', 'CA')"

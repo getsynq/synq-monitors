@@ -1,0 +1,16 @@
+# Monitors change for a given namespace is atomic operation - we collect
+# all defined monitors in code, diff them with current state in Synq and
+# apply the changes. Creating namespaces allows different teams to manage
+# their monitors independently.
+
+version: v1beta2
+
+namespace: "team-Y" # Monitors for team-Y will be managed independently.
+
+entities:
+  - id: ch-prod.default.runs
+    time_partitioning_column: created_at
+
+    monitors:
+      - id: runs_volume_daily
+        type: volume
