@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	pb "buf.build/gen/go/getsynq/api/protocolbuffers/go/synq/monitors/custom_monitors/v1"
+	testsuggestionsv1 "buf.build/gen/go/getsynq/api/protocolbuffers/go/synq/datachecks/testsuggestions/v1"
 	"github.com/getsynq/monitors_mgmt/config"
 	"golang.org/x/oauth2/clientcredentials"
 	"google.golang.org/grpc"
@@ -64,6 +65,37 @@ func PrintMonitorDefs(monitorDefs []*pb.MonitorDefinition) {
 			Multiline: true,
 			Indent:    "  ",
 		}.Marshal(def)
+
+		if err != nil {
+			fmt.Printf("❌ Error converting to JSON: %v\n", err)
+			continue
+		}
+
+		// Pretty print the JSON
+		var prettyJSON map[string]interface{}
+		if err := json.Unmarshal(jsonBytes, &prettyJSON); err == nil {
+			prettyBytes, _ := json.MarshalIndent(prettyJSON, "", "  ")
+			fmt.Println(string(prettyBytes))
+		} else {
+			fmt.Println(string(jsonBytes))
+		}
+	}
+
+	fmt.Println(strings.Repeat("=", 60))
+}
+
+func PrintTestSuggestions(testSuggestions []*testsuggestionsv1.TestSuggestion) {
+	fmt.Println("\n📋 TestSuggestions (JSON format):")
+	fmt.Println(strings.Repeat("=", 60))
+
+	for i, test := range testSuggestions {
+		fmt.Printf("\n--- Test %d: %s ---\n", i+1, test.Identifier)
+
+		// Convert to JSON for readable display
+		jsonBytes, err := protojson.MarshalOptions{
+			Multiline: true,
+			Indent:    "  ",
+		}.Marshal(test)
 
 		if err != nil {
 			fmt.Printf("❌ Error converting to JSON: %v\n", err)

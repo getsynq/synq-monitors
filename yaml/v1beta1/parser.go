@@ -6,6 +6,7 @@ import (
 
 	entitiesv1 "buf.build/gen/go/getsynq/api/protocolbuffers/go/synq/entities/v1"
 	pb "buf.build/gen/go/getsynq/api/protocolbuffers/go/synq/monitors/custom_monitors/v1"
+	testsuggestionsv1 "buf.build/gen/go/getsynq/api/protocolbuffers/go/synq/datachecks/testsuggestions/v1"
 	"github.com/getsynq/monitors_mgmt/yaml/core"
 	"github.com/pkg/errors"
 	"google.golang.org/protobuf/types/known/wrapperspb"
@@ -32,6 +33,7 @@ func (p *YAMLParser) GetYAMLSummary(config any) map[string]any {
 	summary := make(map[string]any)
 	summary["namespace"] = conf.ID
 	summary["monitors_count"] = len(conf.Monitors)
+	summary["tests_count"] = len(conf.Tests)
 
 	if conf.Defaults.Severity != "" {
 		summary["default_severity"] = conf.Defaults.Severity
@@ -45,6 +47,14 @@ func (p *YAMLParser) GetYAMLSummary(config any) map[string]any {
 		typeCount[monitor.Type]++
 	}
 	summary["monitor_types"] = typeCount
+
+	testTypeCount := make(map[string]int)
+	for _, test := range conf.Tests {
+		testTypeCount[test.Type]++
+	}
+	if len(testTypeCount) > 0 {
+		summary["test_types"] = testTypeCount
+	}
 
 	return summary
 }
@@ -458,4 +468,72 @@ func convertHourlySchedule(hourly *YAMLSchedule) *pb.MonitorDefinition_Hourly {
 	}
 
 	return &pb.MonitorDefinition_Hourly{Hourly: schedule}
+}
+
+// ConvertToTestSuggestions converts YAML tests to TestSuggestion protobuf messages
+func (p *YAMLParser) ConvertToTestSuggestions() ([]*testsuggestionsv1.TestSuggestion, error) {
+	var errors ConversionErrors
+	var protoTests []*testsuggestionsv1.TestSuggestion
+	existingTestIds := make(map[string]bool)
+
+	for _, yamlTest := range p.yamlConfig.Tests {
+		id := strings.TrimSpace(yamlTest.Id)
+		if id == "" {
+			errors = append(errors, ConversionError{
+				Field:   "id",
+				Message: "must be set",
+			})
+			continue
+		}
+
+		if _, ok := existingTestIds[id]; ok {
+			errors = append(errors, ConversionError{
+				Field:   "id",
+				Message: "must be unique",
+				Test:    id,
+			})
+			continue
+		}
+		existingTestIds[id] = true
+
+		if len(yamlTest.MonitoredIDs) > 0 && len(yamlTest.MonitoredID) > 0 {
+			errors = append(errors, ConversionError{
+				Field:   "monitored_id",
+				Message: "monitored_id and monitored_ids cannot be used together",
+				Test:    id,
+			})
+			continue
+		} else if len(yamlTest.MonitoredIDs) == 0 && len(yamlTest.MonitoredID) == 0 {
+			errors = append(errors, ConversionError{
+				Field:   "monitored_id",
+				Message: "monitored_id or monitored_ids must be set",
+				Test:    id,
+			})
+			continue
+		}
+
+		if scheduleErrors := validateTestScheduleConfiguration(&yamlTest); len(scheduleErrors) > 0 {
+			errors = append(errors, scheduleErrors...)
+		}
+
+		monitoredIds := yamlTest.MonitoredIDs
+		if len(yamlTest.MonitoredID) > 0 {
+			monitoredIds = append(monitoredIds, yamlTest.MonitoredID)
+		}
+
+		for _, monitoredID := range monitoredIds {
+			protoTest, convErrors := convertSingleTest(&yamlTest, p.yamlConfig, monitoredID)
+			if len(convErrors) > 0 {
+				errors = append(errors, convErrors...)
+				continue
+			}
+			protoTests = append(protoTests, protoTest)
+		}
+	}
+
+	if len(errors) > 0 {
+		return protoTests, errors
+	}
+
+	return protoTests, nil
 }
