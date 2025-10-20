@@ -7,14 +7,15 @@ entities:
       time_partitioning_column: created_at
       monitors:
         - id: 5a6f522b-5fcc-57aa-b4ad-4b36db54c04f
-          name: runs_volume_hourly
           type: volume
+          name: runs_volume_hourly
           severity: ERROR
           timezone: Europe/Prague
           mode:
             anomaly_engine:
                 sensitivity: BALANCED
-          hourly:
+          schedule:
+            type: hourly
             query_delay: 15m0s
 
 ---

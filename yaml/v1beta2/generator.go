@@ -35,21 +35,21 @@ func NewYAMLGenerator(configId string, monitors []*pb.MonitorDefinition) core.Ge
 func (p *YAMLGenerator) GenerateYAML() ([]byte, error) {
 	var errors ConversionErrors
 
-	config := &YAMLConfig{
+	config := &Config{
 		Config: core.Config{
 			Version: core.Version_V1Beta2,
 			ID:      p.configId,
 		},
 	}
 
-	entitiesByPath := make(map[string]*YAMLEntity)
+	entitiesByPath := make(map[string]*Entity)
 
 	for _, protoMonitor := range p.monitors {
 		entityPath := protoMonitor.MonitoredId.GetSynqPath().GetPath()
 
 		entity, exists := entitiesByPath[entityPath]
 		if !exists {
-			entity = &YAMLEntity{
+			entity = &Entity{
 				Id: entityPath,
 			}
 			entitiesByPath[entityPath] = entity
@@ -68,7 +68,7 @@ func (p *YAMLGenerator) GenerateYAML() ([]byte, error) {
 			continue
 		}
 
-		entity.Monitors = append(entity.Monitors, MonitorWrapper{Monitor: monitor})
+		entity.Monitors = append(entity.Monitors, Monitor{Monitor: monitor})
 	}
 
 	for _, entity := range entitiesByPath {
@@ -88,7 +88,7 @@ func (p *YAMLGenerator) GenerateYAML() ([]byte, error) {
 
 func (p *YAMLGenerator) generateSingleMonitor(
 	protoMonitor *pb.MonitorDefinition,
-) (Monitor, ConversionErrors) {
+) (MonitorInline, ConversionErrors) {
 	var errors ConversionErrors
 
 	base := BaseMonitor{
@@ -99,20 +99,20 @@ func (p *YAMLGenerator) generateSingleMonitor(
 	if protoMonitor.Mode != nil {
 		switch t := protoMonitor.Mode.(type) {
 		case *pb.MonitorDefinition_AnomalyEngine:
-			base.Mode = &YAMLMode{
-				AnomalyEngine: &YAMLAnomalyEngine{
+			base.Mode = &Mode{
+				AnomalyEngine: &AnomalyEngine{
 					Sensitivity: strings.TrimPrefix(t.AnomalyEngine.Sensitivity.String(), "SENSITIVITY_"),
 				},
 			}
 		case *pb.MonitorDefinition_FixedThresholds:
-			fixedThresholds := &YAMLFixedThresholds{}
+			fixedThresholds := &FixedThresholds{}
 			if t.FixedThresholds.Max != nil {
 				fixedThresholds.Max = lo.ToPtr(t.FixedThresholds.Max.Value)
 			}
 			if t.FixedThresholds.Min != nil {
 				fixedThresholds.Min = lo.ToPtr(t.FixedThresholds.Min.Value)
 			}
-			base.Mode = &YAMLMode{
+			base.Mode = &Mode{
 				FixedThresholds: fixedThresholds,
 			}
 		default:
@@ -130,7 +130,7 @@ func (p *YAMLGenerator) generateSingleMonitor(
 	}
 
 	if protoMonitor.Segmentation != nil && len(protoMonitor.Segmentation.Expression) > 0 {
-		base.Segmentation = &YAMLSegmentation{
+		base.Segmentation = &Segmentation{
 			Expression: protoMonitor.Segmentation.Expression,
 		}
 		if protoMonitor.Segmentation.IncludeValues != nil {
@@ -150,9 +150,9 @@ func (p *YAMLGenerator) generateSingleMonitor(
 	if protoMonitor.Schedule != nil {
 		switch t := protoMonitor.Schedule.(type) {
 		case *pb.MonitorDefinition_Daily:
-			base.Daily = convertProtoToDailySchedule(t.Daily)
+			base.Schedule = convertProtoToDailySchedule(t.Daily)
 		case *pb.MonitorDefinition_Hourly:
-			base.Hourly = convertProtoToHourlySchedule(t.Hourly)
+			base.Schedule = convertProtoToHourlySchedule(t.Hourly)
 		default:
 			errors = append(errors, ConversionError{
 				Field:   "schedule",
@@ -162,29 +162,29 @@ func (p *YAMLGenerator) generateSingleMonitor(
 		}
 	}
 
-	var monitor Monitor
+	var monitor MonitorInline
 	if protoMonitor.Monitor != nil {
 		switch t := protoMonitor.Monitor.(type) {
 		case *pb.MonitorDefinition_Freshness:
 			base.Type = "freshness"
-			monitor = &Monitor_Freshness{
+			monitor = &FreshnessMonitor{
 				BaseMonitor: base,
 				Expression:  t.Freshness.Expression,
 			}
 		case *pb.MonitorDefinition_Volume:
 			base.Type = "volume"
-			monitor = &Monitor_Volume{
+			monitor = &VolumeMonitor{
 				BaseMonitor: base,
 			}
 		case *pb.MonitorDefinition_CustomNumeric:
 			base.Type = "custom_numeric"
-			monitor = &Monitor_CustomNumeric{
+			monitor = &CustomNumericMonitor{
 				BaseMonitor:       base,
 				MetricAggregation: t.CustomNumeric.MetricAggregation,
 			}
 		case *pb.MonitorDefinition_FieldStats:
 			base.Type = "field_stats"
-			monitor = &Monitor_FieldStats{
+			monitor = &FieldStatsMonitor{
 				BaseMonitor: base,
 				Fields:      t.FieldStats.Fields,
 			}
@@ -201,8 +201,10 @@ func (p *YAMLGenerator) generateSingleMonitor(
 	return monitor, errors
 }
 
-func convertProtoToDailySchedule(daily *pb.ScheduleDaily) *YAMLSchedule {
-	schedule := &YAMLSchedule{}
+func convertProtoToDailySchedule(daily *pb.ScheduleDaily) *Schedule {
+	schedule := &Schedule{}
+	schedule.Type = "daily"
+
 	if daily.GetDelayNumDays() != 0 {
 		schedule.IgnoreLast = lo.ToPtr(daily.GetDelayNumDays())
 	}
@@ -219,8 +221,10 @@ func convertProtoToDailySchedule(daily *pb.ScheduleDaily) *YAMLSchedule {
 	return schedule
 }
 
-func convertProtoToHourlySchedule(hourly *pb.ScheduleHourly) *YAMLSchedule {
-	schedule := &YAMLSchedule{}
+func convertProtoToHourlySchedule(hourly *pb.ScheduleHourly) *Schedule {
+	schedule := &Schedule{}
+	schedule.Type = "hourly"
+
 	if hourly.GetDelayNumHours() != 0 {
 		schedule.IgnoreLast = lo.ToPtr(hourly.GetDelayNumHours())
 	}

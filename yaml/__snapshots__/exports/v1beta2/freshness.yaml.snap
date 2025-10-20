@@ -7,13 +7,13 @@ entities:
       time_partitioning_column: created_at
       monitors:
         - id: 0bb96edf-9eb5-5e5c-9545-c3339d95f06c
-          name: Orders Table Freshness
           type: freshness
+          name: Orders Table Freshness
           severity: ERROR
           mode:
             anomaly_engine:
                 sensitivity: BALANCED
-          daily: {}
+          schedule: daily
           expression: created_at
 
 ---

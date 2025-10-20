@@ -7,12 +7,12 @@ entities:
       time_partitioning_column: created_at
       monitors:
         - id: b6c784cf-7a31-5869-a56f-2000ba641961
-          name: runs_volume_warn
           type: volume
+          name: runs_volume_warn
           severity: WARNING
           mode:
             anomaly_engine:
                 sensitivity: BALANCED
-          daily: {}
+          schedule: daily
 
 ---

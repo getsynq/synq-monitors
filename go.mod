@@ -35,13 +35,19 @@ require (
 	buf.build/gen/go/getsynq/api/grpc/go v1.5.1-20250922105254-9270eaa9228b.2
 	buf.build/gen/go/getsynq/api/protocolbuffers/go v1.36.10-20251010120448-fd019d34b0ea.1
 	github.com/gkampitakis/go-snaps v0.5.14
+	github.com/invopop/jsonschema v0.13.0
+	github.com/sebdah/goldie/v2 v2.8.0
 	go.uber.org/mock v0.6.0
 )
 
 require (
+	github.com/bahlo/generic-list-go v0.2.0 // indirect
+	github.com/buger/jsonparser v1.1.1 // indirect
+	github.com/mailru/easyjson v0.7.7 // indirect
 	github.com/onsi/ginkgo v1.16.5 // indirect
 	github.com/onsi/gomega v1.38.2 // indirect
 	github.com/sergi/go-diff v1.4.0 // indirect
+	github.com/wk8/go-ordered-map/v2 v2.1.8 // indirect
 	github.com/yudai/golcs v0.0.0-20170316035057-ecda9a501e82 // indirect
 	github.com/yudai/pp v2.0.1+incompatible // indirect
 )
