@@ -379,7 +379,6 @@
           "additionalProperties": false,
           "type": "object",
           "required": [
-            "id",
             "column",
             "values"
           ]
@@ -404,7 +403,6 @@
           "additionalProperties": false,
           "type": "object",
           "required": [
-            "id",
             "sql_expression"
           ]
         },
@@ -432,7 +430,6 @@
           "additionalProperties": false,
           "type": "object",
           "required": [
-            "id",
             "columns"
           ]
         },
@@ -457,10 +454,7 @@
             }
           },
           "additionalProperties": false,
-          "type": "object",
-          "required": [
-            "id"
-          ]
+          "type": "object"
         },
         {
           "$schema": "https://json-schema.org/draft/2020-12/schema",
@@ -485,7 +479,6 @@
           "additionalProperties": false,
           "type": "object",
           "required": [
-            "id",
             "column",
             "max_value"
           ]
@@ -516,7 +509,6 @@
           "additionalProperties": false,
           "type": "object",
           "required": [
-            "id",
             "column",
             "min_value",
             "max_value"
@@ -545,7 +537,6 @@
           "additionalProperties": false,
           "type": "object",
           "required": [
-            "id",
             "column",
             "min_value"
           ]
@@ -574,7 +565,6 @@
           "additionalProperties": false,
           "type": "object",
           "required": [
-            "id",
             "columns"
           ]
         },
@@ -605,7 +595,6 @@
           "additionalProperties": false,
           "type": "object",
           "required": [
-            "id",
             "column",
             "values"
           ]
@@ -633,7 +622,6 @@
           "additionalProperties": false,
           "type": "object",
           "required": [
-            "id",
             "column",
             "relative_column"
           ]
@@ -668,7 +656,6 @@
           "additionalProperties": false,
           "type": "object",
           "required": [
-            "id",
             "columns"
           ]
         }

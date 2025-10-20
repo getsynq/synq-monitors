@@ -1,4 +1,4 @@
-# yaml-language-server: $schema=../../schema.json
+# yaml-language-server: $schema=https://raw.githubusercontent.com/getsynq/synq-monitors/refs/heads/main/schema.json
 
 version: v1beta2
 namespace: foo

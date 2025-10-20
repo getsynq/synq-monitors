@@ -43,7 +43,7 @@ type (
 	TestBase struct {
 		isTestImpl
 
-		ID       string   `yaml:"id"`
+		ID       string   `yaml:"id,omitempty"`
 		Schedule Schedule `yaml:"schedule,omitempty"`
 	}
 	TestWithColumns struct {
