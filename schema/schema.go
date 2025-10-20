@@ -2,48 +2,40 @@ package schema
 
 import (
 	"encoding/json"
-	"slices"
 
+	schemautils "github.com/getsynq/monitors_mgmt/schema_utils"
 	"github.com/getsynq/monitors_mgmt/yaml/core"
 	"github.com/getsynq/monitors_mgmt/yaml/v1beta1"
 	"github.com/getsynq/monitors_mgmt/yaml/v1beta2"
 	"github.com/invopop/jsonschema"
-	"github.com/samber/lo"
 )
 
-var versionRegistry = map[string]any{
-	core.Version_V1Beta1: v1beta1.YAMLConfig{},
-	core.Version_V1Beta2: v1beta2.Config{},
+var builder = schemautils.DiscriminatedUnionBuilder[any]{
+	Reflector:     schemautils.NewReflector(),
+	Discriminator: "version",
+	Registry: map[string]any{
+		core.Version_V1Beta1: v1beta1.YAMLConfig{},
+		core.Version_V1Beta2: v1beta2.Config{},
+	},
+	RequireDiscriminator: false,
 }
 
 func GenerateJSONSchema() ([]byte, error) {
-	reflector := jsonschema.Reflector{
-		ExpandedStruct:            true,
-		FieldNameTag:              "yaml",
-		AllowAdditionalProperties: false,
-	}
+	const discriminator = "version"
 
-	schema := &jsonschema.Schema{}
+	schema := builder.Build(
+		func(key string, schema *jsonschema.Schema) {
+			// This allows us to leave `version` as conditional
+			// in each of the config definitions,
+			// and to update the default parser for the schema
+			// and the parser implementation simultaneously.
+			if key != core.Version_DefaultParser {
+				schema.Required = append(schema.Required, discriminator)
+			}
+		},
+	)
+
 	schema.Title = "SYNQ: Observability as Code"
-
-	versionKeys := lo.Keys(versionRegistry)
-	slices.Sort(versionKeys)
-
-	for _, versionKey := range versionKeys {
-		version := versionRegistry[versionKey]
-		versionSchema := reflector.Reflect(version)
-		versionSchema.Properties.Set("version", &jsonschema.Schema{Const: versionKey})
-
-		// This allows us to leave `version` as conditional
-		// in each of the config definitions,
-		// and to update the default parser for the schema
-		// and the parser implementation simultaneously.
-		if versionKey != core.Version_DefaultParser {
-			versionSchema.Required = append(versionSchema.Required, "version")
-		}
-
-		schema.AnyOf = append(schema.AnyOf, versionSchema)
-	}
 
 	mergeDefinitions(schema)
 

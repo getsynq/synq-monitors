@@ -1,0 +1,19 @@
+# yaml-language-server: $schema=../../schema.json
+
+version: v1beta2
+namespace: foo
+
+entities:
+  - id: bar
+    tests:
+      - type: unique
+        columns:
+          - foo
+
+      - type: accepted_values
+        column: bar
+        values: [a, b, c]
+
+      - type: not_null
+        columns:
+          - foo

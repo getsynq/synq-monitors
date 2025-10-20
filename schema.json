@@ -51,7 +51,9 @@
           "type": "string"
         },
         "tests": {
-          "items": true,
+          "items": {
+            "$ref": "#/$defs/Test"
+          },
           "type": "array"
         },
         "monitors": {
@@ -92,7 +94,7 @@
       "type": "object"
     },
     "Monitor": {
-      "oneOf": [
+      "anyOf": [
         {
           "$schema": "https://json-schema.org/draft/2020-12/schema",
           "$id": "https://github.com/getsynq/monitors_mgmt/yaml/v1beta2/custom-numeric-monitor",
@@ -282,7 +284,9 @@
           ]
         }
       ],
-      "title": "Foo"
+      "required": [
+        "type"
+      ]
     },
     "Schedule": {
       "anyOf": [
@@ -344,6 +348,77 @@
       "type": "object",
       "required": [
         "expression"
+      ]
+    },
+    "Test": {
+      "anyOf": [
+        {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "$id": "https://github.com/getsynq/monitors_mgmt/yaml/v1beta2/accepted-values-test",
+          "properties": {
+            "column": {
+              "type": "string"
+            },
+            "values": {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            "type": {
+              "const": "accepted_values"
+            }
+          },
+          "additionalProperties": false,
+          "type": "object",
+          "required": [
+            "column",
+            "values"
+          ]
+        },
+        {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "$id": "https://github.com/getsynq/monitors_mgmt/yaml/v1beta2/not-null-test",
+          "properties": {
+            "columns": {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            "type": {
+              "const": "not_null"
+            }
+          },
+          "additionalProperties": false,
+          "type": "object",
+          "required": [
+            "columns"
+          ]
+        },
+        {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "$id": "https://github.com/getsynq/monitors_mgmt/yaml/v1beta2/unique-test",
+          "properties": {
+            "columns": {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            "type": {
+              "const": "unique"
+            }
+          },
+          "additionalProperties": false,
+          "type": "object",
+          "required": [
+            "columns"
+          ]
+        }
+      ],
+      "required": [
+        "type"
       ]
     },
     "YAMLAnomalyEngine": {

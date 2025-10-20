@@ -2,10 +2,9 @@ package v1beta2
 
 import (
 	"fmt"
-	"slices"
 
+	schemautils "github.com/getsynq/monitors_mgmt/schema_utils"
 	"github.com/invopop/jsonschema"
-	"github.com/samber/lo"
 	goyaml "gopkg.in/yaml.v3"
 )
 
@@ -20,11 +19,16 @@ type MonitorInline interface {
 	GetMonitorSchedule() *Schedule
 }
 
-var monitorRegistry = map[string]MonitorInline{
-	"volume":         VolumeMonitor{},
-	"freshness":      FreshnessMonitor{},
-	"custom_numeric": CustomNumericMonitor{},
-	"field_stats":    FieldStatsMonitor{},
+var builder = schemautils.DiscriminatedUnionBuilder[MonitorInline]{
+	Reflector:     schemautils.NewReflector(),
+	Discriminator: "type",
+	Registry: map[string]MonitorInline{
+		"volume":         VolumeMonitor{},
+		"freshness":      FreshnessMonitor{},
+		"custom_numeric": CustomNumericMonitor{},
+		"field_stats":    FieldStatsMonitor{},
+	},
+	RequireDiscriminator: true,
 }
 
 type Monitor struct {
@@ -32,26 +36,7 @@ type Monitor struct {
 }
 
 func (Monitor) JSONSchema() *jsonschema.Schema {
-	reflector := jsonschema.Reflector{
-		ExpandedStruct: true,
-	}
-
-	keys := lo.Keys(monitorRegistry)
-	slices.Sort(keys)
-
-	monitorSchemas := make([]*jsonschema.Schema, 0, len(monitorRegistry))
-	for _, monitorKey := range keys {
-		monitorType := monitorRegistry[monitorKey]
-
-		monitorSchema := reflector.Reflect(monitorType)
-		monitorSchema.Properties.Set("type", &jsonschema.Schema{Const: monitorKey})
-		monitorSchemas = append(monitorSchemas, monitorSchema)
-	}
-
-	return &jsonschema.Schema{
-		Title: "Foo",
-		OneOf: monitorSchemas,
-	}
+	return builder.Build()
 }
 
 func decodeMonitor[T MonitorInline](n *goyaml.Node) (MonitorInline, error) {
@@ -101,12 +86,12 @@ func (w Monitor) MarshalYAML() (any, error) {
 }
 
 type BaseMonitor struct {
-	ID           string            `yaml:"id"                     json:"id"                     jsonschema:"required"`
-	Type         string            `yaml:"type"                   json:"type"                   jsonschema:"required"`
-	Name         string            `yaml:"name,omitempty"         json:"name,omitempty"`
-	Filter       string            `yaml:"filter,omitempty"       json:"filter,omitempty"`
-	Severity     string            `yaml:"severity,omitempty"     json:"severity,omitempty"     jsonschema:"enum=WARNING,enum=ERROR"`
-	Timezone     string            `yaml:"timezone,omitempty"     json:"timezone,omitempty"`
+	ID           string        `yaml:"id"                     json:"id"                     jsonschema:"required"`
+	Type         string        `yaml:"type"                   json:"type"                   jsonschema:"required"`
+	Name         string        `yaml:"name,omitempty"         json:"name,omitempty"`
+	Filter       string        `yaml:"filter,omitempty"       json:"filter,omitempty"`
+	Severity     string        `yaml:"severity,omitempty"     json:"severity,omitempty"     jsonschema:"enum=WARNING,enum=ERROR"`
+	Timezone     string        `yaml:"timezone,omitempty"     json:"timezone,omitempty"`
 	Mode         *Mode         `yaml:"mode,omitempty"         json:"mode,omitempty"`
 	Segmentation *Segmentation `yaml:"segmentation,omitempty" json:"segmentation,omitempty"`
 	Schedule     *Schedule     `yaml:"schedule,omitempty"     json:"schedule,omitempty"`
