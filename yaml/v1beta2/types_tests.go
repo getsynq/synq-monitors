@@ -44,6 +44,7 @@ type (
 		isTestImpl
 
 		ID       string   `yaml:"id,omitempty"`
+		Type     string   `yaml:"type"`
 		Schedule Schedule `yaml:"schedule,omitempty"`
 	}
 	TestWithColumns struct {

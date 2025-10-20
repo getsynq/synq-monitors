@@ -359,6 +359,9 @@
             "id": {
               "type": "string"
             },
+            "type": {
+              "const": "accepted_values"
+            },
             "schedule": {
               "$ref": "#/$defs/Schedule"
             },
@@ -371,14 +374,12 @@
                 "minLength": 1
               },
               "type": "array"
-            },
-            "type": {
-              "const": "accepted_values"
             }
           },
           "additionalProperties": false,
           "type": "object",
           "required": [
+            "type",
             "column",
             "values"
           ]
@@ -390,19 +391,20 @@
             "id": {
               "type": "string"
             },
+            "type": {
+              "const": "business_rule"
+            },
             "schedule": {
               "$ref": "#/$defs/Schedule"
             },
             "sql_expression": {
               "type": "string"
-            },
-            "type": {
-              "const": "business_rule"
             }
           },
           "additionalProperties": false,
           "type": "object",
           "required": [
+            "type",
             "sql_expression"
           ]
         },
@@ -413,6 +415,9 @@
             "id": {
               "type": "string"
             },
+            "type": {
+              "const": "empty"
+            },
             "schedule": {
               "$ref": "#/$defs/Schedule"
             },
@@ -422,14 +427,12 @@
                 "minLength": 1
               },
               "type": "array"
-            },
-            "type": {
-              "const": "empty"
             }
           },
           "additionalProperties": false,
           "type": "object",
           "required": [
+            "type",
             "columns"
           ]
         },
@@ -440,6 +443,9 @@
             "id": {
               "type": "string"
             },
+            "type": {
+              "const": "freshness"
+            },
             "schedule": {
               "$ref": "#/$defs/Schedule"
             },
@@ -448,13 +454,13 @@
             },
             "time_partition_seconds": {
               "type": "integer"
-            },
-            "type": {
-              "const": "freshness"
             }
           },
           "additionalProperties": false,
-          "type": "object"
+          "type": "object",
+          "required": [
+            "type"
+          ]
         },
         {
           "$schema": "https://json-schema.org/draft/2020-12/schema",
@@ -462,6 +468,9 @@
           "properties": {
             "id": {
               "type": "string"
+            },
+            "type": {
+              "const": "max_value"
             },
             "schedule": {
               "$ref": "#/$defs/Schedule"
@@ -471,14 +480,12 @@
             },
             "max_value": {
               "type": "number"
-            },
-            "type": {
-              "const": "max_value"
             }
           },
           "additionalProperties": false,
           "type": "object",
           "required": [
+            "type",
             "column",
             "max_value"
           ]
@@ -489,6 +496,9 @@
           "properties": {
             "id": {
               "type": "string"
+            },
+            "type": {
+              "const": "min_max"
             },
             "schedule": {
               "$ref": "#/$defs/Schedule"
@@ -501,14 +511,12 @@
             },
             "max_value": {
               "type": "number"
-            },
-            "type": {
-              "const": "min_max"
             }
           },
           "additionalProperties": false,
           "type": "object",
           "required": [
+            "type",
             "column",
             "min_value",
             "max_value"
@@ -521,6 +529,9 @@
             "id": {
               "type": "string"
             },
+            "type": {
+              "const": "min_value"
+            },
             "schedule": {
               "$ref": "#/$defs/Schedule"
             },
@@ -529,14 +540,12 @@
             },
             "min_value": {
               "type": "number"
-            },
-            "type": {
-              "const": "min_value"
             }
           },
           "additionalProperties": false,
           "type": "object",
           "required": [
+            "type",
             "column",
             "min_value"
           ]
@@ -548,6 +557,9 @@
             "id": {
               "type": "string"
             },
+            "type": {
+              "const": "not_null"
+            },
             "schedule": {
               "$ref": "#/$defs/Schedule"
             },
@@ -557,14 +569,12 @@
                 "minLength": 1
               },
               "type": "array"
-            },
-            "type": {
-              "const": "not_null"
             }
           },
           "additionalProperties": false,
           "type": "object",
           "required": [
+            "type",
             "columns"
           ]
         },
@@ -574,6 +584,9 @@
           "properties": {
             "id": {
               "type": "string"
+            },
+            "type": {
+              "const": "rejected_values"
             },
             "schedule": {
               "$ref": "#/$defs/Schedule"
@@ -587,14 +600,12 @@
                 "minLength": 1
               },
               "type": "array"
-            },
-            "type": {
-              "const": "rejected_values"
             }
           },
           "additionalProperties": false,
           "type": "object",
           "required": [
+            "type",
             "column",
             "values"
           ]
@@ -606,6 +617,9 @@
             "id": {
               "type": "string"
             },
+            "type": {
+              "const": "relative_time"
+            },
             "schedule": {
               "$ref": "#/$defs/Schedule"
             },
@@ -614,14 +628,12 @@
             },
             "relative_column": {
               "type": "string"
-            },
-            "type": {
-              "const": "relative_time"
             }
           },
           "additionalProperties": false,
           "type": "object",
           "required": [
+            "type",
             "column",
             "relative_column"
           ]
@@ -632,6 +644,9 @@
           "properties": {
             "id": {
               "type": "string"
+            },
+            "type": {
+              "const": "unique"
             },
             "schedule": {
               "$ref": "#/$defs/Schedule"
@@ -648,14 +663,12 @@
             },
             "time_partition_seconds": {
               "type": "integer"
-            },
-            "type": {
-              "const": "unique"
             }
           },
           "additionalProperties": false,
           "type": "object",
           "required": [
+            "type",
             "columns"
           ]
         }
