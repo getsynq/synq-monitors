@@ -13,8 +13,8 @@ const (
 )
 
 type Config struct {
-	Version string `yaml:"version,omitempty"`
-	ID      string `yaml:"namespace"`
+	Version string `yaml:"version,omitempty" json:"version,omitempty"`
+	ID      string `yaml:"namespace"         json:"namespace"`
 }
 
 type MetadataProvider interface {

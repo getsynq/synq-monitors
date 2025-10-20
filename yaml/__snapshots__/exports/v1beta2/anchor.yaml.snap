@@ -7,8 +7,8 @@ entities:
       time_partitioning_column: created_at
       monitors:
         - id: c20b07ae-27f5-50ff-ab17-7b11bed097dd
-          name: volume_on_logs
           type: volume
+          name: volume_on_logs
           filter: country IN ('US', 'CA')
           severity: WARNING
           mode:
@@ -16,31 +16,34 @@ entities:
                 sensitivity: BALANCED
           segmentation:
             expression: country
-          daily:
+          schedule:
+            type: daily
             query_delay: 1h0m0s
     - id: ch-prod::anomalies::corrections_v2
       time_partitioning_column: created_at
       monitors:
         - id: e90ecd7b-111d-5f14-9da7-e94c08f67655
-          name: freshness_on_orders
           type: volume
+          name: freshness_on_orders
           severity: ERROR
           mode:
             anomaly_engine:
                 sensitivity: BALANCED
-          daily:
+          schedule:
+            type: daily
             query_delay: 1h0m0s
     - id: ch-prod::anomalies::external_sqltests
       time_partitioning_column: created_at
       monitors:
         - id: 24a0e18e-5ef3-5269-ba2b-fbec88270430
-          name: freshness_on_orders
           type: volume
+          name: freshness_on_orders
           severity: ERROR
           mode:
             anomaly_engine:
                 sensitivity: BALANCED
-          daily:
+          schedule:
+            type: daily
             query_delay: 1h0m0s
 
 ---

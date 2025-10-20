@@ -30,5 +30,8 @@ go.work.sum
 
 /*.json
 
+# Generated JSON Schema document
+!schema.json
+
 synq-monitors
 generated/

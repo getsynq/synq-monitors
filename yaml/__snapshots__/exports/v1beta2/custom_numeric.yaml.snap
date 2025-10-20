@@ -7,14 +7,14 @@ entities:
       time_partitioning_column: created_at
       monitors:
         - id: 370fe457-ccc4-515d-a0e1-fc52f0234fbf
-          name: runs_unique_workspaces
           type: custom_numeric
+          name: runs_unique_workspaces
           filter: created_at > today()
           severity: ERROR
           mode:
             fixed_thresholds:
                 max: 1000
-          daily: {}
+          schedule: daily
           metric_aggregation: COUNT(DISTINCT workspace)
 
 ---
