@@ -356,12 +356,19 @@
           "$schema": "https://json-schema.org/draft/2020-12/schema",
           "$id": "https://github.com/getsynq/monitors_mgmt/yaml/v1beta2/accepted-values-test",
           "properties": {
+            "id": {
+              "type": "string"
+            },
+            "schedule": {
+              "$ref": "#/$defs/Schedule"
+            },
             "column": {
               "type": "string"
             },
             "values": {
               "items": {
-                "type": "string"
+                "type": "string",
+                "minLength": 1
               },
               "type": "array"
             },
@@ -372,17 +379,191 @@
           "additionalProperties": false,
           "type": "object",
           "required": [
+            "id",
             "column",
             "values"
           ]
         },
         {
           "$schema": "https://json-schema.org/draft/2020-12/schema",
-          "$id": "https://github.com/getsynq/monitors_mgmt/yaml/v1beta2/not-null-test",
+          "$id": "https://github.com/getsynq/monitors_mgmt/yaml/v1beta2/business-rule-test",
           "properties": {
+            "id": {
+              "type": "string"
+            },
+            "schedule": {
+              "$ref": "#/$defs/Schedule"
+            },
+            "sql_expression": {
+              "type": "string"
+            },
+            "type": {
+              "const": "business_rule"
+            }
+          },
+          "additionalProperties": false,
+          "type": "object",
+          "required": [
+            "id",
+            "sql_expression"
+          ]
+        },
+        {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "$id": "https://github.com/getsynq/monitors_mgmt/yaml/v1beta2/empty-test",
+          "properties": {
+            "id": {
+              "type": "string"
+            },
+            "schedule": {
+              "$ref": "#/$defs/Schedule"
+            },
             "columns": {
               "items": {
-                "type": "string"
+                "type": "string",
+                "minLength": 1
+              },
+              "type": "array"
+            },
+            "type": {
+              "const": "empty"
+            }
+          },
+          "additionalProperties": false,
+          "type": "object",
+          "required": [
+            "id",
+            "columns"
+          ]
+        },
+        {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "$id": "https://github.com/getsynq/monitors_mgmt/yaml/v1beta2/freshness-test",
+          "properties": {
+            "id": {
+              "type": "string"
+            },
+            "schedule": {
+              "$ref": "#/$defs/Schedule"
+            },
+            "time_partition_column": {
+              "type": "string"
+            },
+            "time_partition_seconds": {
+              "type": "integer"
+            },
+            "type": {
+              "const": "freshness"
+            }
+          },
+          "additionalProperties": false,
+          "type": "object",
+          "required": [
+            "id"
+          ]
+        },
+        {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "$id": "https://github.com/getsynq/monitors_mgmt/yaml/v1beta2/max-value-test",
+          "properties": {
+            "id": {
+              "type": "string"
+            },
+            "schedule": {
+              "$ref": "#/$defs/Schedule"
+            },
+            "column": {
+              "type": "string"
+            },
+            "max_value": {
+              "type": "number"
+            },
+            "type": {
+              "const": "max_value"
+            }
+          },
+          "additionalProperties": false,
+          "type": "object",
+          "required": [
+            "id",
+            "column",
+            "max_value"
+          ]
+        },
+        {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "$id": "https://github.com/getsynq/monitors_mgmt/yaml/v1beta2/min-max-test",
+          "properties": {
+            "id": {
+              "type": "string"
+            },
+            "schedule": {
+              "$ref": "#/$defs/Schedule"
+            },
+            "column": {
+              "type": "string"
+            },
+            "min_value": {
+              "type": "number"
+            },
+            "max_value": {
+              "type": "number"
+            },
+            "type": {
+              "const": "min_max"
+            }
+          },
+          "additionalProperties": false,
+          "type": "object",
+          "required": [
+            "id",
+            "column",
+            "min_value",
+            "max_value"
+          ]
+        },
+        {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "$id": "https://github.com/getsynq/monitors_mgmt/yaml/v1beta2/min-value-test",
+          "properties": {
+            "id": {
+              "type": "string"
+            },
+            "schedule": {
+              "$ref": "#/$defs/Schedule"
+            },
+            "column": {
+              "type": "string"
+            },
+            "min_value": {
+              "type": "number"
+            },
+            "type": {
+              "const": "min_value"
+            }
+          },
+          "additionalProperties": false,
+          "type": "object",
+          "required": [
+            "id",
+            "column",
+            "min_value"
+          ]
+        },
+        {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "$id": "https://github.com/getsynq/monitors_mgmt/yaml/v1beta2/not-null-test",
+          "properties": {
+            "id": {
+              "type": "string"
+            },
+            "schedule": {
+              "$ref": "#/$defs/Schedule"
+            },
+            "columns": {
+              "items": {
+                "type": "string",
+                "minLength": 1
               },
               "type": "array"
             },
@@ -393,18 +574,92 @@
           "additionalProperties": false,
           "type": "object",
           "required": [
+            "id",
             "columns"
+          ]
+        },
+        {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "$id": "https://github.com/getsynq/monitors_mgmt/yaml/v1beta2/rejected-values-test",
+          "properties": {
+            "id": {
+              "type": "string"
+            },
+            "schedule": {
+              "$ref": "#/$defs/Schedule"
+            },
+            "column": {
+              "type": "string"
+            },
+            "values": {
+              "items": {
+                "type": "string",
+                "minLength": 1
+              },
+              "type": "array"
+            },
+            "type": {
+              "const": "rejected_values"
+            }
+          },
+          "additionalProperties": false,
+          "type": "object",
+          "required": [
+            "id",
+            "column",
+            "values"
+          ]
+        },
+        {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "$id": "https://github.com/getsynq/monitors_mgmt/yaml/v1beta2/relative-time-test",
+          "properties": {
+            "id": {
+              "type": "string"
+            },
+            "schedule": {
+              "$ref": "#/$defs/Schedule"
+            },
+            "column": {
+              "type": "string"
+            },
+            "relative_column": {
+              "type": "string"
+            },
+            "type": {
+              "const": "relative_time"
+            }
+          },
+          "additionalProperties": false,
+          "type": "object",
+          "required": [
+            "id",
+            "column",
+            "relative_column"
           ]
         },
         {
           "$schema": "https://json-schema.org/draft/2020-12/schema",
           "$id": "https://github.com/getsynq/monitors_mgmt/yaml/v1beta2/unique-test",
           "properties": {
+            "id": {
+              "type": "string"
+            },
+            "schedule": {
+              "$ref": "#/$defs/Schedule"
+            },
             "columns": {
               "items": {
-                "type": "string"
+                "type": "string",
+                "minLength": 1
               },
               "type": "array"
+            },
+            "time_partition_column": {
+              "type": "string"
+            },
+            "time_partition_seconds": {
+              "type": "integer"
             },
             "type": {
               "const": "unique"
@@ -413,6 +668,7 @@
           "additionalProperties": false,
           "type": "object",
           "required": [
+            "id",
             "columns"
           ]
         }
