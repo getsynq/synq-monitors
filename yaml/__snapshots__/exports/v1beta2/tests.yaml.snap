@@ -1,0 +1,7 @@
+
+[TestYAMLGeneratorSuite/TestExamples - 1]
+version: v1beta2
+namespace: foo
+entities: []
+
+---

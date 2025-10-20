@@ -10,11 +10,11 @@ import (
 )
 
 type Defaults struct {
-	Severity         string        `yaml:"severity,omitempty"          json:"severity,omitempty"          jsonschema:"enum=WARNING,enum=ERROR"`
-	TimePartitioning string        `yaml:"time_partitioning,omitempty" json:"time_partitioning,omitempty"`
+	Severity         string    `yaml:"severity,omitempty"          json:"severity,omitempty"          jsonschema:"enum=WARNING,enum=ERROR"`
+	TimePartitioning string    `yaml:"time_partitioning,omitempty" json:"time_partitioning,omitempty"`
 	Schedule         *Schedule `yaml:"schedule,omitempty"          json:"schedule,omitempty"`
 	Mode             *Mode     `yaml:"mode,omitempty"              json:"mode,omitempty"`
-	Timezone         string        `yaml:"timezone,omitempty"          json:"timezone,omitempty"`
+	Timezone         string    `yaml:"timezone,omitempty"          json:"timezone,omitempty"`
 }
 
 type Config struct {
@@ -29,10 +29,6 @@ type Entity struct {
 	TimePartitioningColumn string    `yaml:"time_partitioning_column,omitempty" json:"time_partitioning_column,omitempty"`
 	Tests                  []Test    `yaml:"tests,omitempty"                    json:"tests,omitempty"`
 	Monitors               []Monitor `yaml:"monitors,omitempty"                 json:"monitors,omitempty"`
-}
-
-type Test interface {
-	IsTest()
 }
 
 type Segmentation struct {
