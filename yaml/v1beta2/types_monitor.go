@@ -5,7 +5,7 @@ import (
 
 	schemautils "github.com/getsynq/monitors_mgmt/schema_utils"
 	"github.com/invopop/jsonschema"
-	goyaml "gopkg.in/yaml.v3"
+	goyaml "go.yaml.in/yaml/v3"
 )
 
 type MonitorInline interface {
