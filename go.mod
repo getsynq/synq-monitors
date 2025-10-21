@@ -12,7 +12,6 @@ require (
 	golang.org/x/oauth2 v0.30.0
 	google.golang.org/grpc v1.74.2
 	google.golang.org/protobuf v1.36.10
-	gopkg.in/yaml.v3 v3.0.1
 )
 
 require (
@@ -38,6 +37,7 @@ require (
 	github.com/invopop/jsonschema v0.13.0
 	github.com/sebdah/goldie/v2 v2.8.0
 	go.uber.org/mock v0.6.0
+	go.yaml.in/yaml/v3 v3.0.4
 )
 
 require (
@@ -50,6 +50,7 @@ require (
 	github.com/wk8/go-ordered-map/v2 v2.1.8 // indirect
 	github.com/yudai/golcs v0.0.0-20170316035057-ecda9a501e82 // indirect
 	github.com/yudai/pp v2.0.1+incompatible // indirect
+	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
 
 require (

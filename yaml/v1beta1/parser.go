@@ -8,8 +8,8 @@ import (
 	pb "buf.build/gen/go/getsynq/api/protocolbuffers/go/synq/monitors/custom_monitors/v1"
 	"github.com/getsynq/monitors_mgmt/yaml/core"
 	"github.com/pkg/errors"
+	goyaml "go.yaml.in/yaml/v3"
 	"google.golang.org/protobuf/types/known/wrapperspb"
-	goyaml "gopkg.in/yaml.v3"
 )
 
 type YAMLParser struct {
