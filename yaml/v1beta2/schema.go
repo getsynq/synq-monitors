@@ -3,14 +3,12 @@ package v1beta2
 import (
 	"encoding/json"
 
+	schemautils "github.com/getsynq/monitors_mgmt/schema_utils"
 	"github.com/invopop/jsonschema"
 )
 
 func GenerateJSONSchema() ([]byte, error) {
-	reflector := jsonschema.Reflector{
-		ExpandedStruct: true,
-	}
-
+	reflector := schemautils.NewReflector()
 	schema := reflector.Reflect(&Config{})
 
 	schema.Title = "SYNQ Monitors as Code: v1beta2"

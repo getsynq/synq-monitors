@@ -862,7 +862,6 @@
       "additionalProperties": false,
       "type": "object",
       "required": [
-        "namespace",
         "monitors"
       ]
     },
@@ -890,7 +889,6 @@
       "additionalProperties": false,
       "type": "object",
       "required": [
-        "namespace",
         "entities",
         "version"
       ]

@@ -4,68 +4,67 @@ import (
 	"fmt"
 	"time"
 
+	schemautils "github.com/getsynq/monitors_mgmt/schema_utils"
 	"github.com/getsynq/monitors_mgmt/yaml/core"
 	"github.com/invopop/jsonschema"
 	"go.yaml.in/yaml/v3"
 )
 
 type Defaults struct {
-	Severity         string    `yaml:"severity,omitempty"          json:"severity,omitempty"          jsonschema:"enum=WARNING,enum=ERROR"`
-	TimePartitioning string    `yaml:"time_partitioning,omitempty" json:"time_partitioning,omitempty"`
-	Schedule         *Schedule `yaml:"schedule,omitempty"          json:"schedule,omitempty"`
-	Mode             *Mode     `yaml:"mode,omitempty"              json:"mode,omitempty"`
-	Timezone         string    `yaml:"timezone,omitempty"          json:"timezone,omitempty"`
+	Severity         string    `yaml:"severity,omitempty"          jsonschema:"enum=WARNING,enum=ERROR"`
+	TimePartitioning string    `yaml:"time_partitioning,omitempty"`
+	Schedule         *Schedule `yaml:"schedule,omitempty"`
+	Mode             *Mode     `yaml:"mode,omitempty"`
+	Timezone         string    `yaml:"timezone,omitempty"`
 }
 
 type Config struct {
-	core.Config `yaml:",inline" json:",inline"`
+	core.Config `yaml:",inline"`
 
-	Defaults *Defaults `yaml:"defaults,omitempty" json:"defaults,omitempty"`
-	Entities []Entity  `yaml:"entities"           json:"entities"           jsonschema:"required,minItems=1"`
+	Defaults *Defaults `yaml:"defaults,omitempty"`
+	Entities []Entity  `yaml:"entities"           jsonschema:"required,minItems=1"`
 }
 
 type Entity struct {
-	Id                     string    `yaml:"id"                                 json:"id"                                 jsonschema:"required"`
-	TimePartitioningColumn string    `yaml:"time_partitioning_column,omitempty" json:"time_partitioning_column,omitempty"`
-	Tests                  []Test    `yaml:"tests,omitempty"                    json:"tests,omitempty"`
-	Monitors               []Monitor `yaml:"monitors,omitempty"                 json:"monitors,omitempty"`
+	Id                     string    `yaml:"id"                                 jsonschema:"required"`
+	TimePartitioningColumn string    `yaml:"time_partitioning_column,omitempty"`
+	Tests                  []Test    `yaml:"tests,omitempty"`
+	Monitors               []Monitor `yaml:"monitors,omitempty"`
 }
 
 type Segmentation struct {
-	Expression    string    `yaml:"expression"               json:"expression"               jsonschema:"required"`
-	IncludeValues *[]string `yaml:"include_values,omitempty" json:"include_values,omitempty" jsonschema:""`
-	ExcludeValues *[]string `yaml:"exclude_values,omitempty" json:"exclude_values,omitempty" jsonschema:""`
+	Expression    string    `yaml:"expression"               jsonschema:"required"`
+	IncludeValues *[]string `yaml:"include_values,omitempty"`
+	ExcludeValues *[]string `yaml:"exclude_values,omitempty"`
 }
 
 type Mode struct {
-	AnomalyEngine   *AnomalyEngine   `yaml:"anomaly_engine,omitempty"   json:"anomaly_engine,omitempty"`
-	FixedThresholds *FixedThresholds `yaml:"fixed_thresholds,omitempty" json:"fixed_thresholds,omitempty"`
+	AnomalyEngine   *AnomalyEngine   `yaml:"anomaly_engine,omitempty"`
+	FixedThresholds *FixedThresholds `yaml:"fixed_thresholds,omitempty"`
 }
 
 type AnomalyEngine struct {
-	Sensitivity string `yaml:"sensitivity" json:"sensitivity" jsonschema:"required,enum=PRECISE,enum=BALANCED,enum=RELAXED"`
+	Sensitivity string `yaml:"sensitivity" jsonschema:"required,enum=PRECISE,enum=BALANCED,enum=RELAXED"`
 }
 
 type FixedThresholds struct {
-	Min *float64 `yaml:"min,omitempty" json:"min,omitempty"`
-	Max *float64 `yaml:"max,omitempty" json:"max,omitempty"`
+	Min *float64 `yaml:"min,omitempty"`
+	Max *float64 `yaml:"max,omitempty"`
 }
 
 type Schedule struct {
-	ScheduleInline `yaml:",inline" json:",inline"`
+	ScheduleInline `yaml:",inline"`
 }
 
 type ScheduleInline struct {
-	Type                  string         `yaml:"type"                              json:"type"                              jsonschema:"required,enum=daily,enum=hourly"`
-	TimePartitioningShift *time.Duration `yaml:"time_partitioning_shift,omitempty" json:"time_partitioning_shift,omitempty"`
-	QueryDelay            *time.Duration `yaml:"query_delay,omitempty"             json:"query_delay,omitempty"`
-	IgnoreLast            *int32         `yaml:"ignore_last,omitempty"             json:"ignore_last,omitempty"`
+	Type                  string         `yaml:"type"                              jsonschema:"required,enum=daily,enum=hourly"`
+	TimePartitioningShift *time.Duration `yaml:"time_partitioning_shift,omitempty"`
+	QueryDelay            *time.Duration `yaml:"query_delay,omitempty"`
+	IgnoreLast            *int32         `yaml:"ignore_last,omitempty"`
 }
 
 func (Schedule) JSONSchema() *jsonschema.Schema {
-	reflector := jsonschema.Reflector{
-		ExpandedStruct: true,
-	}
+	reflector := schemautils.NewReflector()
 	defaultSchema := reflector.Reflect(ScheduleInline{})
 
 	return &jsonschema.Schema{

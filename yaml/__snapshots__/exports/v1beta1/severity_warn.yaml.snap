@@ -1,7 +1,6 @@
 
 [TestYAMLGeneratorSuite/TestExamples - 1]
 version: v1beta1
-namespace: ""
 monitors:
     - id: b6c784cf-7a31-5869-a56f-2000ba641961
       name: runs_volume_warn

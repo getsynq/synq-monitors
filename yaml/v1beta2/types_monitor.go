@@ -86,15 +86,15 @@ func (w Monitor) MarshalYAML() (any, error) {
 }
 
 type BaseMonitor struct {
-	ID           string        `yaml:"id"                     json:"id"                     jsonschema:"required"`
-	Type         string        `yaml:"type"                   json:"type"                   jsonschema:"required"`
-	Name         string        `yaml:"name,omitempty"         json:"name,omitempty"`
-	Filter       string        `yaml:"filter,omitempty"       json:"filter,omitempty"`
-	Severity     string        `yaml:"severity,omitempty"     json:"severity,omitempty"     jsonschema:"enum=WARNING,enum=ERROR"`
-	Timezone     string        `yaml:"timezone,omitempty"     json:"timezone,omitempty"`
-	Mode         *Mode         `yaml:"mode,omitempty"         json:"mode,omitempty"`
-	Segmentation *Segmentation `yaml:"segmentation,omitempty" json:"segmentation,omitempty"`
-	Schedule     *Schedule     `yaml:"schedule,omitempty"     json:"schedule,omitempty"`
+	ID           string        `yaml:"id"                     jsonschema:"required"`
+	Type         string        `yaml:"type"                   jsonschema:"required"`
+	Name         string        `yaml:"name,omitempty"`
+	Filter       string        `yaml:"filter,omitempty"`
+	Severity     string        `yaml:"severity,omitempty"     jsonschema:"enum=WARNING,enum=ERROR"`
+	Timezone     string        `yaml:"timezone,omitempty"`
+	Mode         *Mode         `yaml:"mode,omitempty"`
+	Segmentation *Segmentation `yaml:"segmentation,omitempty"`
+	Schedule     *Schedule     `yaml:"schedule,omitempty"`
 }
 
 func (b BaseMonitor) GetMonitorID() string {
@@ -131,18 +131,18 @@ func (b BaseMonitor) GetMonitorSchedule() *Schedule {
 
 type (
 	FreshnessMonitor struct {
-		BaseMonitor `       yaml:",inline"    json:",inline"`
-		Expression  string `yaml:"expression" json:"expression" jsonschema:"required"`
+		BaseMonitor `       yaml:",inline"`
+		Expression  string `yaml:"expression" jsonschema:"required"`
 	}
 	VolumeMonitor struct {
-		BaseMonitor `yaml:",inline" json:",inline"`
+		BaseMonitor `yaml:",inline"`
 	}
 	CustomNumericMonitor struct {
-		BaseMonitor       `       yaml:",inline"            json:",inline"`
-		MetricAggregation string `yaml:"metric_aggregation" json:"metric_aggregation" jsonschema:"required"`
+		BaseMonitor       `       yaml:",inline"`
+		MetricAggregation string `yaml:"metric_aggregation" jsonschema:"required"`
 	}
 	FieldStatsMonitor struct {
-		BaseMonitor `         yaml:",inline"           json:",inline"`
-		Fields      []string `yaml:"columns,omitempty" json:"columns,omitempty" jsonschema:"required,minItems=1"`
+		BaseMonitor `         yaml:",inline"`
+		Fields      []string `yaml:"columns,omitempty" jsonschema:"required,minItems=1"`
 	}
 )
