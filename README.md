@@ -147,191 +147,46 @@ The output file should not already exist.
 
 ## YAML Format
 
+Refer to `schema.json` for the complete and authoritative specification of all supported fields, types, and validation rules. The schema is the source of truth for what is supported.
+
+### Schema Reference in Your Editor
+
+You can reference the schema inline in your YAML files for IDE support and validation:
+
 ```yaml
+# Reference schema from local path (relative or absolute)
+# yaml-language-server: $schema=../../schemas/v1beta2.json
+version: v1beta2
 namespace: "data-team-pipeline"
 
-defaults:
-  severity: ERROR
-  timezone: "Europe/Paris" # optional, defaults to UTC if not specified
-  daily:
-    query_delay: 1h # optional, defaults to 0s if not specified
+entities:
+  - id: orders_table
+    time_partitioning_column: created_at
+    monitors:
+      - id: freshness_on_orders
+        type: freshness
+        expression: "created_at"
 
-monitors:
-  - name: freshness_on_orders
-    time_partitioning: created_at
-    type: freshness
-    expression: "created_at"
-    monitored_ids:
-      - orders_table_eu
-      - orders_table_us
-
-  - name: volume_on_logs
-    time_partitioning: at
-    type: volume
-    monitored_id: log_table
-    segmentation: "country"
-    filter: "country IN ('US', 'CA')"
-
-  - name: stats_on_user_fields
-    type: field_stats
-    time_partitioning: registered_at
-    fields:
-      - age
-      - signup_method
-    monitored_id: users_table
-    mode:
-      anomaly_engine:
-        sensitivity: BALANCED
-    timezone: "UTC" # optional, defaults to UTC if not specified
-    daily:
-      query_delay: 0s # midnight (0 seconds since midnight)
-
-  - name: custom_numeric_active_users
-    time_partitioning: registered_at
-    type: custom_numeric
-    metric_aggregation: "COUNT(DISTINCT user_id)"
-    monitored_ids:
-      - active_users_table
-    mode:
-      fixed_thresholds:
-        min: 100
-        max: 10000
-    hourly:
-      query_delay: 15m # 15 minutes delay for hourly execution
+  - id: log_table
+    monitors:
+      - id: volume_on_logs
+        type: volume
+        filter: "country IN ('US', 'CA')"
 ```
 
-## Monitor Types
+The schema also supports URLs, so you can reference it directly from the repository:
 
-- **freshness**: Requires `expression`
-- **volume**: Basic volume monitoring
-- **field_stats**: Requires `fields` array
-- **custom_numeric**: Requires `metric_aggregation`
+```yaml
+# yaml-language-server: $schema=https://raw.githubusercontent.com/getsynq/synq-monitors/main/schema.json
+```
 
-## Optional Features
+Additionally, the CLI generates a schema when built, which you can pin in your repository alongside the specific CLI version you're using to ensure consistency:
 
-- **segmentation**: Column to segment by
-- **filter**: SQL filter expression
-- **mode**: `anomaly_engine` or `fixed_thresholds`
-- **schedule**: `daily` or `hourly` with `time_partitioning_shift` (deprecated) or `query_delay`
+```bash
+./synq-monitors schema > ./schemas/v1beta2.json
+```
 
-## Available YAML Fields
-
-### Top-level Configuration
-
-| Field       | Type   | Required | Default | Description                             |
-| ----------- | ------ | -------- | ------- | --------------------------------------- |
-| `namespace` | string | ❌       | -       | Unique identifier for the configuration |
-| `defaults`  | object | ❌       | -       | Default values applied to all monitors  |
-| `monitors`  | array  | ✅       | -       | Array of monitor definitions            |
-
-### Defaults Section
-
-| Field                        | Type   | Required | Default                                | Description                                                              |
-| ---------------------------- | ------ | -------- | -------------------------------------- | ------------------------------------------------------------------------ |
-| `defaults.severity`          | string | ❌       | `ERROR`                                | Default severity level for monitors. Possible values: `WARNING`, `ERROR` |
-| `defaults.time_partitioning` | string | ❌       | -                                      | Default time partitioning expression                                     |
-| `defaults.daily`             | object | ❌       | -                                      | Default daily schedule configuration                                     |
-| `defaults.hourly`            | object | ❌       | -                                      | Default hourly schedule configuration                                    |
-| `defaults.mode`              | object | ❌       | `anomaly_engine.sensitivity: BALANCED` | Default detection mode                                                   |
-| `defaults.timezone`          | string | ❌       | `UTC`                                  | Default timezone for schedule execution (e.g., "America/New_York")       |
-
-### Monitor Fields
-
-| Field                | Type          | Required | Default                        | Description                                                                           |
-| -------------------- | ------------- | -------- | ------------------------------ | ------------------------------------------------------------------------------------- |
-| `id`                 | string        | ✅       | -                              | Unique identifier for the monitor                                                     |
-| `name`               | string        | ❌       | `{id}`                         | Human-readable monitor name (defaults to monitor id)                                  |
-| `type`               | string        | ✅       | -                              | Monitor type. Possible values: `freshness`, `volume`, `custom_numeric`, `field_stats` |
-| `expression`         | string        | ❌       | -                              | **Required for `freshness` monitors** - SQL expression to evaluate                    |
-| `metric_aggregation` | string        | ❌       | -                              | **Required for `custom_numeric` monitors** - Aggregation function                     |
-| `monitored_ids`      | array[string] | ✅❌     | -                              | Array of monitored entity IDs (mutually exclusive with `monitored_id`)                |
-| `monitored_id`       | string        | ❌✅     | -                              | Single monitored entity ID (mutually exclusive with `monitored_ids`)                  |
-| `fields`             | array[string] | ❌       | -                              | **Required for `field_stats` monitors** - Fields to analyze                           |
-| `segmentation`       | object        | ❌       | -                              | Segmentation configuration for the monitor                                            |
-| `filter`             | string        | ❌       | -                              | SQL WHERE clause for filtering data                                                   |
-| `severity`           | string        | ❌       | `{defaults.severity}`          | Monitor severity level. Possible values: `WARNING`, `ERROR`                           |
-| `time_partitioning`  | string        | ❌       | `{defaults.time_partitioning}` | Time partitioning expression                                                          |
-| `mode`               | object        | ❌       | `{defaults.mode}`              | Detection mode configuration                                                          |
-| `daily`              | object        | ❌       | `{defaults.daily}`             | Daily schedule configuration                                                          |
-| `hourly`             | object        | ❌       | `{defaults.hourly}`            | Hourly schedule configuration                                                         |
-| `timezone`           | string        | ❌       | `{defaults.timezone}`          | Timezone for schedule execution (e.g., "America/New_York")                            |
-| `namespace`          | string        | ❌       | `{namespace}`                  | Override default namespace ID                                                         |
-
-### Segmentation Configuration
-
-| Field                         | Type          | Required | Default | Description                                  |
-| ----------------------------- | ------------- | -------- | ------- | -------------------------------------------- |
-| `segmentation.expression`     | string        | ✅       | -       | SQL expression for data segmentation column  |
-| `segmentation.include_values` | array[string] | ❌       | -       | Specific values to include in segmentation   |
-| `segmentation.exclude_values` | array[string] | ❌       | -       | Specific values to exclude from segmentation |
-
-### Mode Configuration
-
-| Field                             | Type    | Required | Default    | Description                                                                                |
-| --------------------------------- | ------- | -------- | ---------- | ------------------------------------------------------------------------------------------ |
-| `mode.anomaly_engine.sensitivity` | string  | ❌       | `BALANCED` | Sensitivity level for anomaly detection. Possible values: `PRECISE`, `BALANCED`, `RELAXED` |
-| `mode.fixed_thresholds.min`       | float64 | ❌       | -          | Minimum threshold value                                                                    |
-| `mode.fixed_thresholds.max`       | float64 | ❌       | -          | Maximum threshold value                                                                    |
-
-**Note:** Only one of `anomaly_engine` or `fixed_thresholds` should be specified per mode.
-
-### Daily Schedule Configuration
-
-| Field                           | Type     | Required | Default | Description                                                    |
-| ------------------------------- | -------- | -------- | ------- | -------------------------------------------------------------- |
-| `daily.time_partitioning_shift` | duration | ❌       | -       | Shift of time partitioning. Deprecated, use timezone instead   |
-| `daily.query_delay`             | duration | ❌       | -       | Duration to delay query execution (e.g., "1h", "30m", "2h30m") |
-| `daily.ignore_last`             | int32    | ❌       | -       | Ignore the last X days from the query results                  |
-
-### Hourly Schedule Configuration
-
-| Field                            | Type     | Required | Default | Description                                                    |
-| -------------------------------- | -------- | -------- | ------- | -------------------------------------------------------------- |
-| `hourly.time_partitioning_shift` | duration | ❌       | -       | Shift of time partitioning. Deprecated, use timezone instead   |
-| `hourly.query_delay`             | duration | ❌       | -       | Duration to delay query execution (e.g., "1h", "30m", "2h30m") |
-| `hourly.ignore_last`             | int32    | ❌       | -       | Ignore the last X hours from the query results                 |
-
-**Note:**
-
-- Only one of `daily` or `hourly` should be specified per monitor
-- Duration values use Go duration format (e.g., "1h30m", "45m", "2h")
-- Timezone is specified at the monitor or defaults level, not within the schedule object
-- If no timezone is specified, UTC is used as the default
-- `ignore_last` is used to exclude recent data from analysis (e.g., for daily schedules, `ignore_last: 1` ignores the last day; for hourly schedules, it ignores the last hour)
-
-### Field Requirements by Monitor Type
-
-#### Freshness Monitor
-
-- **Required**: `expression`
-- **Optional**: All other fields
-
-#### Volume Monitor
-
-- **Required**: None (uses default configuration)
-- **Optional**: All fields
-
-#### Custom Numeric Monitor
-
-- **Required**: `metric_aggregation`
-- **Optional**: All other fields
-
-#### Field Stats Monitor
-
-- **Required**: `fields`
-- **Optional**: All other fields
-
-### Validation Rules
-
-- `monitored_id` and `monitored_ids` cannot be used together (mutually exclusive)
-- Either `monitored_id` or `monitored_ids` should be specified for most monitor types
-- Only one schedule type (`daily` or `hourly`) can be specified per monitor
-- Only one mode type (`anomaly_engine` or `fixed_thresholds`) can be specified per monitor
-- `segmentation.expression` is required if segmentation is configured
-- `schedule.delay` can be used with either `daily` or `hourly` schedules
-- `filter` should be a SQL WHERE clause string (without the WHERE keyword)
-
-**Note:** Some example files may show filter as a YAML object, but it should be a quoted string containing the SQL condition.
+Then reference it in your YAML files as shown above.
 
 ### Data Types Reference
 
