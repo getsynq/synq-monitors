@@ -187,33 +187,3 @@ Additionally, the CLI generates a schema when built, which you can pin in your r
 ```
 
 Then reference it in your YAML files as shown above.
-
-### Data Types Reference
-
-#### YAMLConfig (Root Configuration)
-
-- **Fields**: `namespace`, `defaults`, `monitors`
-- **Purpose**: Root structure for YAML configuration files
-
-#### YAMLMonitor
-
-- **Purpose**: Individual monitor definition within the monitors array
-- **Required Fields**: `id`, `type`
-- **Optional Fields**: All others, with specific requirements based on monitor type
-
-#### YAMLSegmentation
-
-- **Purpose**: Configure data segmentation for monitors
-- **Required Fields**: `expression`
-- **Optional Fields**: `include_values`, `exclude_values`
-
-#### YAMLMode
-
-- **Purpose**: Configure detection mode (anomaly detection or fixed thresholds)
-- **Mutually Exclusive**: `anomaly_engine` OR `fixed_thresholds`
-
-#### YAMLDailySchedule / YAMLHourlySchedule
-
-- **Purpose**: Configure monitor execution schedule
-- **Mutually Exclusive**: `daily` OR `hourly`
-- **Mutually Exclusive within each**: `time_partitioning_shift` OR `query_delay`
