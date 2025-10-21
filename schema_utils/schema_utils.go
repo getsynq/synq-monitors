@@ -7,10 +7,14 @@ import (
 	"github.com/samber/lo"
 )
 
+const BaseSchemaID = "https://github.com/getsynq/synq-monitors"
+
 func NewReflector() jsonschema.Reflector {
 	return jsonschema.Reflector{
 		ExpandedStruct: true,
 		FieldNameTag:   "yaml",
+		BaseSchemaID:   BaseSchemaID,
+		Mapper:         typeMapper,
 	}
 }
 
