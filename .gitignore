@@ -35,3 +35,10 @@ go.work.sum
 
 synq-monitors
 generated/
+
+.claude
+adws/
+agents/
+logs/
+trees/
+specs/

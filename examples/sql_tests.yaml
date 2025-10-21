@@ -1,0 +1,123 @@
+# Example SQL tests configuration demonstrating all supported test types
+
+namespace: financial_data
+
+tests:
+  # Not null test with multiple columns
+  - id: revenue_not_null
+    type: not_null
+    columns:
+      - total_revenue
+      - total_tips
+    monitored_id: ch-prod.default.financial_metrics
+    daily:
+      query_delay: 1h
+
+  # Unique test with time window
+  - id: month_unique
+    type: unique
+    columns:
+      - month
+    time_partition_column: created_at
+    time_window_seconds: 86400
+    monitored_id: ch-prod.default.financial_metrics
+    hourly:
+      query_delay: 20m
+
+  # Accepted values test
+  - id: statement_type_check
+    type: accepted_values
+    column: statement
+    values:
+      - income_statement
+      - balance_sheet
+      - cash_flow_statement
+    monitored_id: ch-prod.default.financial_reports
+    daily:
+      query_delay: 1h
+
+  # Rejected values test
+  - id: status_rejected_values
+    type: rejected_values
+    column: status
+    values:
+      - invalid
+      - deprecated
+      - deleted
+    monitored_id: ch-prod.default.transactions
+    hourly:
+      query_delay: 15m
+
+  # Min/Max test
+  - id: revenue_range_check
+    type: min_max
+    column: revenue
+    min_value: 0.0
+    max_value: 1000000.0
+    monitored_id: ch-prod.default.sales
+    daily:
+      query_delay: 2h
+
+  # Min value test
+  - id: quantity_min_check
+    type: min_value
+    column: quantity
+    min_value: 1.0
+    monitored_id: ch-prod.default.orders
+    hourly:
+      query_delay: 30m
+
+  # Max value test
+  - id: discount_max_check
+    type: max_value
+    column: discount_percentage
+    max_value: 100.0
+    monitored_id: ch-prod.default.orders
+    hourly:
+      query_delay: 30m
+
+  # Freshness test
+  - id: data_freshness_check
+    type: freshness
+    time_partition_column: updated_at
+    time_window_seconds: 7200
+    monitored_id: ch-prod.default.inventory
+    hourly:
+      query_delay: 10m
+
+  # Relative time test
+  - id: shipment_date_check
+    type: relative_time
+    column: ship_date
+    relative_column: order_date
+    monitored_id: ch-prod.default.shipments
+    daily:
+      query_delay: 1h
+
+  # Business rule test
+  - id: balance_sheet_equation
+    type: business_rule
+    sql_expression: "assets = liabilities + equity"
+    monitored_id: ch-prod.default.financial_reports
+    daily:
+      query_delay: 2h
+
+  # Test with multiple monitored IDs
+  - id: product_name_not_null
+    type: not_null
+    columns:
+      - product_name
+    monitored_ids:
+      - ch-prod.default.products
+      - ch-prod.default.catalog
+    daily:
+      query_delay: 1h
+
+  # Test with different schedule configurations
+  - id: customer_email_not_null
+    type: not_null
+    columns:
+      - email
+    monitored_id: ch-prod.default.customers
+    hourly:
+      query_delay: 5m
