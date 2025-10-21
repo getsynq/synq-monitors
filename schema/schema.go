@@ -3,7 +3,7 @@ package schema
 import (
 	"encoding/json"
 
-	schemautils "github.com/getsynq/monitors_mgmt/schema_utils"
+	"github.com/getsynq/monitors_mgmt/schema_utils"
 	"github.com/getsynq/monitors_mgmt/yaml/core"
 	"github.com/getsynq/monitors_mgmt/yaml/v1beta1"
 	"github.com/getsynq/monitors_mgmt/yaml/v1beta2"
@@ -35,9 +35,11 @@ func GenerateJSONSchema() ([]byte, error) {
 		},
 	)
 
-	schema.Title = "SYNQ: Observability as Code"
-
 	mergeDefinitions(schema)
+
+	schema.Title = "SYNQ: Observability as Code"
+	schema.ID = schemautils.BaseSchemaID
+	schema.Version = jsonschema.Version
 
 	return json.MarshalIndent(schema, "", "  ")
 }
@@ -56,6 +58,9 @@ func collectDefinitions(s *jsonschema.Schema, rootDefs jsonschema.Definitions) {
 	if s == nil {
 		return
 	}
+
+	s.ID = ""
+	s.Version = ""
 
 	if s.Definitions != nil {
 		for key, def := range s.Definitions {
