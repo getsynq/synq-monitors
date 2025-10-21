@@ -155,7 +155,7 @@ You can reference the schema inline in your YAML files for IDE support and valid
 
 ```yaml
 # Reference schema from local path (relative or absolute)
-# yaml-language-server: $schema=../../schemas/v1beta2.json
+# yaml-language-server: $schema=../../schema.json
 version: v1beta2
 namespace: "data-team-pipeline"
 
@@ -183,7 +183,7 @@ The schema also supports URLs, so you can reference it directly from the reposit
 Additionally, the CLI generates a schema when built, which you can pin in your repository alongside the specific CLI version you're using to ensure consistency:
 
 ```bash
-./synq-monitors schema > ./schemas/v1beta2.json
+./synq-monitors schema > ./schema.json
 ```
 
 Then reference it in your YAML files as shown above.
