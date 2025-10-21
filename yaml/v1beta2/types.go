@@ -6,7 +6,7 @@ import (
 
 	"github.com/getsynq/monitors_mgmt/yaml/core"
 	"github.com/invopop/jsonschema"
-	"gopkg.in/yaml.v3"
+	"go.yaml.in/yaml/v3"
 )
 
 type Defaults struct {

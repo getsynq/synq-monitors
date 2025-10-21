@@ -7,7 +7,7 @@ import (
 	"github.com/getsynq/monitors_mgmt/yaml/v1beta1"
 	"github.com/getsynq/monitors_mgmt/yaml/v1beta2"
 	"github.com/samber/lo"
-	goyaml "gopkg.in/yaml.v3"
+	goyaml "go.yaml.in/yaml/v3"
 )
 
 type VersionedParser struct {
