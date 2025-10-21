@@ -1,7 +1,6 @@
 
 [TestYAMLGeneratorSuite/TestExamples - 1]
 version: v1beta1
-namespace: ""
 monitors:
     - id: 5a6f522b-5fcc-57aa-b4ad-4b36db54c04f
       name: runs_volume_hourly

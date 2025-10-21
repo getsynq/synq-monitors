@@ -1,7 +1,6 @@
 
 [TestYAMLGeneratorSuite/TestExamples - 1]
 version: v1beta2
-namespace: ""
 entities:
     - id: ch-prod::default::runs
       time_partitioning_column: created_at
