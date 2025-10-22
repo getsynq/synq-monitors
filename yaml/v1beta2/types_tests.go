@@ -43,9 +43,11 @@ type (
 	TestBase struct {
 		isTestImpl
 
-		ID       string   `yaml:"id,omitempty"`
-		Type     string   `yaml:"type"`
-		Schedule Schedule `yaml:"schedule,omitempty"`
+		ID          string   `yaml:"id,omitempty"`
+		Type        string   `yaml:"type"`
+		Name        string   `yaml:"name,omitempty"`
+		Description string   `yaml:"description,omitempty"`
+		Schedule    Schedule `yaml:"schedule,omitempty"`
 	}
 	TestWithColumns struct {
 		Columns []string `yaml:"columns" jsonschema:"minLength=1"`

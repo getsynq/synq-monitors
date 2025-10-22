@@ -89,6 +89,7 @@ type BaseMonitor struct {
 	ID           string        `yaml:"id"                     jsonschema:"required"`
 	Type         string        `yaml:"type"                   jsonschema:"required"`
 	Name         string        `yaml:"name,omitempty"`
+	Description  string        `yaml:"description,omitempty"`
 	Filter       string        `yaml:"filter,omitempty"`
 	Severity     string        `yaml:"severity,omitempty"     jsonschema:"enum=WARNING,enum=ERROR"`
 	Timezone     string        `yaml:"timezone,omitempty"`
