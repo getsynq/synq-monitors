@@ -11,6 +11,7 @@ import (
 type MonitorInline interface {
 	GetMonitorID() string
 	GetMonitorName() string
+	GetMonitorDescription() string
 	GetMonitorFilter() string
 	GetMonitorSeverity() string
 	GetMonitorTimezone() string
@@ -89,6 +90,7 @@ type BaseMonitor struct {
 	ID           string        `yaml:"id"                     jsonschema:"required"`
 	Type         string        `yaml:"type"                   jsonschema:"required"`
 	Name         string        `yaml:"name,omitempty"`
+	Description  string        `yaml:"description,omitempty"`
 	Filter       string        `yaml:"filter,omitempty"`
 	Severity     string        `yaml:"severity,omitempty"     jsonschema:"enum=WARNING,enum=ERROR"`
 	Timezone     string        `yaml:"timezone,omitempty"`
@@ -103,6 +105,10 @@ func (b BaseMonitor) GetMonitorID() string {
 
 func (b BaseMonitor) GetMonitorName() string {
 	return b.Name
+}
+
+func (b BaseMonitor) GetMonitorDescription() string {
+	return b.Description
 }
 
 func (b BaseMonitor) GetMonitorFilter() string {

@@ -92,8 +92,9 @@ func (p *YAMLGenerator) generateSingleMonitor(
 	var errors ConversionErrors
 
 	base := BaseMonitor{
-		ID:   protoMonitor.Id,
-		Name: protoMonitor.Name,
+		ID:          protoMonitor.Id,
+		Name:        protoMonitor.Name,
+		Description: protoMonitor.Description,
 	}
 
 	if protoMonitor.Mode != nil {
