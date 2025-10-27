@@ -11,6 +11,7 @@ import (
 type MonitorInline interface {
 	GetMonitorID() string
 	GetMonitorName() string
+	GetMonitorDescription() string
 	GetMonitorFilter() string
 	GetMonitorSeverity() string
 	GetMonitorTimezone() string
@@ -104,6 +105,10 @@ func (b BaseMonitor) GetMonitorID() string {
 
 func (b BaseMonitor) GetMonitorName() string {
 	return b.Name
+}
+
+func (b BaseMonitor) GetMonitorDescription() string {
+	return b.Description
 }
 
 func (b BaseMonitor) GetMonitorFilter() string {
