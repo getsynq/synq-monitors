@@ -1,0 +1,876 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/getsynq/synq-monitors",
+  "$defs": {
+    "AnomalyEngine": {
+      "properties": {
+        "sensitivity": {
+          "type": "string",
+          "enum": [
+            "PRECISE",
+            "BALANCED",
+            "RELAXED"
+          ]
+        }
+      },
+      "additionalProperties": false,
+      "type": "object",
+      "required": [
+        "sensitivity"
+      ]
+    },
+    "Defaults": {
+      "properties": {
+        "severity": {
+          "type": "string",
+          "enum": [
+            "WARNING",
+            "ERROR"
+          ]
+        },
+        "time_partitioning": {
+          "type": "string"
+        },
+        "schedule": {
+          "$ref": "#/$defs/Schedule"
+        },
+        "mode": {
+          "$ref": "#/$defs/Mode"
+        },
+        "timezone": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false,
+      "type": "object"
+    },
+    "Duration": {
+      "type": "string",
+      "pattern": "^([0-9]+([.][0-9]+)?h)?([0-9]+([.][0-9]+)?m)?([0-9]+([.][0-9]+)?s)?([0-9]+([.][0-9]+)?ms)?([0-9]+([.][0-9]+)?us|µs)?([0-9]+([.][0-9]+)?ns)?$",
+      "title": "Duration",
+      "description": "An amount of time.",
+      "examples": [
+        "2h",
+        "30m",
+        "600s",
+        "2h30m"
+      ]
+    },
+    "Entity": {
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "time_partitioning_column": {
+          "type": "string"
+        },
+        "tests": {
+          "items": {
+            "$ref": "#/$defs/Test"
+          },
+          "type": "array"
+        },
+        "monitors": {
+          "items": {
+            "$ref": "#/$defs/Monitor"
+          },
+          "type": "array"
+        }
+      },
+      "additionalProperties": false,
+      "type": "object",
+      "required": [
+        "id"
+      ]
+    },
+    "FixedThresholds": {
+      "properties": {
+        "min": {
+          "type": "number"
+        },
+        "max": {
+          "type": "number"
+        }
+      },
+      "additionalProperties": false,
+      "type": "object"
+    },
+    "Mode": {
+      "properties": {
+        "anomaly_engine": {
+          "$ref": "#/$defs/AnomalyEngine"
+        },
+        "fixed_thresholds": {
+          "$ref": "#/$defs/FixedThresholds"
+        }
+      },
+      "additionalProperties": false,
+      "type": "object"
+    },
+    "Monitor": {
+      "anyOf": [
+        {
+          "properties": {
+            "id": {
+              "type": "string"
+            },
+            "type": {
+              "const": "custom_numeric"
+            },
+            "name": {
+              "type": "string"
+            },
+            "filter": {
+              "type": "string"
+            },
+            "severity": {
+              "type": "string",
+              "enum": [
+                "WARNING",
+                "ERROR"
+              ]
+            },
+            "timezone": {
+              "type": "string"
+            },
+            "mode": {
+              "$ref": "#/$defs/Mode"
+            },
+            "segmentation": {
+              "$ref": "#/$defs/Segmentation"
+            },
+            "schedule": {
+              "$ref": "#/$defs/Schedule"
+            },
+            "metric_aggregation": {
+              "type": "string"
+            }
+          },
+          "additionalProperties": false,
+          "type": "object",
+          "required": [
+            "id",
+            "type",
+            "metric_aggregation"
+          ]
+        },
+        {
+          "properties": {
+            "id": {
+              "type": "string"
+            },
+            "type": {
+              "const": "field_stats"
+            },
+            "name": {
+              "type": "string"
+            },
+            "filter": {
+              "type": "string"
+            },
+            "severity": {
+              "type": "string",
+              "enum": [
+                "WARNING",
+                "ERROR"
+              ]
+            },
+            "timezone": {
+              "type": "string"
+            },
+            "mode": {
+              "$ref": "#/$defs/Mode"
+            },
+            "segmentation": {
+              "$ref": "#/$defs/Segmentation"
+            },
+            "schedule": {
+              "$ref": "#/$defs/Schedule"
+            },
+            "columns": {
+              "items": {
+                "type": "string"
+              },
+              "type": "array",
+              "minItems": 1
+            }
+          },
+          "additionalProperties": false,
+          "type": "object",
+          "required": [
+            "id",
+            "type",
+            "columns"
+          ]
+        },
+        {
+          "properties": {
+            "id": {
+              "type": "string"
+            },
+            "type": {
+              "const": "freshness"
+            },
+            "name": {
+              "type": "string"
+            },
+            "filter": {
+              "type": "string"
+            },
+            "severity": {
+              "type": "string",
+              "enum": [
+                "WARNING",
+                "ERROR"
+              ]
+            },
+            "timezone": {
+              "type": "string"
+            },
+            "mode": {
+              "$ref": "#/$defs/Mode"
+            },
+            "segmentation": {
+              "$ref": "#/$defs/Segmentation"
+            },
+            "schedule": {
+              "$ref": "#/$defs/Schedule"
+            },
+            "expression": {
+              "type": "string"
+            }
+          },
+          "additionalProperties": false,
+          "type": "object",
+          "required": [
+            "id",
+            "type",
+            "expression"
+          ]
+        },
+        {
+          "properties": {
+            "id": {
+              "type": "string"
+            },
+            "type": {
+              "const": "volume"
+            },
+            "name": {
+              "type": "string"
+            },
+            "filter": {
+              "type": "string"
+            },
+            "severity": {
+              "type": "string",
+              "enum": [
+                "WARNING",
+                "ERROR"
+              ]
+            },
+            "timezone": {
+              "type": "string"
+            },
+            "mode": {
+              "$ref": "#/$defs/Mode"
+            },
+            "segmentation": {
+              "$ref": "#/$defs/Segmentation"
+            },
+            "schedule": {
+              "$ref": "#/$defs/Schedule"
+            }
+          },
+          "additionalProperties": false,
+          "type": "object",
+          "required": [
+            "id",
+            "type"
+          ]
+        }
+      ],
+      "required": [
+        "type"
+      ]
+    },
+    "Schedule": {
+      "anyOf": [
+        {
+          "type": "string",
+          "enum": [
+            "daily",
+            "hourly"
+          ]
+        },
+        {
+          "properties": {
+            "type": {
+              "type": "string",
+              "enum": [
+                "daily",
+                "hourly"
+              ]
+            },
+            "time_partitioning_shift": {
+              "$ref": "#/$defs/Duration"
+            },
+            "query_delay": {
+              "$ref": "#/$defs/Duration"
+            },
+            "ignore_last": {
+              "type": "integer"
+            }
+          },
+          "additionalProperties": false,
+          "type": "object",
+          "required": [
+            "type"
+          ]
+        }
+      ]
+    },
+    "Segmentation": {
+      "properties": {
+        "expression": {
+          "type": "string"
+        },
+        "include_values": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "exclude_values": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        }
+      },
+      "additionalProperties": false,
+      "type": "object",
+      "required": [
+        "expression"
+      ]
+    },
+    "Test": {
+      "anyOf": [
+        {
+          "properties": {
+            "id": {
+              "type": "string"
+            },
+            "type": {
+              "const": "accepted_values"
+            },
+            "schedule": {
+              "$ref": "#/$defs/Schedule"
+            },
+            "column": {
+              "type": "string"
+            },
+            "values": {
+              "items": {
+                "type": "string",
+                "minLength": 1
+              },
+              "type": "array"
+            }
+          },
+          "additionalProperties": false,
+          "type": "object",
+          "required": [
+            "type",
+            "column",
+            "values"
+          ]
+        },
+        {
+          "properties": {
+            "id": {
+              "type": "string"
+            },
+            "type": {
+              "const": "business_rule"
+            },
+            "schedule": {
+              "$ref": "#/$defs/Schedule"
+            },
+            "sql_expression": {
+              "type": "string"
+            }
+          },
+          "additionalProperties": false,
+          "type": "object",
+          "required": [
+            "type",
+            "sql_expression"
+          ]
+        },
+        {
+          "properties": {
+            "id": {
+              "type": "string"
+            },
+            "type": {
+              "const": "empty"
+            },
+            "schedule": {
+              "$ref": "#/$defs/Schedule"
+            },
+            "columns": {
+              "items": {
+                "type": "string",
+                "minLength": 1
+              },
+              "type": "array"
+            }
+          },
+          "additionalProperties": false,
+          "type": "object",
+          "required": [
+            "type",
+            "columns"
+          ]
+        },
+        {
+          "properties": {
+            "id": {
+              "type": "string"
+            },
+            "type": {
+              "const": "freshness"
+            },
+            "schedule": {
+              "$ref": "#/$defs/Schedule"
+            },
+            "time_partition_column": {
+              "type": "string"
+            },
+            "time_partition_seconds": {
+              "type": "integer"
+            }
+          },
+          "additionalProperties": false,
+          "type": "object",
+          "required": [
+            "type"
+          ]
+        },
+        {
+          "properties": {
+            "id": {
+              "type": "string"
+            },
+            "type": {
+              "const": "max_value"
+            },
+            "schedule": {
+              "$ref": "#/$defs/Schedule"
+            },
+            "column": {
+              "type": "string"
+            },
+            "max_value": {
+              "type": "number"
+            }
+          },
+          "additionalProperties": false,
+          "type": "object",
+          "required": [
+            "type",
+            "column",
+            "max_value"
+          ]
+        },
+        {
+          "properties": {
+            "id": {
+              "type": "string"
+            },
+            "type": {
+              "const": "min_max"
+            },
+            "schedule": {
+              "$ref": "#/$defs/Schedule"
+            },
+            "column": {
+              "type": "string"
+            },
+            "min_value": {
+              "type": "number"
+            },
+            "max_value": {
+              "type": "number"
+            }
+          },
+          "additionalProperties": false,
+          "type": "object",
+          "required": [
+            "type",
+            "column",
+            "min_value",
+            "max_value"
+          ]
+        },
+        {
+          "properties": {
+            "id": {
+              "type": "string"
+            },
+            "type": {
+              "const": "min_value"
+            },
+            "schedule": {
+              "$ref": "#/$defs/Schedule"
+            },
+            "column": {
+              "type": "string"
+            },
+            "min_value": {
+              "type": "number"
+            }
+          },
+          "additionalProperties": false,
+          "type": "object",
+          "required": [
+            "type",
+            "column",
+            "min_value"
+          ]
+        },
+        {
+          "properties": {
+            "id": {
+              "type": "string"
+            },
+            "type": {
+              "const": "not_null"
+            },
+            "schedule": {
+              "$ref": "#/$defs/Schedule"
+            },
+            "columns": {
+              "items": {
+                "type": "string",
+                "minLength": 1
+              },
+              "type": "array"
+            }
+          },
+          "additionalProperties": false,
+          "type": "object",
+          "required": [
+            "type",
+            "columns"
+          ]
+        },
+        {
+          "properties": {
+            "id": {
+              "type": "string"
+            },
+            "type": {
+              "const": "rejected_values"
+            },
+            "schedule": {
+              "$ref": "#/$defs/Schedule"
+            },
+            "column": {
+              "type": "string"
+            },
+            "values": {
+              "items": {
+                "type": "string",
+                "minLength": 1
+              },
+              "type": "array"
+            }
+          },
+          "additionalProperties": false,
+          "type": "object",
+          "required": [
+            "type",
+            "column",
+            "values"
+          ]
+        },
+        {
+          "properties": {
+            "id": {
+              "type": "string"
+            },
+            "type": {
+              "const": "relative_time"
+            },
+            "schedule": {
+              "$ref": "#/$defs/Schedule"
+            },
+            "column": {
+              "type": "string"
+            },
+            "relative_column": {
+              "type": "string"
+            }
+          },
+          "additionalProperties": false,
+          "type": "object",
+          "required": [
+            "type",
+            "column",
+            "relative_column"
+          ]
+        },
+        {
+          "properties": {
+            "id": {
+              "type": "string"
+            },
+            "type": {
+              "const": "unique"
+            },
+            "schedule": {
+              "$ref": "#/$defs/Schedule"
+            },
+            "columns": {
+              "items": {
+                "type": "string",
+                "minLength": 1
+              },
+              "type": "array"
+            },
+            "time_partition_column": {
+              "type": "string"
+            },
+            "time_partition_seconds": {
+              "type": "integer"
+            }
+          },
+          "additionalProperties": false,
+          "type": "object",
+          "required": [
+            "type",
+            "columns"
+          ]
+        }
+      ],
+      "required": [
+        "type"
+      ]
+    },
+    "YAMLAnomalyEngine": {
+      "properties": {
+        "sensitivity": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false,
+      "type": "object",
+      "required": [
+        "sensitivity"
+      ]
+    },
+    "YAMLFixedThresholds": {
+      "properties": {
+        "min": {
+          "type": "number"
+        },
+        "max": {
+          "type": "number"
+        }
+      },
+      "additionalProperties": false,
+      "type": "object"
+    },
+    "YAMLMode": {
+      "properties": {
+        "anomaly_engine": {
+          "$ref": "#/$defs/YAMLAnomalyEngine"
+        },
+        "fixed_thresholds": {
+          "$ref": "#/$defs/YAMLFixedThresholds"
+        }
+      },
+      "additionalProperties": false,
+      "type": "object"
+    },
+    "YAMLMonitor": {
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "type": {
+          "type": "string"
+        },
+        "expression": {
+          "type": "string"
+        },
+        "metric_aggregation": {
+          "type": "string"
+        },
+        "monitored_ids": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "monitored_id": {
+          "type": "string"
+        },
+        "fields": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "segmentation": {
+          "$ref": "#/$defs/YAMLSegmentation"
+        },
+        "filter": {
+          "type": "string"
+        },
+        "severity": {
+          "type": "string"
+        },
+        "time_partitioning": {
+          "type": "string"
+        },
+        "mode": {
+          "$ref": "#/$defs/YAMLMode"
+        },
+        "daily": {
+          "$ref": "#/$defs/YAMLSchedule"
+        },
+        "hourly": {
+          "$ref": "#/$defs/YAMLSchedule"
+        },
+        "timezone": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false,
+      "type": "object",
+      "required": [
+        "id",
+        "type"
+      ]
+    },
+    "YAMLSchedule": {
+      "properties": {
+        "time_partitioning_shift": {
+          "$ref": "#/$defs/Duration"
+        },
+        "query_delay": {
+          "$ref": "#/$defs/Duration"
+        },
+        "ignore_last": {
+          "type": "integer"
+        }
+      },
+      "additionalProperties": false,
+      "type": "object"
+    },
+    "YAMLSegmentation": {
+      "properties": {
+        "expression": {
+          "type": "string"
+        },
+        "include_values": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "exclude_values": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        }
+      },
+      "additionalProperties": false,
+      "type": "object",
+      "required": [
+        "expression"
+      ]
+    }
+  },
+  "anyOf": [
+    {
+      "properties": {
+        "version": {
+          "const": "v1beta1"
+        },
+        "namespace": {
+          "type": "string"
+        },
+        "defaults": {
+          "properties": {
+            "severity": {
+              "type": "string"
+            },
+            "time_partitioning": {
+              "type": "string"
+            },
+            "daily": {
+              "$ref": "#/$defs/YAMLSchedule"
+            },
+            "hourly": {
+              "$ref": "#/$defs/YAMLSchedule"
+            },
+            "mode": {
+              "$ref": "#/$defs/YAMLMode"
+            },
+            "timezone": {
+              "type": "string"
+            }
+          },
+          "additionalProperties": false,
+          "type": "object"
+        },
+        "monitors": {
+          "items": {
+            "$ref": "#/$defs/YAMLMonitor"
+          },
+          "type": "array"
+        }
+      },
+      "additionalProperties": false,
+      "type": "object",
+      "required": [
+        "monitors"
+      ]
+    },
+    {
+      "properties": {
+        "version": {
+          "const": "v1beta2"
+        },
+        "namespace": {
+          "type": "string"
+        },
+        "defaults": {
+          "$ref": "#/$defs/Defaults"
+        },
+        "entities": {
+          "items": {
+            "$ref": "#/$defs/Entity"
+          },
+          "type": "array",
+          "minItems": 1
+        }
+      },
+      "additionalProperties": false,
+      "type": "object",
+      "required": [
+        "entities",
+        "version"
+      ]
+    }
+  ],
+  "title": "SYNQ: Observability as Code"
+}

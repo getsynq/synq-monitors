@@ -1,29 +1,28 @@
 
 [TestYAMLGeneratorSuite/TestExamples - 1]
 version: v1beta2
-namespace: ""
 entities:
     - id: ch-prod::default::runs
       time_partitioning_column: created_at
       monitors:
         - id: cd7a6968-78a3-5c9a-8f0e-e2a6bbaae074
-          name: runs_volume_daily
           type: volume
+          name: runs_volume_daily
           severity: ERROR
           mode:
             anomaly_engine:
                 sensitivity: BALANCED
-          daily: {}
+          schedule: daily
     - id: runs_buffer
       time_partitioning_column: created_at
       monitors:
         - id: 65212e94-bf30-5f99-9c11-46dfda024ead
-          name: runs_volume_daily
           type: volume
+          name: runs_volume_daily
           severity: ERROR
           mode:
             anomaly_engine:
                 sensitivity: BALANCED
-          daily: {}
+          schedule: daily
 
 ---

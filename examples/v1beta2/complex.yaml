@@ -4,7 +4,8 @@ namespace: "data-team-pipeline"
 
 defaults:
   severity: ERROR
-  daily:
+  schedule:
+    type: daily
     query_delay: 2h
   mode:
     anomaly_engine:
@@ -52,7 +53,7 @@ entities:
         mode:
           anomaly_engine:
             sensitivity: BALANCED
-        daily: {}
+        schedule: daily
 
   - id: bq-synq-dwh.test.orders
     time_partitioning_column: order_date

@@ -3,26 +3,43 @@ package v1beta2
 import (
 	"fmt"
 
-	goyaml "gopkg.in/yaml.v3"
+	schemautils "github.com/getsynq/monitors_mgmt/schema_utils"
+	"github.com/invopop/jsonschema"
+	goyaml "go.yaml.in/yaml/v3"
 )
 
-type Monitor interface {
+type MonitorInline interface {
 	GetMonitorID() string
 	GetMonitorName() string
 	GetMonitorFilter() string
 	GetMonitorSeverity() string
 	GetMonitorTimezone() string
-	GetMonitorMode() *YAMLMode
-	GetMonitorSegmentation() *YAMLSegmentation
-	GetMonitorDaily() *YAMLSchedule
-	GetMonitorHourly() *YAMLSchedule
+	GetMonitorMode() *Mode
+	GetMonitorSegmentation() *Segmentation
+	GetMonitorSchedule() *Schedule
 }
 
-type MonitorWrapper struct {
-	Monitor Monitor
+var builder = schemautils.DiscriminatedUnionBuilder[MonitorInline]{
+	Reflector:     schemautils.NewReflector(),
+	Discriminator: "type",
+	Registry: map[string]MonitorInline{
+		"volume":         VolumeMonitor{},
+		"freshness":      FreshnessMonitor{},
+		"custom_numeric": CustomNumericMonitor{},
+		"field_stats":    FieldStatsMonitor{},
+	},
+	RequireDiscriminator: true,
 }
 
-func decodeMonitor[T Monitor](n *goyaml.Node) (Monitor, error) {
+type Monitor struct {
+	Monitor MonitorInline
+}
+
+func (Monitor) JSONSchema() *jsonschema.Schema {
+	return builder.Build()
+}
+
+func decodeMonitor[T MonitorInline](n *goyaml.Node) (MonitorInline, error) {
 	var t T
 	err := n.Decode(&t)
 	if err != nil {
@@ -32,7 +49,7 @@ func decodeMonitor[T Monitor](n *goyaml.Node) (Monitor, error) {
 	return t, nil
 }
 
-func (w *MonitorWrapper) UnmarshalYAML(n *goyaml.Node) error {
+func (w *Monitor) UnmarshalYAML(n *goyaml.Node) error {
 	type Typed struct {
 		Type string `yaml:"type"`
 	}
@@ -43,16 +60,16 @@ func (w *MonitorWrapper) UnmarshalYAML(n *goyaml.Node) error {
 		return err
 	}
 
-	var m Monitor
+	var m MonitorInline
 	switch t.Type {
 	case "volume":
-		m, err = decodeMonitor[*Monitor_Volume](n)
+		m, err = decodeMonitor[*VolumeMonitor](n)
 	case "freshness":
-		m, err = decodeMonitor[*Monitor_Freshness](n)
+		m, err = decodeMonitor[*FreshnessMonitor](n)
 	case "custom_numeric":
-		m, err = decodeMonitor[*Monitor_CustomNumeric](n)
+		m, err = decodeMonitor[*CustomNumericMonitor](n)
 	case "field_stats":
-		m, err = decodeMonitor[*Monitor_FieldStats](n)
+		m, err = decodeMonitor[*FieldStatsMonitor](n)
 	default:
 		return fmt.Errorf("unsupported type: %s", t.Type)
 	}
@@ -64,22 +81,20 @@ func (w *MonitorWrapper) UnmarshalYAML(n *goyaml.Node) error {
 	return nil
 }
 
-func (w MonitorWrapper) MarshalYAML() (any, error) {
+func (w Monitor) MarshalYAML() (any, error) {
 	return w.Monitor, nil
 }
 
 type BaseMonitor struct {
-	ID       string `yaml:"id"`
-	Name     string `yaml:"name"`
-	Type     string `yaml:"type"`
-	Filter   string `yaml:"filter,omitempty"`
-	Severity string `yaml:"severity,omitempty"`
-	Timezone string `yaml:"timezone,omitempty"`
-
-	Mode         *YAMLMode         `yaml:"mode,omitempty"`
-	Segmentation *YAMLSegmentation `yaml:"segmentation,omitempty"`
-	Daily        *YAMLSchedule     `yaml:"daily,omitempty"`
-	Hourly       *YAMLSchedule     `yaml:"hourly,omitempty"`
+	ID           string        `yaml:"id"                     jsonschema:"required"`
+	Type         string        `yaml:"type"                   jsonschema:"required"`
+	Name         string        `yaml:"name,omitempty"`
+	Filter       string        `yaml:"filter,omitempty"`
+	Severity     string        `yaml:"severity,omitempty"     jsonschema:"enum=WARNING,enum=ERROR"`
+	Timezone     string        `yaml:"timezone,omitempty"`
+	Mode         *Mode         `yaml:"mode,omitempty"`
+	Segmentation *Segmentation `yaml:"segmentation,omitempty"`
+	Schedule     *Schedule     `yaml:"schedule,omitempty"`
 }
 
 func (b BaseMonitor) GetMonitorID() string {
@@ -102,36 +117,32 @@ func (b BaseMonitor) GetMonitorTimezone() string {
 	return b.Timezone
 }
 
-func (b BaseMonitor) GetMonitorMode() *YAMLMode {
+func (b BaseMonitor) GetMonitorMode() *Mode {
 	return b.Mode
 }
 
-func (b BaseMonitor) GetMonitorSegmentation() *YAMLSegmentation {
+func (b BaseMonitor) GetMonitorSegmentation() *Segmentation {
 	return b.Segmentation
 }
 
-func (b BaseMonitor) GetMonitorDaily() *YAMLSchedule {
-	return b.Daily
-}
-
-func (b BaseMonitor) GetMonitorHourly() *YAMLSchedule {
-	return b.Hourly
+func (b BaseMonitor) GetMonitorSchedule() *Schedule {
+	return b.Schedule
 }
 
 type (
-	Monitor_Freshness struct {
-		BaseMonitor `yaml:",inline"`
-		Expression  string `yaml:"expression" `
+	FreshnessMonitor struct {
+		BaseMonitor `       yaml:",inline"`
+		Expression  string `yaml:"expression" jsonschema:"required"`
 	}
-	Monitor_Volume struct {
+	VolumeMonitor struct {
 		BaseMonitor `yaml:",inline"`
 	}
-	Monitor_CustomNumeric struct {
+	CustomNumericMonitor struct {
 		BaseMonitor       `       yaml:",inline"`
-		MetricAggregation string `yaml:"metric_aggregation"`
+		MetricAggregation string `yaml:"metric_aggregation" jsonschema:"required"`
 	}
-	Monitor_FieldStats struct {
-		BaseMonitor `yaml:",inline"`
-		Fields      []string `yaml:"columns,omitempty"`
+	FieldStatsMonitor struct {
+		BaseMonitor `         yaml:",inline"`
+		Fields      []string `yaml:"columns,omitempty" jsonschema:"required,minItems=1"`
 	}
 )

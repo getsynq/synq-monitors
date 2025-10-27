@@ -10,5 +10,6 @@ entities:
       - id: runs_volume_hourly
         type: volume
         timezone: Europe/Prague
-        hourly:
+        schedule:
+          type: hourly
           query_delay: 15m

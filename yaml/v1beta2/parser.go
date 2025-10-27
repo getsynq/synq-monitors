@@ -8,15 +8,15 @@ import (
 	pb "buf.build/gen/go/getsynq/api/protocolbuffers/go/synq/monitors/custom_monitors/v1"
 	"github.com/getsynq/monitors_mgmt/yaml/core"
 	"github.com/pkg/errors"
+	goyaml "go.yaml.in/yaml/v3"
 	"google.golang.org/protobuf/types/known/wrapperspb"
-	goyaml "gopkg.in/yaml.v3"
 )
 
 type YAMLParser struct {
-	yamlConfig *YAMLConfig
+	yamlConfig *Config
 }
 
-func NewYAMLParser(config *YAMLConfig) core.Parser {
+func NewYAMLParser(config *Config) core.Parser {
 	return &YAMLParser{
 		yamlConfig: config,
 	}
@@ -31,7 +31,7 @@ func (p *YAMLParser) GetVersion() string {
 }
 
 func NewYAMLParserFromBytes(bytes []byte) (core.Parser, error) {
-	var config *YAMLConfig
+	var config *Config
 	err := goyaml.Unmarshal(bytes, &config)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to parse YAML")
@@ -40,7 +40,7 @@ func NewYAMLParserFromBytes(bytes []byte) (core.Parser, error) {
 	return NewYAMLParser(config), nil
 }
 
-func (p *YAMLParser) GetYAMLConfig() *YAMLConfig {
+func (p *YAMLParser) GetYAMLConfig() *Config {
 	return p.yamlConfig
 }
 
@@ -59,7 +59,7 @@ func (p *YAMLParser) ConvertToMonitorDefinitions() ([]*pb.MonitorDefinition, err
 		}
 
 		timePartitioning := entity.TimePartitioningColumn
-		if timePartitioning == "" {
+		if p.yamlConfig.Defaults != nil && timePartitioning == "" {
 			timePartitioning = p.yamlConfig.Defaults.TimePartitioning
 		}
 
@@ -70,7 +70,7 @@ func (p *YAMLParser) ConvertToMonitorDefinitions() ([]*pb.MonitorDefinition, err
 			monitorID := yamlMonitor.GetMonitorID()
 			monitor := p.createBaseMonitor(monitorID, yamlMonitor.GetMonitorName(), entity.Id, timePartitioning)
 			switch t := yamlMonitor.(type) {
-			case *Monitor_Freshness:
+			case *FreshnessMonitor:
 				if t.Expression == "" {
 					errors = append(
 						errors,
@@ -78,9 +78,9 @@ func (p *YAMLParser) ConvertToMonitorDefinitions() ([]*pb.MonitorDefinition, err
 					)
 				}
 				monitor.Monitor = &pb.MonitorDefinition_Freshness{Freshness: &pb.MonitorFreshness{Expression: t.Expression}}
-			case *Monitor_Volume:
+			case *VolumeMonitor:
 				monitor.Monitor = &pb.MonitorDefinition_Volume{Volume: &pb.MonitorVolume{}}
-			case *Monitor_CustomNumeric:
+			case *CustomNumericMonitor:
 				if t.MetricAggregation == "" {
 					errors = append(
 						errors,
@@ -88,7 +88,7 @@ func (p *YAMLParser) ConvertToMonitorDefinitions() ([]*pb.MonitorDefinition, err
 					)
 				}
 				monitor.Monitor = &pb.MonitorDefinition_CustomNumeric{CustomNumeric: &pb.MonitorCustomNumeric{MetricAggregation: t.MetricAggregation}}
-			case *Monitor_FieldStats:
+			case *FieldStatsMonitor:
 				if len(t.Fields) == 0 {
 					errors = append(
 						errors,
@@ -119,7 +119,7 @@ func (p *YAMLParser) ConvertToMonitorDefinitions() ([]*pb.MonitorDefinition, err
 			if err.HasErrors() {
 				errors = append(errors, err...)
 			}
-			p.applySchedule(monitor, yamlMonitor.GetMonitorDaily(), yamlMonitor.GetMonitorHourly())
+			p.applySchedule(monitor, yamlMonitor.GetMonitorSchedule())
 			p.applyTimezone(monitor, yamlMonitor.GetMonitorTimezone())
 			err = p.applyOptionalFields(monitor, yamlMonitor)
 			if err.HasErrors() {
@@ -171,7 +171,7 @@ func (p *YAMLParser) createBaseMonitor(id, name, entityId, timePartitioning stri
 }
 
 func (p *YAMLParser) applySeverity(monitor *pb.MonitorDefinition, severity string) {
-	if severity == "" {
+	if p.yamlConfig.Defaults != nil && severity == "" {
 		severity = p.yamlConfig.Defaults.Severity
 	}
 
@@ -182,9 +182,9 @@ func (p *YAMLParser) applySeverity(monitor *pb.MonitorDefinition, severity strin
 	}
 }
 
-func (p *YAMLParser) applyMode(monitor *pb.MonitorDefinition, mode *YAMLMode, entity *YAMLEntity) ConversionErrors {
+func (p *YAMLParser) applyMode(monitor *pb.MonitorDefinition, mode *Mode, entity *Entity) ConversionErrors {
 	var errors ConversionErrors
-	if mode == nil {
+	if p.yamlConfig.Defaults != nil && mode == nil {
 		mode = p.yamlConfig.Defaults.Mode
 	}
 
@@ -233,16 +233,21 @@ func (p *YAMLParser) applyMode(monitor *pb.MonitorDefinition, mode *YAMLMode, en
 	return errors
 }
 
-func (p *YAMLParser) applySchedule(monitor *pb.MonitorDefinition, daily *YAMLSchedule, hourly *YAMLSchedule) {
+func (p *YAMLParser) applySchedule(monitor *pb.MonitorDefinition, schedule *Schedule) {
+	var d *Schedule
+	if p.yamlConfig.Defaults != nil {
+		d = p.yamlConfig.Defaults.Schedule
+	}
+
 	switch {
-	case daily != nil:
-		monitor.Schedule = convertDailySchedule(daily)
-	case hourly != nil:
-		monitor.Schedule = convertHourlySchedule(hourly)
-	case p.yamlConfig.Defaults.Daily != nil:
-		monitor.Schedule = convertDailySchedule(p.yamlConfig.Defaults.Daily)
-	case p.yamlConfig.Defaults.Hourly != nil:
-		monitor.Schedule = convertHourlySchedule(p.yamlConfig.Defaults.Hourly)
+	case schedule != nil && schedule.Type == "daily":
+		monitor.Schedule = convertDailySchedule(schedule)
+	case schedule != nil && schedule.Type == "hourly":
+		monitor.Schedule = convertHourlySchedule(schedule)
+	case d != nil && d.Type == "daily":
+		monitor.Schedule = convertDailySchedule(d)
+	case d != nil && d.Type == "hourly":
+		monitor.Schedule = convertHourlySchedule(d)
 	default:
 		monitor.Schedule = &pb.MonitorDefinition_Daily{
 			Daily: &pb.ScheduleDaily{
@@ -254,14 +259,14 @@ func (p *YAMLParser) applySchedule(monitor *pb.MonitorDefinition, daily *YAMLSch
 }
 
 func (p *YAMLParser) applyTimezone(monitor *pb.MonitorDefinition, timezone string) {
-	if timezone == "" {
+	if p.yamlConfig.Defaults != nil && timezone == "" {
 		timezone = p.yamlConfig.Defaults.Timezone
 	}
 
 	monitor.Timezone = timezone
 }
 
-func (p *YAMLParser) applyOptionalFields(monitor *pb.MonitorDefinition, yamlMonitor Monitor) ConversionErrors {
+func (p *YAMLParser) applyOptionalFields(monitor *pb.MonitorDefinition, yamlMonitor MonitorInline) ConversionErrors {
 	var errors ConversionErrors
 
 	if segmentation := yamlMonitor.GetMonitorSegmentation(); segmentation != nil {
@@ -342,11 +347,13 @@ func (p *YAMLParser) GetYAMLSummary() map[string]any {
 	summary["namespace"] = p.yamlConfig.ID
 	summary["entities_count"] = len(p.yamlConfig.Entities)
 
-	if p.yamlConfig.Defaults.Severity != "" {
-		summary["default_severity"] = p.yamlConfig.Defaults.Severity
-	}
-	if p.yamlConfig.Defaults.TimePartitioning != "" {
-		summary["default_time_partitioning"] = p.yamlConfig.Defaults.TimePartitioning
+	if defaults := p.yamlConfig.Defaults; defaults != nil {
+		if defaults.Severity != "" {
+			summary["default_severity"] = defaults.Severity
+		}
+		if defaults.TimePartitioning != "" {
+			summary["default_time_partitioning"] = defaults.TimePartitioning
+		}
 	}
 
 	totalMonitors := 0
@@ -362,13 +369,13 @@ func (p *YAMLParser) GetYAMLSummary() map[string]any {
 		totalMonitors += len(entity.Monitors)
 		for _, wrapper := range entity.Monitors {
 			switch wrapper.Monitor.(type) {
-			case *Monitor_Freshness:
+			case *FreshnessMonitor:
 				monitorTypeCount["freshness"]++
-			case *Monitor_Volume:
+			case *VolumeMonitor:
 				monitorTypeCount["volume"]++
-			case *Monitor_CustomNumeric:
+			case *CustomNumericMonitor:
 				monitorTypeCount["custom_numeric"]++
-			case *Monitor_FieldStats:
+			case *FieldStatsMonitor:
 				monitorTypeCount["field_stats"]++
 			}
 		}
@@ -382,7 +389,7 @@ func (p *YAMLParser) GetYAMLSummary() map[string]any {
 	return summary
 }
 
-func convertDailySchedule(daily *YAMLSchedule) *pb.MonitorDefinition_Daily {
+func convertDailySchedule(daily *Schedule) *pb.MonitorDefinition_Daily {
 	schedule := &pb.ScheduleDaily{
 		DelayNumDays: daily.IgnoreLast,
 	}
@@ -399,7 +406,7 @@ func convertDailySchedule(daily *YAMLSchedule) *pb.MonitorDefinition_Daily {
 	return &pb.MonitorDefinition_Daily{Daily: schedule}
 }
 
-func convertHourlySchedule(hourly *YAMLSchedule) *pb.MonitorDefinition_Hourly {
+func convertHourlySchedule(hourly *Schedule) *pb.MonitorDefinition_Hourly {
 	schedule := &pb.ScheduleHourly{
 		DelayNumHours: hourly.IgnoreLast,
 	}
