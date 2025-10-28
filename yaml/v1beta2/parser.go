@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"strings"
 
+	sqltestsv1 "buf.build/gen/go/getsynq/api/protocolbuffers/go/synq/datachecks/sqltests/v1"
 	entitiesv1 "buf.build/gen/go/getsynq/api/protocolbuffers/go/synq/entities/v1"
 	pb "buf.build/gen/go/getsynq/api/protocolbuffers/go/synq/monitors/custom_monitors/v1"
 	"github.com/getsynq/monitors_mgmt/yaml/core"
@@ -141,6 +142,75 @@ func (p *YAMLParser) ConvertToMonitorDefinitions() ([]*pb.MonitorDefinition, err
 	}
 
 	return monitors, errors.Coalesce()
+}
+
+func (p *YAMLParser) ConvertToSqlTests() ([]*sqltestsv1.SqlTest, error) {
+	var errors ConversionErrors
+	var protoTests []*sqltestsv1.SqlTest
+	existingTestIds := make(map[string]bool)
+
+	for _, entity := range p.yamlConfig.Entities {
+		for _, yamlTest := range p.yamlConfig.Tests {
+			id := strings.TrimSpace(yamlTest.Id)
+			if id == "" {
+				errors = append(errors, ConversionError{
+					Field:   "id",
+					Message: "must be set",
+				})
+				continue
+			}
+
+			if _, ok := existingTestIds[id]; ok {
+				errors = append(errors, ConversionError{
+					Field:   "id",
+					Message: "must be unique",
+					Test:    id,
+				})
+				continue
+			}
+			existingTestIds[id] = true
+
+			if len(yamlTest.MonitoredIDs) > 0 && len(yamlTest.MonitoredID) > 0 {
+				errors = append(errors, ConversionError{
+					Field:   "monitored_id",
+					Message: "monitored_id and monitored_ids cannot be used together",
+					Test:    id,
+				})
+				continue
+			} else if len(yamlTest.MonitoredIDs) == 0 && len(yamlTest.MonitoredID) == 0 {
+				errors = append(errors, ConversionError{
+					Field:   "monitored_id",
+					Message: "monitored_id or monitored_ids must be set",
+					Test:    id,
+				})
+				continue
+			}
+
+			if scheduleErrors := validateTestScheduleConfiguration(&yamlTest); len(scheduleErrors) > 0 {
+				errors = append(errors, scheduleErrors...)
+			}
+
+			monitoredIds := yamlTest.MonitoredIDs
+			if len(yamlTest.MonitoredID) > 0 {
+				monitoredIds = append(monitoredIds, yamlTest.MonitoredID)
+			}
+
+			for _, monitoredID := range monitoredIds {
+				protoTest, convErrors := convertSingleTest(&yamlTest, p.yamlConfig, monitoredID)
+				if len(convErrors) > 0 {
+					errors = append(errors, convErrors...)
+					continue
+				}
+				protoTests = append(protoTests, protoTest)
+			}
+		}
+	}
+
+	if len(errors) > 0 {
+		return protoTests, errors
+	}
+
+	return protoTests, nil
 }
 
 func (p *YAMLParser) createBaseMonitor(id, name, entityId, timePartitioning string) *pb.MonitorDefinition {

@@ -9,6 +9,7 @@ import (
 
 	iamv1grpc "buf.build/gen/go/getsynq/api/grpc/go/synq/auth/iam/v1/iamv1grpc"
 	iamv1 "buf.build/gen/go/getsynq/api/protocolbuffers/go/synq/auth/iam/v1"
+	sqltestsv1 "buf.build/gen/go/getsynq/api/protocolbuffers/go/synq/datachecks/sqltests/v1"
 	testsuggestionsv1 "buf.build/gen/go/getsynq/api/protocolbuffers/go/synq/datachecks/testsuggestions/v1"
 	entitiesv1 "buf.build/gen/go/getsynq/api/protocolbuffers/go/synq/entities/v1"
 	pb "buf.build/gen/go/getsynq/api/protocolbuffers/go/synq/monitors/custom_monitors/v1"
@@ -194,7 +195,7 @@ func deployFromYaml(cmd *cobra.Command, args []string) {
 	fmt.Println("✅ Deployment complete!")
 }
 
-func parse(filePath string) (*yaml.VersionedParser, []*pb.MonitorDefinition, []*testsuggestionsv1.TestSuggestion, error) {
+func parse(filePath string) (*yaml.VersionedParser, []*pb.MonitorDefinition, []*sqltestsv1.SqlTest, error) {
 	// Read YAML file
 	fmt.Println("🔍 Parsing YAML structure...")
 	yamlContent, err := os.ReadFile(filePath)
@@ -219,7 +220,7 @@ func parse(filePath string) (*yaml.VersionedParser, []*pb.MonitorDefinition, []*
 
 	// Convert tests to protobuf
 	fmt.Println("\n🔄 Converting tests to protobuf format...")
-	protoTests, err := yamlParser.ConvertToTestSuggestions()
+	protoTests, err := yamlParser.ConvertToSqlTests()
 	if err != nil {
 		return nil, nil, nil, fmt.Errorf("❌ Test conversion errors found: %s\n", err.Error())
 	}

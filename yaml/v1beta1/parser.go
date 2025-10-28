@@ -4,9 +4,9 @@ import (
 	"fmt"
 	"strings"
 
+	sqltestsv1 "buf.build/gen/go/getsynq/api/protocolbuffers/go/synq/datachecks/sqltests/v1"
 	entitiesv1 "buf.build/gen/go/getsynq/api/protocolbuffers/go/synq/entities/v1"
 	pb "buf.build/gen/go/getsynq/api/protocolbuffers/go/synq/monitors/custom_monitors/v1"
-	testsuggestionsv1 "buf.build/gen/go/getsynq/api/protocolbuffers/go/synq/datachecks/testsuggestions/v1"
 	"github.com/getsynq/monitors_mgmt/yaml/core"
 	"github.com/pkg/errors"
 	goyaml "go.yaml.in/yaml/v3"
@@ -470,10 +470,9 @@ func convertHourlySchedule(hourly *YAMLSchedule) *pb.MonitorDefinition_Hourly {
 	return &pb.MonitorDefinition_Hourly{Hourly: schedule}
 }
 
-// ConvertToTestSuggestions converts YAML tests to TestSuggestion protobuf messages
-func (p *YAMLParser) ConvertToTestSuggestions() ([]*testsuggestionsv1.TestSuggestion, error) {
+func (p *YAMLParser) ConvertToSqlTests() ([]*sqltestsv1.SqlTest, error) {
 	var errors ConversionErrors
-	var protoTests []*testsuggestionsv1.TestSuggestion
+	var protoTests []*sqltestsv1.SqlTest
 	existingTestIds := make(map[string]bool)
 
 	for _, yamlTest := range p.yamlConfig.Tests {
