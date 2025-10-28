@@ -13,7 +13,7 @@ type TestInline interface {
 	GetId() string
 	GetName() string
 	GetDescription() string
-	GetSchedule() *Schedule
+	GetSchedule() *SimpleSchedule
 }
 type isTestImpl struct{}
 
@@ -106,11 +106,11 @@ type (
 	TestBase struct {
 		isTestImpl
 
-		ID          string   `yaml:"id,omitempty"`
-		Type        string   `yaml:"type"`
-		Name        string   `yaml:"name,omitempty"`
-		Description string   `yaml:"description,omitempty"`
-		Schedule    Schedule `yaml:"schedule,omitempty"`
+		ID          string         `yaml:"id,omitempty"`
+		Type        string         `yaml:"type"`
+		Name        string         `yaml:"name,omitempty"`
+		Description string         `yaml:"description,omitempty"`
+		Schedule    SimpleSchedule `yaml:"schedule,omitempty"`
 	}
 	TestWithColumns struct {
 		Columns []string `yaml:"columns" jsonschema:"minLength=1"`
@@ -195,6 +195,6 @@ func (t TestBase) GetDescription() string {
 	return t.Description
 }
 
-func (t TestBase) GetSchedule() *Schedule {
+func (t TestBase) GetSchedule() *SimpleSchedule {
 	return &t.Schedule
 }

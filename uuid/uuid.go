@@ -41,18 +41,15 @@ func (g *UUIDGenerator) GenerateMonitorUUID(monitor *pb.MonitorDefinition) strin
 
 // GenerateTestUUID generates a deterministic UUID for a test based on its configuration
 func (g *UUIDGenerator) GenerateTestUUID(test *sqltestsv1.SqlTest) string {
-	// Get the identifier path which contains config_id/test_id
-	identifierPath := test.Id
-
-	// Check if identifierPath is already a valid UUID
-	parsed, err := uuid.Parse(identifierPath)
+	// Check if test.Id is already a valid UUID
+	parsed, err := uuid.Parse(test.Id)
 	if err == nil {
 		return parsed.String()
 	}
 
 	fields := []string{
-		identifierPath,
 		test.Template.GetIdentifier().GetSynqPath().GetPath(),
+		test.Template.WhichTest().String(),
 	}
 
 	// Join fields with a separator

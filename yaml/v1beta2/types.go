@@ -95,3 +95,45 @@ func (s *Schedule) MarshalYAML() (any, error) {
 	}
 	return s.Type, nil
 }
+
+type SimpleSchedule struct {
+	SimpleScheduleInline `yaml:",inline"`
+}
+
+type SimpleScheduleInline struct {
+	Type       string         `yaml:"type"                  jsonschema:"required,enum=daily,enum=hourly"`
+	QueryDelay *time.Duration `yaml:"query_delay,omitempty"`
+}
+
+func (SimpleSchedule) JSONSchema() *jsonschema.Schema {
+	reflector := schemautils.NewReflector()
+	defaultSchema := reflector.Reflect(SimpleScheduleInline{})
+
+	return &jsonschema.Schema{
+		AnyOf: []*jsonschema.Schema{
+			{
+				Type: "string",
+				Enum: []any{"daily", "hourly"},
+			},
+			defaultSchema,
+		},
+	}
+}
+
+func (s *SimpleSchedule) UnmarshalYAML(n *yaml.Node) error {
+	switch n.Kind {
+	case yaml.ScalarNode:
+		return n.Decode(&s.Type)
+	case yaml.MappingNode:
+		return n.Decode(&s.SimpleScheduleInline)
+	default:
+		return fmt.Errorf("YAMLSimpleSchedule cannot be unmarshalled from %v", n.Kind)
+	}
+}
+
+func (s *SimpleSchedule) MarshalYAML() (any, error) {
+	if s.QueryDelay != nil {
+		return s.SimpleScheduleInline, nil
+	}
+	return s.Type, nil
+}

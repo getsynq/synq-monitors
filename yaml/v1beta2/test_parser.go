@@ -2,10 +2,12 @@ package v1beta2
 
 import (
 	"fmt"
+	"time"
 
 	sqltestsv1 "buf.build/gen/go/getsynq/api/protocolbuffers/go/synq/datachecks/sqltests/v1"
 	testsuggestionsv1 "buf.build/gen/go/getsynq/api/protocolbuffers/go/synq/datachecks/testsuggestions/v1"
 	entitiesv1 "buf.build/gen/go/getsynq/api/protocolbuffers/go/synq/entities/v1"
+	"github.com/teambition/rrule-go"
 )
 
 // convertSingleTest converts a single YAML test to a SqlTest protobuf
@@ -15,8 +17,19 @@ func convertSingleTest(
 ) (*sqltestsv1.SqlTest, ConversionErrors) {
 	var errors ConversionErrors
 
+	recurrenceRule, err := convertScheduleToRecurrenceRule(yamlTest.GetSchedule())
+	if err != nil {
+		errors = append(errors, ConversionError{
+			Field:   "schedule",
+			Message: "failed to convert schedule to recurrence rule",
+			Test:    yamlTest.GetId(),
+		})
+		return nil, errors
+	}
+
 	proto := &sqltestsv1.SqlTest{
-		Name: yamlTest.GetName(),
+		Name:           yamlTest.GetName(),
+		RecurrenceRule: recurrenceRule,
 		Template: &sqltestsv1.Template{
 			Identifier: &entitiesv1.Identifier{
 				Id: &entitiesv1.Identifier_SynqPath{
@@ -118,6 +131,25 @@ func convertSingleTest(
 	}
 
 	return proto, errors
+}
+
+func convertScheduleToRecurrenceRule(schedule *SimpleSchedule) (string, error) {
+	t := time.Date(1972, time.January, 1, 0, 0, 0, 0, time.UTC)
+	if schedule.SimpleScheduleInline.QueryDelay != nil {
+		t = t.Add(*schedule.SimpleScheduleInline.QueryDelay)
+	}
+	freq := rrule.DAILY
+	if schedule.Type == "hourly" {
+		freq = rrule.HOURLY
+	}
+	rr, err := rrule.NewRRule(rrule.ROption{
+		Dtstart: t,
+		Freq:    freq,
+	})
+	if err != nil {
+		return "", err
+	}
+	return rr.String(), nil
 }
 
 // convertNotNullTest converts a YAML not_null test to protobuf
