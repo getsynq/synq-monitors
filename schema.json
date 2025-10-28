@@ -120,6 +120,9 @@
             "name": {
               "type": "string"
             },
+            "description": {
+              "type": "string"
+            },
             "filter": {
               "type": "string"
             },
@@ -163,6 +166,9 @@
               "const": "field_stats"
             },
             "name": {
+              "type": "string"
+            },
+            "description": {
               "type": "string"
             },
             "filter": {
@@ -214,6 +220,9 @@
             "name": {
               "type": "string"
             },
+            "description": {
+              "type": "string"
+            },
             "filter": {
               "type": "string"
             },
@@ -257,6 +266,9 @@
               "const": "volume"
             },
             "name": {
+              "type": "string"
+            },
+            "description": {
               "type": "string"
             },
             "filter": {
@@ -364,6 +376,12 @@
             "type": {
               "const": "accepted_values"
             },
+            "name": {
+              "type": "string"
+            },
+            "description": {
+              "type": "string"
+            },
             "schedule": {
               "$ref": "#/$defs/Schedule"
             },
@@ -394,6 +412,12 @@
             "type": {
               "const": "business_rule"
             },
+            "name": {
+              "type": "string"
+            },
+            "description": {
+              "type": "string"
+            },
             "schedule": {
               "$ref": "#/$defs/Schedule"
             },
@@ -415,6 +439,12 @@
             },
             "type": {
               "const": "empty"
+            },
+            "name": {
+              "type": "string"
+            },
+            "description": {
+              "type": "string"
             },
             "schedule": {
               "$ref": "#/$defs/Schedule"
@@ -442,6 +472,12 @@
             "type": {
               "const": "freshness"
             },
+            "name": {
+              "type": "string"
+            },
+            "description": {
+              "type": "string"
+            },
             "schedule": {
               "$ref": "#/$defs/Schedule"
             },
@@ -465,6 +501,12 @@
             },
             "type": {
               "const": "max_value"
+            },
+            "name": {
+              "type": "string"
+            },
+            "description": {
+              "type": "string"
             },
             "schedule": {
               "$ref": "#/$defs/Schedule"
@@ -491,6 +533,12 @@
             },
             "type": {
               "const": "min_max"
+            },
+            "name": {
+              "type": "string"
+            },
+            "description": {
+              "type": "string"
             },
             "schedule": {
               "$ref": "#/$defs/Schedule"
@@ -522,6 +570,12 @@
             "type": {
               "const": "min_value"
             },
+            "name": {
+              "type": "string"
+            },
+            "description": {
+              "type": "string"
+            },
             "schedule": {
               "$ref": "#/$defs/Schedule"
             },
@@ -548,6 +602,12 @@
             "type": {
               "const": "not_null"
             },
+            "name": {
+              "type": "string"
+            },
+            "description": {
+              "type": "string"
+            },
             "schedule": {
               "$ref": "#/$defs/Schedule"
             },
@@ -573,6 +633,12 @@
             },
             "type": {
               "const": "rejected_values"
+            },
+            "name": {
+              "type": "string"
+            },
+            "description": {
+              "type": "string"
             },
             "schedule": {
               "$ref": "#/$defs/Schedule"
@@ -604,6 +670,12 @@
             "type": {
               "const": "relative_time"
             },
+            "name": {
+              "type": "string"
+            },
+            "description": {
+              "type": "string"
+            },
             "schedule": {
               "$ref": "#/$defs/Schedule"
             },
@@ -629,6 +701,12 @@
             },
             "type": {
               "const": "unique"
+            },
+            "name": {
+              "type": "string"
+            },
+            "description": {
+              "type": "string"
             },
             "schedule": {
               "$ref": "#/$defs/Schedule"
