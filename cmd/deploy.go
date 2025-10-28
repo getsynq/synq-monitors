@@ -102,12 +102,15 @@ func deployFromYaml(cmd *cobra.Command, args []string) {
 		}
 	}
 
+	namespacesToFiles := map[string][]string{}
 	parsers := lo.FilterMap(filePaths, func(item string, index int) (*yaml.VersionedParser, bool) {
 		parser, err := getParser(item)
 		if err != nil {
+			fmt.Fprintf(os.Stderr, "failed to parse %s: %v\n", item, err)
 			return nil, false
 		}
 
+		namespacesToFiles[parser.GetConfigID()] = append(namespacesToFiles[parser.GetConfigID()], item)
 		return parser, true
 	})
 
@@ -118,6 +121,9 @@ func deployFromYaml(cmd *cobra.Command, args []string) {
 	pathsConverter := paths.NewPathConverter(ctx, conn)
 	for namespace, parsers := range parsersByNamespace {
 		fmt.Printf("📋 Processing namespace '%s'\n", namespace)
+		for _, file := range namespacesToFiles[namespace] {
+			fmt.Printf(" - %s\n", file)
+		}
 
 		if len(deployCmd_namespaces) > 0 && !slices.Contains(deployCmd_namespaces, namespace) {
 			fmt.Printf("🧹 Not processing %s as it is not in %v\n\n", namespace, deployCmd_namespaces)
