@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"net/url"
 	"os"
+	"path/filepath"
+	"slices"
 	"strings"
 
 	iamv1grpc "buf.build/gen/go/getsynq/api/grpc/go/synq/auth/iam/v1/iamv1grpc"
@@ -24,27 +26,53 @@ import (
 var (
 	deployCmd_printProtobuf bool
 	deployCmd_autoConfirm   bool
+	deployCmd_namespaces    []string
 )
-
-var deployCmd = &cobra.Command{
-	Use:   "deploy [yaml-file-path]",
-	Short: "Deploy custom monitors from YAML configuration",
-	Long: `Deploy custom monitors by parsing YAML configuration and converting to protobuf.
-Shows YAML preview and asks for confirmation before proceeding.`,
-	Args: cobra.ExactArgs(1),
-	Run:  deployFromYaml,
-}
 
 func init() {
 	deployCmd.Flags().BoolVarP(&deployCmd_printProtobuf, "print-protobuf", "p", false, "Print protobuf messages in JSON format")
 	deployCmd.Flags().BoolVar(&deployCmd_autoConfirm, "auto-confirm", false, "Automatically confirm all prompts (skip interactive confirmations)")
+	deployCmd.Flags().StringSliceVar(&deployCmd_namespaces, "namespace", []string{}, "If set, will only make changes to the included namespaces")
 
 	rootCmd.AddCommand(deployCmd)
 }
 
+var deployCmd = &cobra.Command{
+	Use:   "deploy",
+	Short: "Deploy custom monitors from YAML configuration",
+	Long: `Deploy custom monitors by parsing YAML configuration and converting to protobuf.
+Shows YAML preview and asks for confirmation before proceeding.`,
+	Args: cobra.NoArgs,
+	Run:  deployFromYaml,
+}
+
+func findFiles(path, extension string) ([]string, error) {
+	files := []string{}
+
+	err := filepath.Walk(path, func(path string, info os.FileInfo, err error) error {
+		if err != nil {
+			return err
+		}
+
+		if info.IsDir() {
+			return nil
+		}
+
+		if filepath.Ext(path) == extension {
+			files = append(files, path)
+		}
+
+		return nil
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	return files, nil
+}
+
 func deployFromYaml(cmd *cobra.Command, args []string) {
 	ctx := context.Background()
-	filePath := args[0]
 
 	conn, err := connectToApi(ctx)
 	if err != nil {
@@ -58,146 +86,131 @@ func deployFromYaml(cmd *cobra.Command, args []string) {
 	if err != nil {
 		exitWithError(err)
 	}
+
 	workspace := iamResponse.Workspace
 	fmt.Printf("🔍 Workspace: %s\n\n", workspace)
 
-	// Check if file exists
-	if _, err := os.Stat(filePath); os.IsNotExist(err) {
-		fmt.Printf("❌ Error: File '%s' does not exist\n", filePath)
-		return
-	}
-
-	fmt.Printf("🚀 Deploying monitors from: %s\n\n", filePath)
-
-	err = yaml.PrintFileOverview(filePath)
+	filePaths, err := findFiles(".", ".yaml")
 	if err != nil {
-		exitWithError(fmt.Errorf("❌ Error getting file overview: %v", err))
+		exitWithError(fmt.Errorf("❌ Error finding files: %v", err))
 	}
 
-	// Ask for confirmation
-	if deployCmd_autoConfirm {
-		fmt.Println("\n✅ Auto-confirmed! Processing YAML and converting to protobuf...")
-	} else {
-		prompt := promptui.Prompt{
-			Label:     "Is this the correct file to deploy? (y/N)",
-			IsConfirm: true,
-		}
-
-		result, err := prompt.Run()
+	parsers := lo.FilterMap(filePaths, func(item string, index int) (*yaml.VersionedParser, bool) {
+		parser, err := getParser(item)
 		if err != nil {
-			fmt.Println("❌ Deployment cancelled")
-			return
+			return nil, false
 		}
 
-		if result != "y" && result != "Y" {
-			fmt.Println("❌ Deployment cancelled")
-			return
-		}
+		return parser, true
+	})
 
-		fmt.Println("\n✅ Confirmed! Processing YAML and converting to protobuf...")
-	}
+	parsersByNamespace := lo.GroupBy(parsers, func(item *yaml.VersionedParser) string {
+		return item.GetConfigID()
+	})
 
-	// parse
-	yamlParser, protoMonitors, err := parse(filePath)
-	if err != nil {
-		exitWithError(err)
-	}
-
-	// resolve monitored entities
 	pathsConverter := paths.NewPathConverter(ctx, conn)
-	protoMonitors, err = resolve(pathsConverter, protoMonitors)
-	if err != nil {
-		exitWithError(err)
-	}
+	for namespace, parsers := range parsersByNamespace {
+		fmt.Printf("📋 Processing namespace '%s'\n", namespace)
 
-	// Sanitize UUIDs for monitors.
-	uuidGenerator := uuid.NewUUIDGenerator(workspace)
-	for _, protoMonitor := range protoMonitors {
-		protoMonitor.Id = uuidGenerator.GenerateMonitorUUID(protoMonitor)
-	}
-
-	// Conditionally show protobuf output based on the -p flag
-	if deployCmd_printProtobuf {
-		PrintMonitorDefs(protoMonitors)
-	} else {
-		fmt.Println("\n💡 Use -p flag to print protobuf messages in JSON format")
-	}
-
-	fmt.Println("🎉 Deployment preparation complete!")
-
-	// localDatabaseURL := "postgres://postgres:postgres@localhost:5432/kernel_anomalies?sslmode=disable"
-	// localPostgresConn, err := sqlx.Connect("postgres", localDatabaseURL)
-	// if err != nil {
-	// 	panic(err)
-	// }
-	// defer localPostgresConn.Close()
-	// workspace = "synq"
-	// mgmtService := mgmt.NewMgmtLocalService(ctx, localPostgresConn, workspace)
-	mgmtService := mgmt.NewMgmtRemoteService(ctx, conn)
-
-	// Calculate delta
-	configID := yamlParser.GetConfigID()
-	changesOverview, err := mgmtService.ConfigChangesOverview(protoMonitors, configID)
-	if err != nil {
-		exitWithError(fmt.Errorf("❌ Error getting config changes overview: %v", err))
-	}
-
-	changesOverview.PrettyPrint()
-
-	if !changesOverview.HasChanges() {
-		return
-	}
-
-	if breakingChanges := changesOverview.GetBreakingChanges(); len(breakingChanges) > 0 {
-		exitWithError(fmt.Errorf("%+v\n❌ Breaking changes detected! Please resolve the issues and try again.", breakingChanges))
-		return
-	}
-
-	if !deployCmd_autoConfirm {
-		prompt := promptui.Prompt{
-			Label:     "Are you sure you want to deploy these monitors? (y/N)",
-			IsConfirm: true,
+		if len(deployCmd_namespaces) > 0 && !slices.Contains(deployCmd_namespaces, namespace) {
+			fmt.Printf("🧹 Not processing %s as it is not in %v\n\n", namespace, deployCmd_namespaces)
+			continue
 		}
-		if result, err := prompt.Run(); err != nil || strings.ToLower(result) != "y" {
-			fmt.Println("❌ Deployment cancelled")
-			return
+
+		monitors := lo.FlatMap(parsers, func(item *yaml.VersionedParser, index int) []*pb.MonitorDefinition {
+			monitors, err := item.ConvertToMonitorDefinitions()
+			if err != nil {
+				fmt.Printf("could not convert to monitor definitions: %v", err)
+				return []*pb.MonitorDefinition{}
+			}
+
+			return monitors
+		})
+
+		// resolve monitored entities
+		monitors, err = resolve(pathsConverter, monitors)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "%v", err)
+			continue
 		}
-	} else {
-		fmt.Println("✅ Auto-confirmed deployment!")
-	}
 
-	err = mgmtService.DeployMonitors(changesOverview)
-	if err != nil {
-		exitWithError(fmt.Errorf("❌ Error deploying monitors: %v", err))
-	}
+		// Sanitize UUIDs for monitors.
+		uuidGenerator := uuid.NewUUIDGenerator(workspace)
+		for _, protoMonitor := range monitors {
+			protoMonitor.Id = uuidGenerator.GenerateMonitorUUID(protoMonitor)
+		}
 
-	fmt.Println("✅ Deployment complete!")
+		// Conditionally show protobuf output based on the -p flag
+		if deployCmd_printProtobuf {
+			PrintMonitorDefs(monitors)
+		} else {
+			fmt.Println("\n💡 Use -p flag to print protobuf messages in JSON format")
+		}
+		fmt.Println("🎉 Deployment preparation complete!")
+
+		// localDatabaseURL := "postgres://postgres:postgres@localhost:5432/kernel_anomalies?sslmode=disable"
+		// localPostgresConn, err := sqlx.Connect("postgres", localDatabaseURL)
+		// if err != nil {
+		// 	panic(err)
+		// }
+		// defer localPostgresConn.Close()
+		// workspace = "synq"
+		// mgmtService := mgmt.NewMgmtLocalService(ctx, localPostgresConn, workspace)
+		mgmtService := mgmt.NewMgmtRemoteService(ctx, conn)
+
+		// Calculate delta
+		configID := namespace
+		changesOverview, err := mgmtService.ConfigChangesOverview(monitors, configID)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "❌ Error getting config changes overview: %v", err)
+		}
+
+		changesOverview.PrettyPrint()
+
+		if !changesOverview.HasChanges() {
+			continue
+		}
+
+		if breakingChanges := changesOverview.GetBreakingChanges(); len(breakingChanges) > 0 {
+			fmt.Fprintf(os.Stderr, "%+v\n❌ Breaking changes detected! Please resolve the issues and try again.", breakingChanges)
+			continue
+		}
+
+		if !deployCmd_autoConfirm {
+			prompt := promptui.Prompt{
+				Label:     "Are you sure you want to deploy these monitors? (y/N)",
+				IsConfirm: true,
+			}
+			if result, err := prompt.Run(); err != nil || strings.ToLower(result) != "y" {
+				fmt.Println("❌ Deployment cancelled")
+				continue
+			}
+		} else {
+			fmt.Println("✅ Auto-confirmed deployment!")
+		}
+
+		err = mgmtService.DeployMonitors(changesOverview)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "❌ Error deploying monitors: %v", err)
+			continue
+		}
+
+		fmt.Println("✅ Deployment complete!")
+	}
 }
 
-func parse(filePath string) (*yaml.VersionedParser, []*pb.MonitorDefinition, error) {
-	// Read YAML file
-	fmt.Println("🔍 Parsing YAML structure...")
-	yamlContent, err := os.ReadFile(filePath)
+func getParser(path string) (*yaml.VersionedParser, error) {
+	content, err := os.ReadFile(path)
 	if err != nil {
-		return nil, nil, fmt.Errorf("❌ Error reading file: %v\n", err)
+		return nil, err
 	}
 
-	yamlParser, err := yaml.NewVersionedParser(yamlContent)
+	parser, err := yaml.NewVersionedParser(content)
 	if err != nil {
-		return nil, nil, fmt.Errorf("❌ YAML parsing failed: %v\n", err)
-	}
-	fmt.Println("✅ YAML syntax is valid!")
-
-	// Convert to protobuf
-	fmt.Println("\n🔄 Converting to protobuf format...")
-	protoMonitors, err := yamlParser.ConvertToMonitorDefinitions()
-	if err != nil {
-		return nil, nil, fmt.Errorf("❌ Conversion errors found: %s\n", err.Error())
+		return nil, err
 	}
 
-	fmt.Printf("✅ Successfully converted to %d protobuf MonitorDefinition(s)\n", len(protoMonitors))
-
-	return yamlParser, protoMonitors, nil
+	return parser, nil
 }
 
 func resolve(pathsConverter paths.PathConverter, protoMonitors []*pb.MonitorDefinition) ([]*pb.MonitorDefinition, error) {
@@ -213,7 +226,7 @@ func resolve(pathsConverter paths.PathConverter, protoMonitors []*pb.MonitorDefi
 
 	resolvedPaths, err := pathsConverter.SimpleToPath(pathsToConvert)
 	if err != nil && err.HasErrors() {
-		return protoMonitors, errors.New(err.Error())
+		return protoMonitors, errors.New(err.Error() + "\n\n")
 	}
 
 	// set resolved paths back to config
