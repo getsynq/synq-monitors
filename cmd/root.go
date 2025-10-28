@@ -1,12 +1,17 @@
 package cmd
 
 import (
+	"fmt"
+	"os"
+
 	"github.com/spf13/cobra"
 )
 
-var clientID string
-var clientSecret string
-var apiUrl string
+var (
+	clientID     string
+	clientSecret string
+	apiUrl       string
+)
 
 var rootCmd = &cobra.Command{
 	Use:           "synq-monitors",
@@ -14,7 +19,6 @@ var rootCmd = &cobra.Command{
 	SilenceUsage:  true,
 	SilenceErrors: true,
 	Run: func(cmd *cobra.Command, args []string) {
-
 	},
 }
 
@@ -26,5 +30,8 @@ func init() {
 }
 
 func Execute() {
-	rootCmd.Execute()
+	err := rootCmd.Execute()
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "error: %v", err)
+	}
 }
