@@ -42,7 +42,7 @@ var deployCmd = &cobra.Command{
 	Short: "Deploy custom monitors from YAML configuration",
 	Long: `Deploy custom monitors by parsing YAML configuration and converting to protobuf.
 Shows YAML preview and asks for confirmation before proceeding.`,
-	Args: cobra.NoArgs,
+	Args: cobra.ArbitraryArgs,
 	Run:  deployFromYaml,
 }
 
@@ -90,9 +90,16 @@ func deployFromYaml(cmd *cobra.Command, args []string) {
 	workspace := iamResponse.Workspace
 	fmt.Printf("🔍 Workspace: %s\n\n", workspace)
 
-	filePaths, err := findFiles(".", ".yaml")
-	if err != nil {
-		exitWithError(fmt.Errorf("❌ Error finding files: %v", err))
+	var filePaths []string
+	if len(args) > 0 {
+		fmt.Println("Parsing files from arguments")
+		filePaths = args
+	} else {
+		fmt.Println("Parsing files found under working directory")
+		filePaths, err = findFiles(".", ".yaml")
+		if err != nil {
+			exitWithError(fmt.Errorf("❌ Error finding files: %v", err))
+		}
 	}
 
 	parsers := lo.FilterMap(filePaths, func(item string, index int) (*yaml.VersionedParser, bool) {
