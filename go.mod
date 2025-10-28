@@ -31,7 +31,7 @@ require (
 )
 
 require (
-	buf.build/gen/go/getsynq/api/grpc/go v1.5.1-20250922105254-9270eaa9228b.2
+	buf.build/gen/go/getsynq/api/grpc/go v1.5.1-20251027123029-e0ebf51a8ef4.2
 	buf.build/gen/go/getsynq/api/protocolbuffers/go v1.36.10-20251027123029-e0ebf51a8ef4.1
 	github.com/gkampitakis/go-snaps v0.5.14
 	github.com/invopop/jsonschema v0.13.0

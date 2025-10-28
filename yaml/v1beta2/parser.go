@@ -69,7 +69,7 @@ func (p *YAMLParser) ConvertToMonitorDefinitions() ([]*pb.MonitorDefinition, err
 		for _, wrapper := range entity.Monitors {
 			yamlMonitor := wrapper.Monitor
 			monitorID := yamlMonitor.GetMonitorID()
-			monitor := p.createBaseMonitor(monitorID, yamlMonitor.GetMonitorName(), entity.Id, timePartitioning)
+			monitor := p.createBaseMonitor(monitorID, yamlMonitor.GetMonitorName(), yamlMonitor.GetMonitorDescription(), entity.Id, timePartitioning)
 			switch t := yamlMonitor.(type) {
 			case *FreshnessMonitor:
 				if t.Expression == "" {
@@ -213,11 +213,12 @@ func (p *YAMLParser) ConvertToSqlTests() ([]*sqltestsv1.SqlTest, error) {
 	return protoTests, nil
 }
 
-func (p *YAMLParser) createBaseMonitor(id, name, entityId, timePartitioning string) *pb.MonitorDefinition {
+func (p *YAMLParser) createBaseMonitor(id, name, description, entityId, timePartitioning string) *pb.MonitorDefinition {
 	monitor := &pb.MonitorDefinition{
-		Id:       id,
-		Name:     name,
-		ConfigId: p.yamlConfig.ID,
+		Id:          id,
+		Name:        name,
+		Description: description,
+		ConfigId:    p.yamlConfig.ID,
 		MonitoredId: &entitiesv1.Identifier{
 			Id: &entitiesv1.Identifier_SynqPath{
 				SynqPath: &entitiesv1.SynqPathIdentifier{
