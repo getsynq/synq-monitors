@@ -129,6 +129,7 @@
             "severity": {
               "type": "string",
               "enum": [
+                "INFO",
                 "WARNING",
                 "ERROR"
               ]
@@ -177,6 +178,7 @@
             "severity": {
               "type": "string",
               "enum": [
+                "INFO",
                 "WARNING",
                 "ERROR"
               ]
@@ -229,6 +231,7 @@
             "severity": {
               "type": "string",
               "enum": [
+                "INFO",
                 "WARNING",
                 "ERROR"
               ]
@@ -277,6 +280,7 @@
             "severity": {
               "type": "string",
               "enum": [
+                "INFO",
                 "WARNING",
                 "ERROR"
               ]
@@ -366,6 +370,36 @@
         "expression"
       ]
     },
+    "SimpleSchedule": {
+      "anyOf": [
+        {
+          "type": "string",
+          "enum": [
+            "daily",
+            "hourly"
+          ]
+        },
+        {
+          "properties": {
+            "type": {
+              "type": "string",
+              "enum": [
+                "daily",
+                "hourly"
+              ]
+            },
+            "query_delay": {
+              "$ref": "#/$defs/Duration"
+            }
+          },
+          "additionalProperties": false,
+          "type": "object",
+          "required": [
+            "type"
+          ]
+        }
+      ]
+    },
     "Test": {
       "anyOf": [
         {
@@ -383,7 +417,15 @@
               "type": "string"
             },
             "schedule": {
-              "$ref": "#/$defs/Schedule"
+              "$ref": "#/$defs/SimpleSchedule"
+            },
+            "severity": {
+              "type": "string",
+              "enum": [
+                "INFO",
+                "WARNING",
+                "ERROR"
+              ]
             },
             "column": {
               "type": "string"
@@ -419,7 +461,15 @@
               "type": "string"
             },
             "schedule": {
-              "$ref": "#/$defs/Schedule"
+              "$ref": "#/$defs/SimpleSchedule"
+            },
+            "severity": {
+              "type": "string",
+              "enum": [
+                "INFO",
+                "WARNING",
+                "ERROR"
+              ]
             },
             "sql_expression": {
               "type": "string"
@@ -447,7 +497,15 @@
               "type": "string"
             },
             "schedule": {
-              "$ref": "#/$defs/Schedule"
+              "$ref": "#/$defs/SimpleSchedule"
+            },
+            "severity": {
+              "type": "string",
+              "enum": [
+                "INFO",
+                "WARNING",
+                "ERROR"
+              ]
             },
             "columns": {
               "items": {
@@ -479,7 +537,15 @@
               "type": "string"
             },
             "schedule": {
-              "$ref": "#/$defs/Schedule"
+              "$ref": "#/$defs/SimpleSchedule"
+            },
+            "severity": {
+              "type": "string",
+              "enum": [
+                "INFO",
+                "WARNING",
+                "ERROR"
+              ]
             },
             "time_partition_column": {
               "type": "string"
@@ -509,7 +575,15 @@
               "type": "string"
             },
             "schedule": {
-              "$ref": "#/$defs/Schedule"
+              "$ref": "#/$defs/SimpleSchedule"
+            },
+            "severity": {
+              "type": "string",
+              "enum": [
+                "INFO",
+                "WARNING",
+                "ERROR"
+              ]
             },
             "column": {
               "type": "string"
@@ -541,7 +615,15 @@
               "type": "string"
             },
             "schedule": {
-              "$ref": "#/$defs/Schedule"
+              "$ref": "#/$defs/SimpleSchedule"
+            },
+            "severity": {
+              "type": "string",
+              "enum": [
+                "INFO",
+                "WARNING",
+                "ERROR"
+              ]
             },
             "column": {
               "type": "string"
@@ -577,7 +659,15 @@
               "type": "string"
             },
             "schedule": {
-              "$ref": "#/$defs/Schedule"
+              "$ref": "#/$defs/SimpleSchedule"
+            },
+            "severity": {
+              "type": "string",
+              "enum": [
+                "INFO",
+                "WARNING",
+                "ERROR"
+              ]
             },
             "column": {
               "type": "string"
@@ -609,7 +699,15 @@
               "type": "string"
             },
             "schedule": {
-              "$ref": "#/$defs/Schedule"
+              "$ref": "#/$defs/SimpleSchedule"
+            },
+            "severity": {
+              "type": "string",
+              "enum": [
+                "INFO",
+                "WARNING",
+                "ERROR"
+              ]
             },
             "columns": {
               "items": {
@@ -641,7 +739,15 @@
               "type": "string"
             },
             "schedule": {
-              "$ref": "#/$defs/Schedule"
+              "$ref": "#/$defs/SimpleSchedule"
+            },
+            "severity": {
+              "type": "string",
+              "enum": [
+                "INFO",
+                "WARNING",
+                "ERROR"
+              ]
             },
             "column": {
               "type": "string"
@@ -677,7 +783,15 @@
               "type": "string"
             },
             "schedule": {
-              "$ref": "#/$defs/Schedule"
+              "$ref": "#/$defs/SimpleSchedule"
+            },
+            "severity": {
+              "type": "string",
+              "enum": [
+                "INFO",
+                "WARNING",
+                "ERROR"
+              ]
             },
             "column": {
               "type": "string"
@@ -709,7 +823,15 @@
               "type": "string"
             },
             "schedule": {
-              "$ref": "#/$defs/Schedule"
+              "$ref": "#/$defs/SimpleSchedule"
+            },
+            "severity": {
+              "type": "string",
+              "enum": [
+                "INFO",
+                "WARNING",
+                "ERROR"
+              ]
             },
             "columns": {
               "items": {

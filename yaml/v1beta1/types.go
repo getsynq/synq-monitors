@@ -20,7 +20,7 @@ type YAMLConfig struct {
 		Timezone         string        `yaml:"timezone,omitempty"`
 	} `yaml:"defaults,omitempty"`
 	Monitors []YAMLMonitor `yaml:"monitors"`
-	Tests    []YAMLTest    `yaml:"tests,omitempty"`
+	// Tests    []YAMLTest    `yaml:"tests,omitempty"`
 }
 
 type YAMLMonitor struct {

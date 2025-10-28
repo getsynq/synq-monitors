@@ -33,7 +33,6 @@ func (p *YAMLParser) GetYAMLSummary(config any) map[string]any {
 	summary := make(map[string]any)
 	summary["namespace"] = conf.ID
 	summary["monitors_count"] = len(conf.Monitors)
-	summary["tests_count"] = len(conf.Tests)
 
 	if conf.Defaults.Severity != "" {
 		summary["default_severity"] = conf.Defaults.Severity
@@ -47,14 +46,6 @@ func (p *YAMLParser) GetYAMLSummary(config any) map[string]any {
 		typeCount[monitor.Type]++
 	}
 	summary["monitor_types"] = typeCount
-
-	testTypeCount := make(map[string]int)
-	for _, test := range conf.Tests {
-		testTypeCount[test.Type]++
-	}
-	if len(testTypeCount) > 0 {
-		summary["test_types"] = testTypeCount
-	}
 
 	return summary
 }

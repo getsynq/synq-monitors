@@ -111,6 +111,7 @@ type (
 		Name        string         `yaml:"name,omitempty"`
 		Description string         `yaml:"description,omitempty"`
 		Schedule    SimpleSchedule `yaml:"schedule,omitempty"`
+		Severity    string         `yaml:"severity,omitempty"    jsonschema:"enum=INFO,enum=WARNING,enum=ERROR"`
 	}
 	TestWithColumns struct {
 		Columns []string `yaml:"columns" jsonschema:"minLength=1"`
