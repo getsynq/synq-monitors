@@ -150,58 +150,41 @@ func (p *YAMLParser) ConvertToSqlTests() ([]*sqltestsv1.SqlTest, error) {
 	existingTestIds := make(map[string]bool)
 
 	for _, entity := range p.yamlConfig.Entities {
-		for _, yamlTest := range p.yamlConfig.Tests {
-			id := strings.TrimSpace(yamlTest.Id)
-			if id == "" {
+		entityId := strings.TrimSpace(entity.Id)
+		if entityId == "" {
+			errors = append(errors, ConversionError{
+				Field:   "id",
+				Message: "must be set",
+			})
+			continue
+		}
+		fmt.Println("entityId", entityId)
+
+		timePartitioning := entity.TimePartitioningColumn
+		if p.yamlConfig.Defaults != nil && timePartitioning == "" {
+			timePartitioning = p.yamlConfig.Defaults.TimePartitioning
+		}
+
+		for _, wrapper := range entity.Tests {
+			yamlTest := wrapper.Test
+			fmt.Println("yamlTest", yamlTest)
+			fmt.Println("wrapper", wrapper)
+			test, err := convertSingleTest(yamlTest, entityId)
+			if err.HasErrors() {
+				errors = append(errors, err...)
+				continue
+			}
+
+			if _, ok := existingTestIds[test.Id]; ok {
 				errors = append(errors, ConversionError{
 					Field:   "id",
-					Message: "must be set",
+					Message: "must be unique within entity",
+					Test:    test.Id,
+					Entity:  entityId,
 				})
-				continue
-			}
-
-			if _, ok := existingTestIds[id]; ok {
-				errors = append(errors, ConversionError{
-					Field:   "id",
-					Message: "must be unique",
-					Test:    id,
-				})
-				continue
-			}
-			existingTestIds[id] = true
-
-			if len(yamlTest.MonitoredIDs) > 0 && len(yamlTest.MonitoredID) > 0 {
-				errors = append(errors, ConversionError{
-					Field:   "monitored_id",
-					Message: "monitored_id and monitored_ids cannot be used together",
-					Test:    id,
-				})
-				continue
-			} else if len(yamlTest.MonitoredIDs) == 0 && len(yamlTest.MonitoredID) == 0 {
-				errors = append(errors, ConversionError{
-					Field:   "monitored_id",
-					Message: "monitored_id or monitored_ids must be set",
-					Test:    id,
-				})
-				continue
-			}
-
-			if scheduleErrors := validateTestScheduleConfiguration(&yamlTest); len(scheduleErrors) > 0 {
-				errors = append(errors, scheduleErrors...)
-			}
-
-			monitoredIds := yamlTest.MonitoredIDs
-			if len(yamlTest.MonitoredID) > 0 {
-				monitoredIds = append(monitoredIds, yamlTest.MonitoredID)
-			}
-
-			for _, monitoredID := range monitoredIds {
-				protoTest, convErrors := convertSingleTest(&yamlTest, p.yamlConfig, monitoredID)
-				if len(convErrors) > 0 {
-					errors = append(errors, convErrors...)
-					continue
-				}
-				protoTests = append(protoTests, protoTest)
+			} else {
+				existingTestIds[test.Id] = true
+				protoTests = append(protoTests, test)
 			}
 		}
 	}

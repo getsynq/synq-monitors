@@ -10,17 +10,24 @@ type ConversionError struct {
 	Message string
 	Monitor string
 	Entity  string
+	Test    string
 }
 
 func (e ConversionError) Error() string {
 	if e.Entity != "" && e.Monitor != "" {
 		return fmt.Sprintf("Entity '%s', Monitor '%s': %s - %s", e.Entity, e.Monitor, e.Field, e.Message)
 	}
+	if e.Entity != "" && e.Test != "" {
+		return fmt.Sprintf("Entity '%s', Test '%s': %s - %s", e.Entity, e.Test, e.Field, e.Message)
+	}
 	if e.Entity != "" {
 		return fmt.Sprintf("Entity '%s': %s - %s", e.Entity, e.Field, e.Message)
 	}
 	if e.Monitor != "" {
 		return fmt.Sprintf("Monitor '%s': %s - %s", e.Monitor, e.Field, e.Message)
+	}
+	if e.Test != "" {
+		return fmt.Sprintf("Test '%s': %s - %s", e.Test, e.Field, e.Message)
 	}
 	return fmt.Sprintf("%s - %s", e.Field, e.Message)
 }

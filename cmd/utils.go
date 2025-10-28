@@ -8,8 +8,8 @@ import (
 	"os"
 	"strings"
 
+	sqltestsv1 "buf.build/gen/go/getsynq/api/protocolbuffers/go/synq/datachecks/sqltests/v1"
 	pb "buf.build/gen/go/getsynq/api/protocolbuffers/go/synq/monitors/custom_monitors/v1"
-	testsuggestionsv1 "buf.build/gen/go/getsynq/api/protocolbuffers/go/synq/datachecks/testsuggestions/v1"
 	"github.com/getsynq/monitors_mgmt/config"
 	"golang.org/x/oauth2/clientcredentials"
 	"google.golang.org/grpc"
@@ -84,12 +84,12 @@ func PrintMonitorDefs(monitorDefs []*pb.MonitorDefinition) {
 	fmt.Println(strings.Repeat("=", 60))
 }
 
-func PrintTestSuggestions(testSuggestions []*testsuggestionsv1.TestSuggestion) {
-	fmt.Println("\n📋 TestSuggestions (JSON format):")
+func PrintSqlTests(sqlTests []*sqltestsv1.SqlTest) {
+	fmt.Println("\n📋 SqlTests (JSON format):")
 	fmt.Println(strings.Repeat("=", 60))
 
-	for i, test := range testSuggestions {
-		fmt.Printf("\n--- Test %d: %s ---\n", i+1, test.Identifier)
+	for i, test := range sqlTests {
+		fmt.Printf("\n--- Test %d: %s ---\n", i+1, test.Name)
 
 		// Convert to JSON for readable display
 		jsonBytes, err := protojson.MarshalOptions{

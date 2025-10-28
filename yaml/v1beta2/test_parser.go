@@ -1,127 +1,119 @@
-package v1beta1
+package v1beta2
 
 import (
 	"fmt"
-	"strings"
 
 	sqltestsv1 "buf.build/gen/go/getsynq/api/protocolbuffers/go/synq/datachecks/sqltests/v1"
 	testsuggestionsv1 "buf.build/gen/go/getsynq/api/protocolbuffers/go/synq/datachecks/testsuggestions/v1"
 	entitiesv1 "buf.build/gen/go/getsynq/api/protocolbuffers/go/synq/entities/v1"
 )
 
-// convertSingleTest converts a single YAML test to a TestSuggestion protobuf
+// convertSingleTest converts a single YAML test to a SqlTest protobuf
 func convertSingleTest(
-	yamlTest *YAMLTest,
-	config *YAMLConfig,
+	yamlTest TestInline,
 	monitoredID string,
 ) (*sqltestsv1.SqlTest, ConversionErrors) {
 	var errors ConversionErrors
 
-	testID := strings.TrimSpace(yamlTest.Id)
-	configID := yamlTest.ConfigID
-	if configID == "" {
-		configID = config.ID
-	}
-
 	proto := &sqltestsv1.SqlTest{
-		Name: 
-		Identifier: &entitiesv1.Identifier{
-			Id: &entitiesv1.Identifier_SynqPath{
-				SynqPath: &entitiesv1.SynqPathIdentifier{
-					Path: fmt.Sprintf("%s/%s", configID, testID),
+		Name: yamlTest.GetName(),
+		Template: &sqltestsv1.Template{
+			Identifier: &entitiesv1.Identifier{
+				Id: &entitiesv1.Identifier_SynqPath{
+					SynqPath: &entitiesv1.SynqPathIdentifier{
+						Path: monitoredID,
+					},
 				},
 			},
 		},
-		EntitySynqPath: &monitoredID,
 	}
 
 	// Convert test based on type
-	switch yamlTest.Type {
-	case "not_null":
-		test, convErrors := convertNotNullTest(yamlTest)
+	switch t := yamlTest.(type) {
+	case *NotNullTest:
+		testTemplate, convErrors := convertNotNullTest(t)
 		if len(convErrors) > 0 {
 			errors = append(errors, convErrors...)
 		} else {
-			proto.Test = &testsuggestionsv1.TestSuggestion_NotNullTest{NotNullTest: test}
+			proto.Template.Test = testTemplate
 		}
 
-	case "unique":
-		test, convErrors := convertUniqueTest(yamlTest)
+	case *UniqueTest:
+		testTemplate, convErrors := convertUniqueTest(t)
 		if len(convErrors) > 0 {
 			errors = append(errors, convErrors...)
 		} else {
-			proto.Test = &testsuggestionsv1.TestSuggestion_UniqueTest{UniqueTest: test}
+			proto.Template.Test = testTemplate
 		}
 
-	case "accepted_values":
-		test, convErrors := convertAcceptedValuesTest(yamlTest)
+	case *AcceptedValuesTest:
+		testTemplate, convErrors := convertAcceptedValuesTest(t)
 		if len(convErrors) > 0 {
 			errors = append(errors, convErrors...)
 		} else {
-			proto.Test = &testsuggestionsv1.TestSuggestion_AcceptedValuesTest{AcceptedValuesTest: test}
+			proto.Template.Test = testTemplate
 		}
 
-	case "rejected_values":
-		test, convErrors := convertRejectedValuesTest(yamlTest)
+	case *RejectedValuesTest:
+		testTemplate, convErrors := convertRejectedValuesTest(t)
 		if len(convErrors) > 0 {
 			errors = append(errors, convErrors...)
 		} else {
-			proto.Test = &testsuggestionsv1.TestSuggestion_RejectedValuesTest{RejectedValuesTest: test}
+			proto.Template.Test = testTemplate
 		}
 
-	case "min_max":
-		test, convErrors := convertMinMaxTest(yamlTest)
+	case *MinMaxTest:
+		testTemplate, convErrors := convertMinMaxTest(t)
 		if len(convErrors) > 0 {
 			errors = append(errors, convErrors...)
 		} else {
-			proto.Test = &testsuggestionsv1.TestSuggestion_MinMaxTest{MinMaxTest: test}
+			proto.Template.Test = testTemplate
 		}
 
-	case "min_value":
-		test, convErrors := convertMinValueTest(yamlTest)
+	case *MinValueTest:
+		testTemplate, convErrors := convertMinValueTest(t)
 		if len(convErrors) > 0 {
 			errors = append(errors, convErrors...)
 		} else {
-			proto.Test = &testsuggestionsv1.TestSuggestion_MinValueTest{MinValueTest: test}
+			proto.Template.Test = testTemplate
 		}
 
-	case "max_value":
-		test, convErrors := convertMaxValueTest(yamlTest)
+	case *MaxValueTest:
+		testTemplate, convErrors := convertMaxValueTest(t)
 		if len(convErrors) > 0 {
 			errors = append(errors, convErrors...)
 		} else {
-			proto.Test = &testsuggestionsv1.TestSuggestion_MaxValueTest{MaxValueTest: test}
+			proto.Template.Test = testTemplate
 		}
 
-	case "freshness":
-		test, convErrors := convertFreshnessTest(yamlTest)
+	case *FreshnessTest:
+		testTemplate, convErrors := convertFreshnessTest(t)
 		if len(convErrors) > 0 {
 			errors = append(errors, convErrors...)
 		} else {
-			proto.Test = &testsuggestionsv1.TestSuggestion_FreshnessTest{FreshnessTest: test}
+			proto.Template.Test = testTemplate
 		}
 
-	case "relative_time":
-		test, convErrors := convertRelativeTimeTest(yamlTest)
+	case *RelativeTimeTest:
+		testTemplate, convErrors := convertRelativeTimeTest(t)
 		if len(convErrors) > 0 {
 			errors = append(errors, convErrors...)
 		} else {
-			proto.Test = &testsuggestionsv1.TestSuggestion_RelativeTimeTest{RelativeTimeTest: test}
+			proto.Template.Test = testTemplate
 		}
 
-	case "business_rule":
-		test, convErrors := convertBusinessRuleTest(yamlTest)
+	case *BusinessRuleTest:
+		testTemplate, convErrors := convertBusinessRuleTest(t)
 		if len(convErrors) > 0 {
 			errors = append(errors, convErrors...)
 		} else {
-			proto.Test = &testsuggestionsv1.TestSuggestion_BusinessRuleTest{BusinessRuleTest: test}
+			proto.Template.Test = testTemplate
 		}
 
 	default:
 		errors = append(errors, ConversionError{
 			Field:   "type",
-			Message: fmt.Sprintf("unsupported test type: %s", yamlTest.Type),
-			Test:    testID,
+			Message: fmt.Sprintf("unsupported test type: %s", t),
 		})
 	}
 
@@ -129,57 +121,57 @@ func convertSingleTest(
 }
 
 // convertNotNullTest converts a YAML not_null test to protobuf
-func convertNotNullTest(yamlTest *YAMLTest) (*testsuggestionsv1.NotNullTest, ConversionErrors) {
+func convertNotNullTest(yamlTest *NotNullTest) (*sqltestsv1.Template_NotNullTest, ConversionErrors) {
 	var errors ConversionErrors
 
 	if len(yamlTest.Columns) == 0 {
 		errors = append(errors, ConversionError{
 			Field:   "columns",
 			Message: "columns are required for not_null tests",
-			Test:    yamlTest.Id,
+			Test:    yamlTest.GetId(),
 		})
 		return nil, errors
 	}
 
-	return &testsuggestionsv1.NotNullTest{
-		ColumnNames: yamlTest.Columns,
+	return &sqltestsv1.Template_NotNullTest{
+		NotNullTest: &testsuggestionsv1.NotNullTest{
+			ColumnNames: yamlTest.Columns,
+		},
 	}, nil
 }
 
 // convertUniqueTest converts a YAML unique test to protobuf
-func convertUniqueTest(yamlTest *YAMLTest) (*testsuggestionsv1.UniqueTest, ConversionErrors) {
+func convertUniqueTest(yamlTest *UniqueTest) (*sqltestsv1.Template_UniqueTest, ConversionErrors) {
 	var errors ConversionErrors
 
 	if len(yamlTest.Columns) == 0 {
 		errors = append(errors, ConversionError{
 			Field:   "columns",
 			Message: "columns are required for unique tests",
-			Test:    yamlTest.Id,
+			Test:    yamlTest.GetId(),
 		})
 		return nil, errors
 	}
 
-	test := &testsuggestionsv1.UniqueTest{
-		ColumnNames:             yamlTest.Columns,
-		TimePartitionColumnName: yamlTest.TimePartitionColumn,
-	}
-
-	if yamlTest.TimeWindowSeconds != nil {
-		test.TimeWindowSeconds = *yamlTest.TimeWindowSeconds
+	test := &sqltestsv1.Template_UniqueTest{
+		UniqueTest: &testsuggestionsv1.UniqueTest{
+			ColumnNames:             yamlTest.Columns,
+			TimePartitionColumnName: yamlTest.TimePartitionColumn,
+		},
 	}
 
 	return test, nil
 }
 
 // convertAcceptedValuesTest converts a YAML accepted_values test to protobuf
-func convertAcceptedValuesTest(yamlTest *YAMLTest) (*testsuggestionsv1.AcceptedValuesTest, ConversionErrors) {
+func convertAcceptedValuesTest(yamlTest *AcceptedValuesTest) (*sqltestsv1.Template_AcceptedValuesTest, ConversionErrors) {
 	var errors ConversionErrors
 
 	if yamlTest.Column == "" {
 		errors = append(errors, ConversionError{
 			Field:   "column",
 			Message: "column is required for accepted_values tests",
-			Test:    yamlTest.Id,
+			Test:    yamlTest.GetId(),
 		})
 	}
 
@@ -187,7 +179,7 @@ func convertAcceptedValuesTest(yamlTest *YAMLTest) (*testsuggestionsv1.AcceptedV
 		errors = append(errors, ConversionError{
 			Field:   "values",
 			Message: "values are required for accepted_values tests",
-			Test:    yamlTest.Id,
+			Test:    yamlTest.GetId(),
 		})
 	}
 
@@ -195,21 +187,23 @@ func convertAcceptedValuesTest(yamlTest *YAMLTest) (*testsuggestionsv1.AcceptedV
 		return nil, errors
 	}
 
-	return &testsuggestionsv1.AcceptedValuesTest{
-		ColumnName:     yamlTest.Column,
-		AcceptedValues: yamlTest.Values,
+	return &sqltestsv1.Template_AcceptedValuesTest{
+		AcceptedValuesTest: &testsuggestionsv1.AcceptedValuesTest{
+			ColumnName:     yamlTest.Column,
+			AcceptedValues: yamlTest.Values,
+		},
 	}, nil
 }
 
 // convertRejectedValuesTest converts a YAML rejected_values test to protobuf
-func convertRejectedValuesTest(yamlTest *YAMLTest) (*testsuggestionsv1.RejectedValuesTest, ConversionErrors) {
+func convertRejectedValuesTest(yamlTest *RejectedValuesTest) (*sqltestsv1.Template_RejectedValuesTest, ConversionErrors) {
 	var errors ConversionErrors
 
 	if yamlTest.Column == "" {
 		errors = append(errors, ConversionError{
 			Field:   "column",
 			Message: "column is required for rejected_values tests",
-			Test:    yamlTest.Id,
+			Test:    yamlTest.GetId(),
 		})
 	}
 
@@ -217,7 +211,7 @@ func convertRejectedValuesTest(yamlTest *YAMLTest) (*testsuggestionsv1.RejectedV
 		errors = append(errors, ConversionError{
 			Field:   "values",
 			Message: "values are required for rejected_values tests",
-			Test:    yamlTest.Id,
+			Test:    yamlTest.GetId(),
 		})
 	}
 
@@ -225,29 +219,23 @@ func convertRejectedValuesTest(yamlTest *YAMLTest) (*testsuggestionsv1.RejectedV
 		return nil, errors
 	}
 
-	return &testsuggestionsv1.RejectedValuesTest{
-		ColumnName:     yamlTest.Column,
-		RejectedValues: yamlTest.Values,
+	return &sqltestsv1.Template_RejectedValuesTest{
+		RejectedValuesTest: &testsuggestionsv1.RejectedValuesTest{
+			ColumnName:     yamlTest.Column,
+			RejectedValues: yamlTest.Values,
+		},
 	}, nil
 }
 
 // convertMinMaxTest converts a YAML min_max test to protobuf
-func convertMinMaxTest(yamlTest *YAMLTest) (*testsuggestionsv1.MinMaxTest, ConversionErrors) {
+func convertMinMaxTest(yamlTest *MinMaxTest) (*sqltestsv1.Template_MinMaxTest, ConversionErrors) {
 	var errors ConversionErrors
 
 	if yamlTest.Column == "" {
 		errors = append(errors, ConversionError{
 			Field:   "column",
 			Message: "column is required for min_max tests",
-			Test:    yamlTest.Id,
-		})
-	}
-
-	if yamlTest.MinValue == nil && yamlTest.MaxValue == nil {
-		errors = append(errors, ConversionError{
-			Field:   "min_value/max_value",
-			Message: "at least one of min_value or max_value is required for min_max tests",
-			Test:    yamlTest.Id,
+			Test:    yamlTest.GetId(),
 		})
 	}
 
@@ -255,68 +243,47 @@ func convertMinMaxTest(yamlTest *YAMLTest) (*testsuggestionsv1.MinMaxTest, Conve
 		return nil, errors
 	}
 
-	test := &testsuggestionsv1.MinMaxTest{
-		ColumnName: yamlTest.Column,
-	}
-
-	if yamlTest.MinValue != nil {
-		test.MinValue = *yamlTest.MinValue
-	}
-
-	if yamlTest.MaxValue != nil {
-		test.MaxValue = *yamlTest.MaxValue
-	}
-
-	return test, nil
+	return &sqltestsv1.Template_MinMaxTest{
+		MinMaxTest: &testsuggestionsv1.MinMaxTest{
+			ColumnName: yamlTest.Column,
+			MinValue:   yamlTest.MinValue,
+			MaxValue:   yamlTest.MaxValue,
+		},
+	}, nil
 }
 
 // convertMinValueTest converts a YAML min_value test to protobuf
-func convertMinValueTest(yamlTest *YAMLTest) (*testsuggestionsv1.MinValueTest, ConversionErrors) {
+func convertMinValueTest(yamlTest *MinValueTest) (*sqltestsv1.Template_MinValueTest, ConversionErrors) {
 	var errors ConversionErrors
 
 	if yamlTest.Column == "" {
 		errors = append(errors, ConversionError{
 			Field:   "column",
 			Message: "column is required for min_value tests",
-			Test:    yamlTest.Id,
+			Test:    yamlTest.GetId(),
 		})
 	}
-
-	if yamlTest.MinValue == nil {
-		errors = append(errors, ConversionError{
-			Field:   "min_value",
-			Message: "min_value is required for min_value tests",
-			Test:    yamlTest.Id,
-		})
-	}
-
 	if len(errors) > 0 {
 		return nil, errors
 	}
 
-	return &testsuggestionsv1.MinValueTest{
-		ColumnName: yamlTest.Column,
-		MinValue:   *yamlTest.MinValue,
+	return &sqltestsv1.Template_MinValueTest{
+		MinValueTest: &testsuggestionsv1.MinValueTest{
+			ColumnName: yamlTest.Column,
+			MinValue:   yamlTest.MinValue,
+		},
 	}, nil
 }
 
 // convertMaxValueTest converts a YAML max_value test to protobuf
-func convertMaxValueTest(yamlTest *YAMLTest) (*testsuggestionsv1.MaxValueTest, ConversionErrors) {
+func convertMaxValueTest(yamlTest *MaxValueTest) (*sqltestsv1.Template_MaxValueTest, ConversionErrors) {
 	var errors ConversionErrors
 
 	if yamlTest.Column == "" {
 		errors = append(errors, ConversionError{
 			Field:   "column",
 			Message: "column is required for max_value tests",
-			Test:    yamlTest.Id,
-		})
-	}
-
-	if yamlTest.MaxValue == nil {
-		errors = append(errors, ConversionError{
-			Field:   "max_value",
-			Message: "max_value is required for max_value tests",
-			Test:    yamlTest.Id,
+			Test:    yamlTest.GetId(),
 		})
 	}
 
@@ -324,29 +291,31 @@ func convertMaxValueTest(yamlTest *YAMLTest) (*testsuggestionsv1.MaxValueTest, C
 		return nil, errors
 	}
 
-	return &testsuggestionsv1.MaxValueTest{
-		ColumnName: yamlTest.Column,
-		MaxValue:   *yamlTest.MaxValue,
+	return &sqltestsv1.Template_MaxValueTest{
+		MaxValueTest: &testsuggestionsv1.MaxValueTest{
+			ColumnName: yamlTest.Column,
+			MaxValue:   yamlTest.MaxValue,
+		},
 	}, nil
 }
 
 // convertFreshnessTest converts a YAML freshness test to protobuf
-func convertFreshnessTest(yamlTest *YAMLTest) (*testsuggestionsv1.FreshnessTest, ConversionErrors) {
+func convertFreshnessTest(yamlTest *FreshnessTest) (*sqltestsv1.Template_FreshnessTest, ConversionErrors) {
 	var errors ConversionErrors
 
 	if yamlTest.TimePartitionColumn == "" {
 		errors = append(errors, ConversionError{
 			Field:   "time_partition_column",
 			Message: "time_partition_column is required for freshness tests",
-			Test:    yamlTest.Id,
+			Test:    yamlTest.GetId(),
 		})
 	}
 
-	if yamlTest.TimeWindowSeconds == nil {
+	if yamlTest.TimeWindowSeconds == 0 {
 		errors = append(errors, ConversionError{
 			Field:   "time_window_seconds",
-			Message: "time_window_seconds is required for freshness tests",
-			Test:    yamlTest.Id,
+			Message: "time_window_seconds is required for freshness tests and must be greater than 0",
+			Test:    yamlTest.GetId(),
 		})
 	}
 
@@ -354,21 +323,23 @@ func convertFreshnessTest(yamlTest *YAMLTest) (*testsuggestionsv1.FreshnessTest,
 		return nil, errors
 	}
 
-	return &testsuggestionsv1.FreshnessTest{
-		TimePartitionColumnName: yamlTest.TimePartitionColumn,
-		TimeWindowSeconds:       *yamlTest.TimeWindowSeconds,
+	return &sqltestsv1.Template_FreshnessTest{
+		FreshnessTest: &testsuggestionsv1.FreshnessTest{
+			TimePartitionColumnName: yamlTest.TimePartitionColumn,
+			TimeWindowSeconds:       yamlTest.TimeWindowSeconds,
+		},
 	}, nil
 }
 
 // convertRelativeTimeTest converts a YAML relative_time test to protobuf
-func convertRelativeTimeTest(yamlTest *YAMLTest) (*testsuggestionsv1.RelativeTimeTest, ConversionErrors) {
+func convertRelativeTimeTest(yamlTest *RelativeTimeTest) (*sqltestsv1.Template_RelativeTimeTest, ConversionErrors) {
 	var errors ConversionErrors
 
 	if yamlTest.Column == "" {
 		errors = append(errors, ConversionError{
 			Field:   "column",
 			Message: "column is required for relative_time tests",
-			Test:    yamlTest.Id,
+			Test:    yamlTest.GetId(),
 		})
 	}
 
@@ -376,7 +347,7 @@ func convertRelativeTimeTest(yamlTest *YAMLTest) (*testsuggestionsv1.RelativeTim
 		errors = append(errors, ConversionError{
 			Field:   "relative_column",
 			Message: "relative_column is required for relative_time tests",
-			Test:    yamlTest.Id,
+			Test:    yamlTest.GetId(),
 		})
 	}
 
@@ -384,62 +355,30 @@ func convertRelativeTimeTest(yamlTest *YAMLTest) (*testsuggestionsv1.RelativeTim
 		return nil, errors
 	}
 
-	return &testsuggestionsv1.RelativeTimeTest{
-		ColumnName:         yamlTest.Column,
-		RelativeColumnName: yamlTest.RelativeColumn,
+	return &sqltestsv1.Template_RelativeTimeTest{
+		RelativeTimeTest: &testsuggestionsv1.RelativeTimeTest{
+			ColumnName:         yamlTest.Column,
+			RelativeColumnName: yamlTest.RelativeColumn,
+		},
 	}, nil
 }
 
 // convertBusinessRuleTest converts a YAML business_rule test to protobuf
-func convertBusinessRuleTest(yamlTest *YAMLTest) (*testsuggestionsv1.BusinessRuleTest, ConversionErrors) {
+func convertBusinessRuleTest(yamlTest *BusinessRuleTest) (*sqltestsv1.Template_BusinessRuleTest, ConversionErrors) {
 	var errors ConversionErrors
 
-	if yamlTest.SqlExpression == "" {
+	if yamlTest.SQLExpression == "" {
 		errors = append(errors, ConversionError{
 			Field:   "sql_expression",
 			Message: "sql_expression is required for business_rule tests",
-			Test:    yamlTest.Id,
+			Test:    yamlTest.GetId(),
 		})
 		return nil, errors
 	}
 
-	return &testsuggestionsv1.BusinessRuleTest{
-		SqlExpression: yamlTest.SqlExpression,
+	return &sqltestsv1.Template_BusinessRuleTest{
+		BusinessRuleTest: &testsuggestionsv1.BusinessRuleTest{
+			SqlExpression: yamlTest.SQLExpression,
+		},
 	}, nil
-}
-
-// validateTestScheduleConfiguration validates test schedule configuration
-func validateTestScheduleConfiguration(test *YAMLTest) ConversionErrors {
-	var errors ConversionErrors
-
-	if test.Daily != nil && test.Hourly != nil {
-		errors = append(errors, ConversionError{
-			Field:   "schedule",
-			Message: "daily and hourly schedules are mutually exclusive",
-			Test:    test.Id,
-		})
-		return errors
-	}
-
-	if test.Daily != nil {
-		if test.Daily.TimePartitioningShift != nil && test.Daily.QueryDelay != nil {
-			errors = append(errors, ConversionError{
-				Field:   "daily",
-				Message: "time_partitioning_shift and query_delay are mutually exclusive within daily schedule",
-				Test:    test.Id,
-			})
-		}
-	}
-
-	if test.Hourly != nil {
-		if test.Hourly.TimePartitioningShift != nil && test.Hourly.QueryDelay != nil {
-			errors = append(errors, ConversionError{
-				Field:   "hourly",
-				Message: "time_partitioning_shift and query_delay are mutually exclusive within hourly schedule",
-				Test:    test.Id,
-			})
-		}
-	}
-
-	return errors
 }

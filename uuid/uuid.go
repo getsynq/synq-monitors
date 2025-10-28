@@ -3,8 +3,8 @@ package uuid
 import (
 	"strings"
 
+	sqltestsv1 "buf.build/gen/go/getsynq/api/protocolbuffers/go/synq/datachecks/sqltests/v1"
 	pb "buf.build/gen/go/getsynq/api/protocolbuffers/go/synq/monitors/custom_monitors/v1"
-	testsuggestionsv1 "buf.build/gen/go/getsynq/api/protocolbuffers/go/synq/datachecks/testsuggestions/v1"
 	"github.com/google/uuid"
 )
 
@@ -40,9 +40,9 @@ func (g *UUIDGenerator) GenerateMonitorUUID(monitor *pb.MonitorDefinition) strin
 }
 
 // GenerateTestUUID generates a deterministic UUID for a test based on its configuration
-func (g *UUIDGenerator) GenerateTestUUID(test *testsuggestionsv1.TestSuggestion) string {
+func (g *UUIDGenerator) GenerateTestUUID(test *sqltestsv1.SqlTest) string {
 	// Get the identifier path which contains config_id/test_id
-	identifierPath := test.GetIdentifier().GetSynqPath().GetPath()
+	identifierPath := test.Id
 
 	// Check if identifierPath is already a valid UUID
 	parsed, err := uuid.Parse(identifierPath)
@@ -52,7 +52,7 @@ func (g *UUIDGenerator) GenerateTestUUID(test *testsuggestionsv1.TestSuggestion)
 
 	fields := []string{
 		identifierPath,
-		test.GetEntitySynqPath(),
+		test.Template.GetIdentifier().GetSynqPath().GetPath(),
 	}
 
 	// Join fields with a separator
