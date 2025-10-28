@@ -103,6 +103,7 @@ func deployFromYaml(cmd *cobra.Command, args []string) {
 	}
 
 	namespacesToFiles := map[string][]string{}
+
 	parsers := lo.FilterMap(filePaths, func(item string, index int) (*yaml.VersionedParser, bool) {
 		parser, err := getParser(item)
 		if err != nil {
@@ -147,10 +148,9 @@ func deployFromYaml(cmd *cobra.Command, args []string) {
 			continue
 		}
 
-		// Sanitize UUIDs for monitors.
-		uuidGenerator := uuid.NewUUIDGenerator(workspace)
-		for _, protoMonitor := range monitors {
-			protoMonitor.Id = uuidGenerator.GenerateMonitorUUID(protoMonitor)
+		duplicateSeen := assignAndValidateUUIDs(workspace, namespace, monitors)
+		if duplicateSeen {
+			continue
 		}
 
 		// Conditionally show protobuf output based on the -p flag
@@ -210,6 +210,25 @@ func deployFromYaml(cmd *cobra.Command, args []string) {
 
 		fmt.Println("✅ Deployment complete!")
 	}
+}
+
+func assignAndValidateUUIDs(workspace, namespace string, monitors []*pb.MonitorDefinition) bool {
+	seenUUIDs := map[string]bool{}
+	duplicateSeen := false
+
+	// Sanitize UUIDs for monitors.
+	uuidGenerator := uuid.NewUUIDGenerator(workspace)
+	for _, protoMonitor := range monitors {
+		protoMonitor.Id = uuidGenerator.GenerateMonitorUUID(protoMonitor)
+
+		if _, exists := seenUUIDs[protoMonitor.Id]; exists {
+			duplicateSeen = true
+			fmt.Printf("❌ Duplicate monitor in namespace %s: %+v\n", namespace, protoMonitor)
+		}
+
+		seenUUIDs[protoMonitor.Id] = true
+	}
+	return duplicateSeen
 }
 
 func getParser(path string) (*yaml.VersionedParser, error) {
