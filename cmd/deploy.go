@@ -38,10 +38,14 @@ func init() {
 }
 
 var deployCmd = &cobra.Command{
-	Use:   "deploy",
+	Use:   "deploy [FILES...]",
 	Short: "Deploy custom monitors from YAML configuration",
-	Long: `Deploy custom monitors by parsing YAML configuration and converting to protobuf.
-Shows YAML preview and asks for confirmation before proceeding.`,
+	Long: `Deploy custom monitors by parsing YAML configuration files.
+
+Before deploying, it prints what changes will be made and prompts for confirmation,
+unless --auto-confirm is set.
+
+If no files are provided, it will recursively search for YAML files from the working directory.`,
 	Args: cobra.ArbitraryArgs,
 	Run:  deployFromYaml,
 }
