@@ -162,7 +162,7 @@ func deployFromYaml(cmd *cobra.Command, args []string) {
 			fmt.Fprintf(os.Stderr, "could not resolve tests: %v", err)
 			continue
 		}
-		duplicateSeen = assignAndValidateUUIDs(workspace, namespace, monitors, sqlTests)
+		duplicateSeen := assignAndValidateUUIDs(workspace, namespace, monitors, sqlTests)
 		if duplicateSeen {
 			continue
 		}
