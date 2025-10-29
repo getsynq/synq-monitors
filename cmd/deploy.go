@@ -180,7 +180,7 @@ func deployFromYaml(cmd *cobra.Command, args []string) {
 
 		// Calculate delta
 		configID := namespace
-		changesOverview, err := mgmtService.ConfigChangesOverview(monitors, configID)
+		changesOverview, err := mgmtService.ConfigChangesOverview(monitors, sqlTests, configID)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "❌ Error getting config changes overview: %v", err)
 		}

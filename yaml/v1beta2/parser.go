@@ -158,7 +158,6 @@ func (p *YAMLParser) ConvertToSqlTests() ([]*sqltestsv1.SqlTest, error) {
 			})
 			continue
 		}
-		fmt.Println("entityId", entityId)
 
 		timePartitioning := entity.TimePartitioningColumn
 		if p.yamlConfig.Defaults != nil && timePartitioning == "" {
@@ -167,8 +166,6 @@ func (p *YAMLParser) ConvertToSqlTests() ([]*sqltestsv1.SqlTest, error) {
 
 		for _, wrapper := range entity.Tests {
 			yamlTest := wrapper.Test
-			fmt.Println("yamlTest", yamlTest)
-			fmt.Println("wrapper", wrapper)
 			test, err := convertSingleTest(yamlTest, entityId)
 			if err.HasErrors() {
 				errors = append(errors, err...)
