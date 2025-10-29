@@ -5,7 +5,11 @@ Deploy custom monitors from YAML configuration files.
 ## Script execution
 
 ```bash
-go run ./... examples/minimal.yaml
+# Deploy specific files
+go run ./... deploy examples/minimal.yaml
+
+# Auto-discover and deploy all YAML files
+go run ./... deploy
 ```
 
 ## Installation
@@ -67,8 +71,12 @@ SYNQ_API_URL=https://developer.synq.io
 ### Deploy
 
 ```bash
-./synq-monitors deploy [yaml-file-path] [flags]
+./synq-monitors deploy [FILES...] [flags]
 ```
+
+#### Arguments
+
+- `[yaml-file-paths...]` (optional): One or more YAML configuration files to deploy. If no files are specified, the command will automatically discover all `.yaml` files in the current directory and subdirectories.
 
 #### Available Flags
 
@@ -77,20 +85,32 @@ SYNQ_API_URL=https://developer.synq.io
 - `--api-url string`: Synq API URL (overrides .env and environment variables)
 - `-p, --print-protobuf`: Print protobuf messages in JSON format
 - `--auto-confirm`: Automatically confirm all prompts (skip interactive confirmations)
+- `--namespace string`: If set, will only make changes to the included namespaces
 - `-h, --help`: Show help information
 
 #### How it works
 
-1. **Preview**: Shows first 20 lines of YAML file
-2. **Confirm**: Asks for confirmation with `y/N` prompt
-3. **Convert**: Parses YAML and converts to protobuf MonitorDefinitions
-4. **Display**: Shows configuration summary and protobuf JSON output
+1. **File Discovery**: If no files are specified, automatically finds all `.yaml` files in the working directory
+2. **Parse**: Parses YAML files and converts to protobuf
+3. **Resolve**: Resolves monitored entities using SYNQ path resolution
+4. **Preview**: Shows configuration changes and delta
+5. **Confirm**: Asks for confirmation with `y/N` prompt (unless `--auto-confirm` is used)
+6. **Deploy**: Applies the configuration changes
 
 #### Examples
 
 ```bash
-# Basic usage
+# Deploy specific files
 ./synq-monitors deploy sample_monitors.yaml
+
+# Deploy multiple files
+./synq-monitors deploy monitors/file1.yaml monitors/file2.yaml
+
+# Deploy using shell globbing (all YAML files in any subdirectory)
+./synq-monitors deploy **/*.yaml
+
+# Auto-discover and deploy all YAML files from current directory
+./synq-monitors deploy
 
 # With command line credentials
 ./synq-monitors deploy sample_monitors.yaml --client-id="prod_client" --client-secret="prod_secret" --api-url="https://developer.synq.io"
@@ -100,6 +120,9 @@ SYNQ_API_URL=https://developer.synq.io
 
 # With auto-confirm (skip all prompts)
 ./synq-monitors deploy sample_monitors.yaml --auto-confirm
+
+# Deploy only specific namespaces
+./synq-monitors deploy --namespace=data-team-pipeline
 ```
 
 ### Export
