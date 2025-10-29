@@ -1,3 +1,4 @@
+# yaml-language-server: $schema=../../schema.json
 # Create a single volume monitor for runs table with defaults (schedule=daily, severity=Error)
 
 version: v1beta2

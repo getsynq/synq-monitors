@@ -1,3 +1,4 @@
+# yaml-language-server: $schema=../../schema.json
 # Includes freshness, volume, field stats with anomaly engine (BALANCED sensitivity),
 # and a custom numeric check to ensure revenue is never negative.
 
