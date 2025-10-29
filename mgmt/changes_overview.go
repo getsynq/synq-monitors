@@ -8,6 +8,7 @@ import (
 	"slices"
 	"strings"
 
+	sqltestsv1 "buf.build/gen/go/getsynq/api/protocolbuffers/go/synq/datachecks/sqltests/v1"
 	entitiesv1 "buf.build/gen/go/getsynq/api/protocolbuffers/go/synq/entities/v1"
 	pb "buf.build/gen/go/getsynq/api/protocolbuffers/go/synq/monitors/custom_monitors/v1"
 	"github.com/fatih/color"
@@ -43,7 +44,7 @@ func (s *ChangesOverview) PrettyPrint() {
 	s.MonitorChangesOverview.PrettyPrint()
 }
 
-func GenerateConfigChangesOverview(configId string, protoMonitors []*pb.MonitorDefinition, fetchedMonitors map[string]*pb.MonitorDefinition) (*ChangesOverview, error) {
+func GenerateConfigChangesOverview(configId string, protoMonitors []*pb.MonitorDefinition, fetchedMonitors map[string]*pb.MonitorDefinition, sqlTests []*sqltestsv1.SqlTest, fetchedSqlTests map[string]*sqltestsv1.SqlTest) (*ChangesOverview, error) {
 	monitorChangesOverview, err := generateMonitorChangesOverview(configId, protoMonitors, fetchedMonitors)
 	if err != nil {
 		return nil, err

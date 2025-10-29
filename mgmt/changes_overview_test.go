@@ -18,7 +18,7 @@ func TestMgmtServiceTestSuite(t *testing.T) {
 	suite.Run(t, &MgmtServiceTestSuite{})
 }
 
-func (s *MgmtServiceTestSuite) TestConfigChangesOverview() {
+func (s *MgmtServiceTestSuite) TestMonitorChangesOverview() {
 	configId := "config-id"
 
 	// Create existing monitor
@@ -150,37 +150,36 @@ func (s *MgmtServiceTestSuite) TestConfigChangesOverview() {
 			},
 		}
 
-		overview, err := GenerateConfigChangesOverview(configId, requestedMonitors, map[string]*pb.MonitorDefinition{
+		changes, err := generateMonitorChangesOverview(configId, requestedMonitors, map[string]*pb.MonitorDefinition{
 			existingMonitor.Id:      existingMonitor,
 			appMonitor.Id:           appMonitor,
 			toDeleteMonitor.Id:      toDeleteMonitor,
 			anotherConfigMonitor.Id: anotherConfigMonitor,
 		})
 		s.Require().NoError(err)
-		monitorChanges := overview.MonitorChangesOverview
-		s.Require().NotNil(monitorChanges)
-		s.Require().True(monitorChanges.HasChanges())
+		s.Require().NotNil(changes)
+		s.Require().True(changes.HasChanges())
 
 		// Should have 1 app-managed monitor
-		s.Len(monitorChanges.MonitorsManagedByApp, 1)
-		s.Equal(appMonitor.Id, monitorChanges.MonitorsManagedByApp[0])
+		s.Len(changes.MonitorsManagedByApp, 1)
+		s.Equal(appMonitor.Id, changes.MonitorsManagedByApp[0])
 
 		// Should have 1 monitor managed by other configs
-		s.Len(monitorChanges.MonitorsManagedByOtherConfig, 1)
-		s.Equal(monitorChanges.MonitorsManagedByOtherConfig[anotherConfigMonitor.Id], anotherConfigId)
-		s.NotEmpty(monitorChanges.GetBreakingChanges())
+		s.Len(changes.MonitorsManagedByOtherConfig, 1)
+		s.Equal(changes.MonitorsManagedByOtherConfig[anotherConfigMonitor.Id], anotherConfigId)
+		s.NotEmpty(changes.GetBreakingChanges())
 
 		// Should have 1 monitor to create
-		s.Len(monitorChanges.MonitorsToCreate, 1)
-		s.Equal("new-monitor-id", monitorChanges.MonitorsToCreate[0].Id)
+		s.Len(changes.MonitorsToCreate, 1)
+		s.Equal("new-monitor-id", changes.MonitorsToCreate[0].Id)
 
 		// Should have 3 monitor with changes
-		s.Len(monitorChanges.MonitorsChangesOverview, 2)
-		changedMonitorIds := lo.Map(monitorChanges.MonitorsChangesOverview, func(m *pb.ChangeOverview, _ int) string { return m.MonitorId })
+		s.Len(changes.MonitorsChangesOverview, 2)
+		changedMonitorIds := lo.Map(changes.MonitorsChangesOverview, func(m *pb.ChangeOverview, _ int) string { return m.MonitorId })
 		s.Contains(changedMonitorIds, existingMonitor.Id)
 		s.Contains(changedMonitorIds, appMonitor.Id)
 
-		for _, change := range monitorChanges.MonitorsChangesOverview {
+		for _, change := range changes.MonitorsChangesOverview {
 			if change.MonitorId == existingMonitor.Id {
 				s.Equal(existingMonitor.Id, change.OriginDefinition.Id)
 				s.Equal(existingMonitor.Id, change.NewDefinition.Id)
@@ -190,28 +189,27 @@ func (s *MgmtServiceTestSuite) TestConfigChangesOverview() {
 		}
 
 		// Should have 2 monitor to delete
-		s.Len(monitorChanges.MonitorsToDelete, 1)
-		s.Require().Contains(monitorChanges.MonitorsToDelete[0].Id, toDeleteMonitor.Id)
+		s.Len(changes.MonitorsToDelete, 1)
+		s.Require().Contains(changes.MonitorsToDelete[0].Id, toDeleteMonitor.Id)
 
 		// Should have 0 monitors unchanged
-		s.Len(monitorChanges.MonitorsUnchanged, 0)
+		s.Len(changes.MonitorsUnchanged, 0)
 	})
 
 	s.Run("empty_request_no_existing_monitors", func() {
 		requestedMonitors := []*pb.MonitorDefinition{}
 
-		overview, err := GenerateConfigChangesOverview("config-id-no-existing", requestedMonitors, map[string]*pb.MonitorDefinition{})
+		changes, err := generateMonitorChangesOverview("config-id-no-existing", requestedMonitors, map[string]*pb.MonitorDefinition{})
 		s.Require().NoError(err)
-		monitorChanges := overview.MonitorChangesOverview
-		s.Require().NotNil(monitorChanges)
-		s.Require().False(monitorChanges.HasChanges())
-		s.Len(monitorChanges.MonitorsManagedByApp, 0)
-		s.Len(monitorChanges.MonitorsToCreate, 0)
-		s.Len(monitorChanges.MonitorsToDelete, 0)
-		s.Len(monitorChanges.MonitorsChangesOverview, 0)
-		s.Len(monitorChanges.MonitorsUnchanged, 0)
-		s.Len(monitorChanges.MonitorsManagedByApp, 0)
-		s.Len(monitorChanges.MonitorsManagedByOtherConfig, 0)
+		s.Require().NotNil(changes)
+		s.Require().False(changes.HasChanges())
+		s.Len(changes.MonitorsManagedByApp, 0)
+		s.Len(changes.MonitorsToCreate, 0)
+		s.Len(changes.MonitorsToDelete, 0)
+		s.Len(changes.MonitorsChangesOverview, 0)
+		s.Len(changes.MonitorsUnchanged, 0)
+		s.Len(changes.MonitorsManagedByApp, 0)
+		s.Len(changes.MonitorsManagedByOtherConfig, 0)
 	})
 
 	s.Run("empty_request_with_monitors_global_config", func() {
@@ -234,57 +232,54 @@ func (s *MgmtServiceTestSuite) TestConfigChangesOverview() {
 			Source:   pb.MonitorDefinition_SOURCE_API,
 		}
 
-		overview, err := GenerateConfigChangesOverview("", []*pb.MonitorDefinition{}, map[string]*pb.MonitorDefinition{
+		changes, err := generateMonitorChangesOverview("", []*pb.MonitorDefinition{}, map[string]*pb.MonitorDefinition{
 			monitor.Id: monitor,
 		})
 		s.Require().NoError(err)
-		monitorChanges := overview.MonitorChangesOverview
-		s.Require().NotNil(monitorChanges)
-		s.Require().True(monitorChanges.HasChanges())
-		s.Len(monitorChanges.MonitorsManagedByApp, 0)
-		s.Len(monitorChanges.MonitorsToCreate, 0)
-		s.Len(monitorChanges.MonitorsToDelete, 1)
-		s.Equal(monitor.Id, monitorChanges.MonitorsToDelete[0].Id)
-		s.Len(monitorChanges.MonitorsChangesOverview, 0)
-		s.Len(monitorChanges.MonitorsUnchanged, 0)
-		s.Len(monitorChanges.MonitorsManagedByApp, 0)
-		s.Len(monitorChanges.MonitorsManagedByOtherConfig, 0)
+		s.Require().NotNil(changes)
+		s.Require().True(changes.HasChanges())
+		s.Len(changes.MonitorsManagedByApp, 0)
+		s.Len(changes.MonitorsToCreate, 0)
+		s.Len(changes.MonitorsToDelete, 1)
+		s.Equal(monitor.Id, changes.MonitorsToDelete[0].Id)
+		s.Len(changes.MonitorsChangesOverview, 0)
+		s.Len(changes.MonitorsUnchanged, 0)
+		s.Len(changes.MonitorsManagedByApp, 0)
+		s.Len(changes.MonitorsManagedByOtherConfig, 0)
 	})
 
 	s.Run("empty_request_with_monitors", func() {
-		overview, err := GenerateConfigChangesOverview(configId, []*pb.MonitorDefinition{}, map[string]*pb.MonitorDefinition{
+		changes, err := generateMonitorChangesOverview(configId, []*pb.MonitorDefinition{}, map[string]*pb.MonitorDefinition{
 			existingMonitor.Id: existingMonitor,
 		})
 		s.Require().NoError(err)
-		monitorChanges := overview.MonitorChangesOverview
-		s.Require().NotNil(monitorChanges)
-		s.Require().True(monitorChanges.HasChanges())
-		s.Len(monitorChanges.MonitorsManagedByApp, 0)
-		s.Len(monitorChanges.MonitorsToCreate, 0)
-		s.Len(monitorChanges.MonitorsToDelete, 1)
-		s.Equal(existingMonitor.Id, monitorChanges.MonitorsToDelete[0].Id)
-		s.Len(monitorChanges.MonitorsChangesOverview, 0)
-		s.Len(monitorChanges.MonitorsUnchanged, 0)
-		s.Len(monitorChanges.MonitorsManagedByApp, 0)
-		s.Len(monitorChanges.MonitorsManagedByOtherConfig, 0)
+		s.Require().NotNil(changes)
+		s.Require().True(changes.HasChanges())
+		s.Len(changes.MonitorsManagedByApp, 0)
+		s.Len(changes.MonitorsToCreate, 0)
+		s.Len(changes.MonitorsToDelete, 1)
+		s.Equal(existingMonitor.Id, changes.MonitorsToDelete[0].Id)
+		s.Len(changes.MonitorsChangesOverview, 0)
+		s.Len(changes.MonitorsUnchanged, 0)
+		s.Len(changes.MonitorsManagedByApp, 0)
+		s.Len(changes.MonitorsManagedByOtherConfig, 0)
 	})
 
 	s.Run("no_changes", func() {
-		overview, err := GenerateConfigChangesOverview(configId, []*pb.MonitorDefinition{existingMonitor}, map[string]*pb.MonitorDefinition{
+		changes, err := generateMonitorChangesOverview(configId, []*pb.MonitorDefinition{existingMonitor}, map[string]*pb.MonitorDefinition{
 			existingMonitor.Id: existingMonitor,
 		})
 		s.Require().NoError(err)
-		monitorChanges := overview.MonitorChangesOverview
-		s.Require().NotNil(monitorChanges)
-		s.Require().False(monitorChanges.HasChanges())
-		s.Len(monitorChanges.MonitorsManagedByApp, 0)
-		s.Len(monitorChanges.MonitorsToCreate, 0)
-		s.Len(monitorChanges.MonitorsToDelete, 0)
-		s.Len(monitorChanges.MonitorsChangesOverview, 0)
-		s.Len(monitorChanges.MonitorsUnchanged, 1)
-		s.Equal(existingMonitor.Id, monitorChanges.MonitorsUnchanged[0].Id)
-		s.Len(monitorChanges.MonitorsManagedByApp, 0)
-		s.Len(monitorChanges.MonitorsManagedByOtherConfig, 0)
+		s.Require().NotNil(changes)
+		s.Require().False(changes.HasChanges())
+		s.Len(changes.MonitorsManagedByApp, 0)
+		s.Len(changes.MonitorsToCreate, 0)
+		s.Len(changes.MonitorsToDelete, 0)
+		s.Len(changes.MonitorsChangesOverview, 0)
+		s.Len(changes.MonitorsUnchanged, 1)
+		s.Equal(existingMonitor.Id, changes.MonitorsUnchanged[0].Id)
+		s.Len(changes.MonitorsManagedByApp, 0)
+		s.Len(changes.MonitorsManagedByOtherConfig, 0)
 	})
 
 	s.Run("change_monitored_id", func() {
@@ -307,7 +302,7 @@ func (s *MgmtServiceTestSuite) TestConfigChangesOverview() {
 			Severity: pb.Severity_SEVERITY_WARNING,
 			Source:   pb.MonitorDefinition_SOURCE_API,
 		}
-		overview, err := GenerateConfigChangesOverview(configId, []*pb.MonitorDefinition{{
+		changes, err := generateMonitorChangesOverview(configId, []*pb.MonitorDefinition{{
 			Name: "named_monitor",
 			Id:   uuid.NewString(),
 			MonitoredId: &entitiesv1.Identifier{
@@ -329,16 +324,15 @@ func (s *MgmtServiceTestSuite) TestConfigChangesOverview() {
 			monitor.Id: monitor,
 		})
 		s.Require().NoError(err)
-		monitorChanges := overview.MonitorChangesOverview
-		s.Require().NotNil(monitorChanges)
-		s.Require().True(monitorChanges.HasChanges())
-		s.Len(monitorChanges.MonitorsManagedByApp, 0)
-		s.Len(monitorChanges.MonitorsToCreate, 1)
-		s.Len(monitorChanges.MonitorsToDelete, 1)
-		s.Len(monitorChanges.MonitorsChangesOverview, 0)
-		s.Len(monitorChanges.MonitorsUnchanged, 0)
-		s.Len(monitorChanges.MonitorsManagedByApp, 0)
-		s.Len(monitorChanges.MonitorsManagedByOtherConfig, 0)
+		s.Require().NotNil(changes)
+		s.Require().True(changes.HasChanges())
+		s.Len(changes.MonitorsManagedByApp, 0)
+		s.Len(changes.MonitorsToCreate, 1)
+		s.Len(changes.MonitorsToDelete, 1)
+		s.Len(changes.MonitorsChangesOverview, 0)
+		s.Len(changes.MonitorsUnchanged, 0)
+		s.Len(changes.MonitorsManagedByApp, 0)
+		s.Len(changes.MonitorsManagedByOtherConfig, 0)
 	})
 
 	s.Run("change_monitored_id_global_config", func() {
@@ -360,7 +354,7 @@ func (s *MgmtServiceTestSuite) TestConfigChangesOverview() {
 			Severity: pb.Severity_SEVERITY_WARNING,
 			Source:   pb.MonitorDefinition_SOURCE_API,
 		}
-		overview, err := GenerateConfigChangesOverview("", []*pb.MonitorDefinition{{
+		changes, err := generateMonitorChangesOverview("", []*pb.MonitorDefinition{{
 			Name: "named_monitor",
 			Id:   uuid.NewString(),
 			MonitoredId: &entitiesv1.Identifier{
@@ -381,15 +375,14 @@ func (s *MgmtServiceTestSuite) TestConfigChangesOverview() {
 			monitor.Id: monitor,
 		})
 		s.Require().NoError(err)
-		monitorChanges := overview.MonitorChangesOverview
-		s.Require().NotNil(monitorChanges)
-		s.Require().True(monitorChanges.HasChanges())
-		s.Len(monitorChanges.MonitorsManagedByApp, 0)
-		s.Len(monitorChanges.MonitorsToCreate, 1)
-		s.Len(monitorChanges.MonitorsToDelete, 1)
-		s.Len(monitorChanges.MonitorsChangesOverview, 0)
-		s.Len(monitorChanges.MonitorsUnchanged, 0)
-		s.Len(monitorChanges.MonitorsManagedByApp, 0)
-		s.Len(monitorChanges.MonitorsManagedByOtherConfig, 0)
+		s.Require().NotNil(changes)
+		s.Require().True(changes.HasChanges())
+		s.Len(changes.MonitorsManagedByApp, 0)
+		s.Len(changes.MonitorsToCreate, 1)
+		s.Len(changes.MonitorsToDelete, 1)
+		s.Len(changes.MonitorsChangesOverview, 0)
+		s.Len(changes.MonitorsUnchanged, 0)
+		s.Len(changes.MonitorsManagedByApp, 0)
+		s.Len(changes.MonitorsManagedByOtherConfig, 0)
 	})
 }

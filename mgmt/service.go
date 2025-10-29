@@ -78,7 +78,7 @@ func (s *remoteMgmtService) ConfigChangesOverview(
 		}
 	}
 
-	return GenerateConfigChangesOverview(configId, protoMonitors, allFetchedMonitors)
+	return GenerateConfigChangesOverview(configId, protoMonitors, allFetchedMonitors, nil, nil)
 }
 
 func (s *remoteMgmtService) DeployMonitors(
