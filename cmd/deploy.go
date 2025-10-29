@@ -186,7 +186,7 @@ func deployFromYaml(cmd *cobra.Command, args []string) {
 		fmt.Println("✅ Auto-confirmed deployment!")
 	}
 
-	err = mgmtService.DeployMonitors(changesOverview)
+	err = mgmtService.DeployMonitors(changesOverview.MonitorChangesOverview)
 	if err != nil {
 		exitWithError(fmt.Errorf("❌ Error deploying monitors: %v", err))
 	}

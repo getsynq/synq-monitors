@@ -14,7 +14,7 @@ import (
 
 type MgmtService interface {
 	ConfigChangesOverview(protoMonitors []*custommonitorsv1.MonitorDefinition, configId string) (*ChangesOverview, error)
-	DeployMonitors(changesOverview *ChangesOverview) error
+	DeployMonitors(changesOverview *MonitorChangesOverview) error
 	ListMonitors(scope *ListScope) ([]*custommonitorsv1.MonitorDefinition, error)
 }
 
@@ -82,7 +82,7 @@ func (s *remoteMgmtService) ConfigChangesOverview(
 }
 
 func (s *remoteMgmtService) DeployMonitors(
-	changesOverview *ChangesOverview,
+	changesOverview *MonitorChangesOverview,
 ) error {
 	if len(changesOverview.MonitorsToCreate) > 0 {
 		fmt.Println("Creating monitors...")

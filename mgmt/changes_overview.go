@@ -18,6 +18,10 @@ import (
 )
 
 type ChangesOverview struct {
+	MonitorChangesOverview *MonitorChangesOverview
+}
+
+type MonitorChangesOverview struct {
 	MonitorsUnchanged            []*pb.MonitorDefinition
 	MonitorsToCreate             []*pb.MonitorDefinition
 	MonitorsToDelete             []*pb.MonitorDefinition
@@ -27,10 +31,32 @@ type ChangesOverview struct {
 }
 
 func (s *ChangesOverview) HasChanges() bool {
-	return len(s.MonitorsToCreate)+len(s.MonitorsToDelete)+len(s.MonitorsChangesOverview)+len(s.MonitorsManagedByApp)+len(s.MonitorsManagedByOtherConfig) > 0
+	return s.MonitorChangesOverview.HasChanges()
 }
 
 func (s *ChangesOverview) GetBreakingChanges() string {
+	return s.MonitorChangesOverview.GetBreakingChanges()
+}
+
+func (s *ChangesOverview) PrettyPrint() {
+	s.MonitorChangesOverview.PrettyPrint()
+}
+
+func GenerateConfigChangesOverview(configId string, protoMonitors []*pb.MonitorDefinition, fetchedMonitors map[string]*pb.MonitorDefinition) (*ChangesOverview, error) {
+	monitorChangesOverview, err := generateMonitorChangesOverview(configId, protoMonitors, fetchedMonitors)
+	if err != nil {
+		return nil, err
+	}
+	return &ChangesOverview{
+		MonitorChangesOverview: monitorChangesOverview,
+	}, nil
+}
+
+func (s *MonitorChangesOverview) HasChanges() bool {
+	return len(s.MonitorsToCreate)+len(s.MonitorsToDelete)+len(s.MonitorsChangesOverview)+len(s.MonitorsManagedByApp)+len(s.MonitorsManagedByOtherConfig) > 0
+}
+
+func (s *MonitorChangesOverview) GetBreakingChanges() string {
 	breakingChanges := []string{}
 	if len(s.MonitorsManagedByOtherConfig) > 0 {
 		breakingChanges = append(breakingChanges, fmt.Sprintf("  🚫 %d monitors managed by other configs.", len(s.MonitorsManagedByOtherConfig)))
@@ -45,7 +71,7 @@ func (s *ChangesOverview) GetBreakingChanges() string {
 	return strings.Join(breakingChanges, "\n")
 }
 
-func GenerateConfigChangesOverview(configId string, protoMonitors []*pb.MonitorDefinition, fetchedMonitors map[string]*pb.MonitorDefinition) (*ChangesOverview, error) {
+func generateMonitorChangesOverview(configId string, protoMonitors []*pb.MonitorDefinition, fetchedMonitors map[string]*pb.MonitorDefinition) (*MonitorChangesOverview, error) {
 	// Map incoming data
 	monitorIdsInConfig := []string{}
 	for id, monitor := range fetchedMonitors {
@@ -93,7 +119,7 @@ func GenerateConfigChangesOverview(configId string, protoMonitors []*pb.MonitorD
 			continue
 		}
 
-		changes, err := generateChangeOverview(differ, deltaFormatter, fetchedMonitor, monitor)
+		changes, err := generateMonitorChangeOverview(differ, deltaFormatter, fetchedMonitor, monitor)
 		if err != nil {
 			return nil, err
 		}
@@ -104,7 +130,7 @@ func GenerateConfigChangesOverview(configId string, protoMonitors []*pb.MonitorD
 		}
 	}
 
-	return &ChangesOverview{
+	return &MonitorChangesOverview{
 		MonitorsToCreate:             monitorsToCreate,
 		MonitorsToDelete:             monitorsToDelete,
 		MonitorsUnchanged:            monitorsUnchanged,
@@ -114,7 +140,7 @@ func GenerateConfigChangesOverview(configId string, protoMonitors []*pb.MonitorD
 	}, nil
 }
 
-func (s *ChangesOverview) PrettyPrint() {
+func (s *MonitorChangesOverview) PrettyPrint() {
 	// Color definitions
 	green := color.New(color.FgGreen, color.Bold)
 	red := color.New(color.FgRed, color.Bold)
@@ -242,7 +268,7 @@ func (s *ChangesOverview) PrettyPrint() {
 }
 
 // Helper function to extract monitor type from MonitorDefinition
-func (s *ChangesOverview) getMonitorType(monitor *pb.MonitorDefinition) string {
+func (s *MonitorChangesOverview) getMonitorType(monitor *pb.MonitorDefinition) string {
 	if monitor == nil {
 		return "unknown"
 	}
@@ -262,7 +288,7 @@ func (s *ChangesOverview) getMonitorType(monitor *pb.MonitorDefinition) string {
 }
 
 // Helper function to format MonitoredId for display
-func (s *ChangesOverview) formatMonitoredId(id *entitiesv1.Identifier) string {
+func (s *MonitorChangesOverview) formatMonitoredId(id *entitiesv1.Identifier) string {
 	if id == nil {
 		panic("id is nil")
 	}
@@ -275,7 +301,7 @@ func (s *ChangesOverview) formatMonitoredId(id *entitiesv1.Identifier) string {
 	panic("unknown id type")
 }
 
-func generateChangeOverview(
+func generateMonitorChangeOverview(
 	differ *diff.Differ,
 	deltaFormatter *formatter.DeltaFormatter,
 	origin *pb.MonitorDefinition,
@@ -343,11 +369,11 @@ func generateChangeOverview(
 		NewDefinition:    newOverview,
 		Changes:          changes,
 		ChangesDeltaJson: changesDelta,
-		ShouldReset:      shouldReset(origin, newOverview),
+		ShouldReset:      shouldResetMonitor(origin, newOverview),
 	}, nil
 }
 
-func shouldReset(
+func shouldResetMonitor(
 	originDef *pb.MonitorDefinition,
 	newDef *pb.MonitorDefinition,
 ) bool {
