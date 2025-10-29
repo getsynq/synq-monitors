@@ -50,7 +50,7 @@ If no files are provided, it will recursively search for YAML files from the wor
 	Run:  deployFromYaml,
 }
 
-func findFiles(path, extension string) ([]string, error) {
+func findFiles(path string, extensions []string) ([]string, error) {
 	files := []string{}
 
 	err := filepath.Walk(path, func(path string, info os.FileInfo, err error) error {
@@ -62,7 +62,7 @@ func findFiles(path, extension string) ([]string, error) {
 			return nil
 		}
 
-		if filepath.Ext(path) == extension {
+		if slices.Contains(extensions, filepath.Ext(path)) {
 			files = append(files, path)
 		}
 
@@ -100,7 +100,7 @@ func deployFromYaml(cmd *cobra.Command, args []string) {
 		filePaths = args
 	} else {
 		fmt.Println("Parsing files found under working directory")
-		filePaths, err = findFiles(".", ".yaml")
+		filePaths, err = findFiles(".", []string{".yaml", ".yml"})
 		if err != nil {
 			exitWithError(fmt.Errorf("❌ Error finding files: %v", err))
 		}
