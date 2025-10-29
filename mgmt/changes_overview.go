@@ -18,6 +18,7 @@ import (
 )
 
 type ChangesOverview struct {
+	ConfigID                     string
 	MonitorsUnchanged            []*pb.MonitorDefinition
 	MonitorsToCreate             []*pb.MonitorDefinition
 	MonitorsToDelete             []*pb.MonitorDefinition
@@ -105,6 +106,7 @@ func GenerateConfigChangesOverview(configId string, protoMonitors []*pb.MonitorD
 	}
 
 	return &ChangesOverview{
+		ConfigID:                     configId,
 		MonitorsToCreate:             monitorsToCreate,
 		MonitorsToDelete:             monitorsToDelete,
 		MonitorsUnchanged:            monitorsUnchanged,
@@ -124,7 +126,7 @@ func (s *ChangesOverview) PrettyPrint() {
 	bold := color.New(color.Bold)
 
 	fmt.Println()
-	bold.Println("📊 Configuration Changes Overview")
+	bold.Printf("📊 Configuration Changes Overview: %s\n", s.ConfigID)
 	fmt.Println(strings.Repeat("=", 50))
 
 	totalChanges := len(s.MonitorsToCreate) + len(s.MonitorsToDelete) + len(s.MonitorsChangesOverview)
