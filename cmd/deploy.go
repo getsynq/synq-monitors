@@ -149,7 +149,20 @@ func deployFromYaml(cmd *cobra.Command, args []string) {
 			continue
 		}
 
-		duplicateSeen := assignAndValidateUUIDs(workspace, namespace, monitors)
+		sqlTests := lo.FlatMap(parsers, func(item *yaml.VersionedParser, index int) []*sqltestsv1.SqlTest {
+			sqlTests, err := item.ConvertToSqlTests()
+			if err != nil {
+				fmt.Fprintf(os.Stderr, "could not convert to sql tests: %v", err)
+				return []*sqltestsv1.SqlTest{}
+			}
+			return sqlTests
+		})
+		sqlTests, err = resolveTests(pathsConverter, sqlTests)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "could not resolve tests: %v", err)
+			continue
+		}
+		duplicateSeen = assignAndValidateUUIDs(workspace, namespace, monitors, sqlTests)
 		if duplicateSeen {
 			continue
 		}
@@ -157,19 +170,12 @@ func deployFromYaml(cmd *cobra.Command, args []string) {
 		// Conditionally show protobuf output based on the -p flag
 		if deployCmd_printProtobuf {
 			PrintMonitorDefs(monitors)
+			PrintSqlTests(sqlTests)
 		} else {
 			fmt.Println("\n💡 Use -p flag to print protobuf messages in JSON format")
 		}
 		fmt.Println("🎉 Deployment preparation complete!")
 
-		// localDatabaseURL := "postgres://postgres:postgres@localhost:5432/kernel_anomalies?sslmode=disable"
-		// localPostgresConn, err := sqlx.Connect("postgres", localDatabaseURL)
-		// if err != nil {
-		// 	panic(err)
-		// }
-		// defer localPostgresConn.Close()
-		// workspace = "synq"
-		// mgmtService := mgmt.NewMgmtLocalService(ctx, localPostgresConn, workspace)
 		mgmtService := mgmt.NewMgmtRemoteService(ctx, conn)
 
 		// Calculate delta
@@ -203,7 +209,7 @@ func deployFromYaml(cmd *cobra.Command, args []string) {
 			fmt.Println("✅ Auto-confirmed deployment!")
 		}
 
-		err = mgmtService.DeployMonitors(changesOverview)
+		err = mgmtService.DeployMonitors(changesOverview.MonitorChangesOverview)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "❌ Error deploying monitors: %v", err)
 			continue
@@ -213,8 +219,9 @@ func deployFromYaml(cmd *cobra.Command, args []string) {
 	}
 }
 
-func assignAndValidateUUIDs(workspace, namespace string, monitors []*pb.MonitorDefinition) bool {
-	seenUUIDs := map[string]bool{}
+func assignAndValidateUUIDs(workspace, namespace string, monitors []*pb.MonitorDefinition, sqlTests []*sqltestsv1.SqlTest) bool {
+	seenMonitorUUIDs := map[string]bool{}
+	seenTestUUIDs := map[string]bool{}
 	duplicateSeen := false
 
 	// Sanitize UUIDs for monitors.
@@ -222,13 +229,25 @@ func assignAndValidateUUIDs(workspace, namespace string, monitors []*pb.MonitorD
 	for _, protoMonitor := range monitors {
 		protoMonitor.Id = uuidGenerator.GenerateMonitorUUID(protoMonitor)
 
-		if _, exists := seenUUIDs[protoMonitor.Id]; exists {
+		if _, exists := seenMonitorUUIDs[protoMonitor.Id]; exists {
 			duplicateSeen = true
 			fmt.Printf("❌ Duplicate monitor in namespace %s: %+v\n", namespace, protoMonitor)
 		}
 
-		seenUUIDs[protoMonitor.Id] = true
+		seenMonitorUUIDs[protoMonitor.Id] = true
 	}
+
+	for _, protoTest := range sqlTests {
+		protoTest.Id = uuidGenerator.GenerateTestUUID(protoTest)
+
+		if _, exists := seenTestUUIDs[protoTest.Id]; exists {
+			duplicateSeen = true
+			fmt.Printf("❌ Duplicate test in namespace %s: %+v\n", namespace, protoTest)
+		}
+
+		seenTestUUIDs[protoTest.Id] = true
+	}
+
 	return duplicateSeen
 }
 

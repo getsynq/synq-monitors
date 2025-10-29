@@ -3,8 +3,11 @@ package cmd
 import (
 	"testing"
 
+	sqltestsv1 "buf.build/gen/go/getsynq/api/protocolbuffers/go/synq/datachecks/sqltests/v1"
+	testsuggestionsv1 "buf.build/gen/go/getsynq/api/protocolbuffers/go/synq/datachecks/testsuggestions/v1"
 	entitiesv1 "buf.build/gen/go/getsynq/api/protocolbuffers/go/synq/entities/v1"
 	pb "buf.build/gen/go/getsynq/api/protocolbuffers/go/synq/monitors/custom_monitors/v1"
+	"github.com/emicklei/proto"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -28,27 +31,52 @@ func createMonitor(id, configId, path string) *pb.MonitorDefinition {
 	}
 }
 
+func createSqlTest(id, path string, testType proto.Message) *sqltestsv1.SqlTest {
+	return &sqltestsv1.SqlTest{
+		Id:             id,
+		Name:           "name " + id,
+		Description:    "description " + id,
+		RecurrenceRule: "RRULE:FREQ=DAILY;INTERVAL=1",
+		Template: &sqltestsv1.Template{
+			Test: testType.(proto.Message),
+			Identifier: &entitiesv1.Identifier{
+				Id: &entitiesv1.Identifier_SynqPath{
+					SynqPath: &entitiesv1.SynqPathIdentifier{
+						Path: path,
+					},
+				},
+			},
+		},
+	}
+}
+
 func TestAssignAndValidateUUIDs(t *testing.T) {
 	workspace := "test-workspace"
 
 	tests := []struct {
 		name          string
 		monitors      []*pb.MonitorDefinition
+		tests         []*sqltestsv1.SqlTest
 		duplicateSeen bool
 	}{
 		{
-			name: "single_monitor_no_duplicates",
-			monitors: []*pb.MonitorDefinition{
-				createMonitor("monitor1", "config1", "table1"),
-			},
-			duplicateSeen: false,
-		},
-		{
-			name: "multiple_unique_monitors_no_duplicates",
+			name: "multiple_uniques_no_duplicates",
 			monitors: []*pb.MonitorDefinition{
 				createMonitor("monitor1", "config1", "table1"),
 				createMonitor("monitor2", "config2", "table2"),
 				createMonitor("monitor3", "config3", "table3"),
+			},
+			tests: []*sqltestsv1.SqlTest{
+				createSqlTest("", "table1", &sqltestsv1.Template_UniqueTest{
+					UniqueTest: &testsuggestionsv1.UniqueTest{
+						ColumnNames: []string{"column1"},
+					},
+				}),
+				createSqlTest("", "table2", &sqltestsv1.Template_UniqueTest{
+					UniqueTest: &testsuggestionsv1.UniqueTest{
+						ColumnNames: []string{"column2"},
+					},
+				}),
 			},
 			duplicateSeen: false,
 		},
@@ -80,12 +108,13 @@ func TestAssignAndValidateUUIDs(t *testing.T) {
 			duplicateSeen: true,
 		},
 		{
-			name:          "empty_monitors_list",
+			name:          "empty",
 			monitors:      []*pb.MonitorDefinition{},
+			tests:         []*sqltestsv1.SqlTest{},
 			duplicateSeen: false,
 		},
 		{
-			name: "monitors_with_different_config_same_name",
+			name: "different_configs_same_name",
 			monitors: []*pb.MonitorDefinition{
 				createMonitor("monitor1", "config1", "table1"),
 				createMonitor("monitor1", "config2", "table1"),
@@ -104,8 +133,7 @@ func TestAssignAndValidateUUIDs(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			monitors := tt.monitors
-			duplicateSeen := assignAndValidateUUIDs(workspace, "default", monitors)
+			duplicateSeen := assignAndValidateUUIDs(workspace, "default", tt.monitors, tt.tests)
 			assert.Equal(t, tt.duplicateSeen, duplicateSeen)
 		})
 	}
