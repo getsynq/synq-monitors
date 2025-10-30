@@ -209,10 +209,18 @@ func deployFromYaml(cmd *cobra.Command, args []string) {
 			fmt.Println("✅ Auto-confirmed deployment!")
 		}
 
-		err = mgmtService.DeployMonitors(changesOverview.MonitorChangesOverview)
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "❌ Error deploying monitors: %v", err)
-			continue
+		if changesOverview.MonitorChangesOverview.HasChanges() {
+			err = mgmtService.DeployMonitors(changesOverview.MonitorChangesOverview)
+			if err != nil {
+				exitWithError(fmt.Errorf("❌ Error deploying monitors: %v", err))
+			}
+		}
+
+		if changesOverview.SqlTestChangesOverview.HasChanges() {
+			err = mgmtService.DeploySqlTests(changesOverview.SqlTestChangesOverview)
+			if err != nil {
+				exitWithError(fmt.Errorf("❌ Error deploying sql tests: %v", err))
+			}
 		}
 
 		fmt.Println("✅ Deployment complete!")

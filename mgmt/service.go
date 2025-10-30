@@ -17,6 +17,7 @@ import (
 type MgmtService interface {
 	ConfigChangesOverview(protoMonitors []*custommonitorsv1.MonitorDefinition, protoSqlTests []*sqltestsv1.SqlTest, configId string) (*ChangesOverview, error)
 	DeployMonitors(changesOverview *MonitorChangesOverview) error
+	DeploySqlTests(changesOverview *SqlTestChangesOverview) error
 	ListMonitors(scope *ListScope) ([]*custommonitorsv1.MonitorDefinition, error)
 	ListSqlTests(scope *ListScope) ([]*sqltestsv1.SqlTest, error)
 }
@@ -73,8 +74,11 @@ func (s *remoteMgmtService) ConfigChangesOverview(
 		return nil, err
 	}
 	for _, st := range configSqlTestsResp.SqlTests {
-		allFetchedSqlTests[st.Id] = st
-		sqlTestIdsInConfig = append(sqlTestIdsInConfig, st.Id)
+		// TODO: Remove this once we have a way to get sql tests by config id and source
+		if st.Template != nil {
+			allFetchedSqlTests[st.Id] = st
+			sqlTestIdsInConfig = append(sqlTestIdsInConfig, st.Id)
+		}
 	}
 
 	// Get requested monitors not in config
@@ -109,7 +113,10 @@ func (s *remoteMgmtService) ConfigChangesOverview(
 			return nil, err
 		}
 		for _, st := range sqlTestsResp.SqlTests {
-			allFetchedSqlTests[st.Id] = st
+			// TODO: Remove this once we have a way to get sql tests by config id and source
+			if st.Template != nil {
+				allFetchedSqlTests[st.Id] = st
+			}
 		}
 	}
 
@@ -161,6 +168,56 @@ func (s *remoteMgmtService) DeployMonitors(
 	}
 
 	return nil
+}
+
+func (s *remoteMgmtService) DeploySqlTests(
+	changesOverview *SqlTestChangesOverview,
+) error {
+	// implement this in same way as DeployMonitors
+	if len(changesOverview.SqlTestsToCreate) > 0 {
+		fmt.Println("Creating SQL tests...")
+		_, err := s.sqlTestsService.BatchUpsertSqlTests(s.ctx, &sqltestsv1.BatchUpsertSqlTestsRequest{
+			SqlTests: changesOverview.SqlTestsToCreate,
+		})
+		if err != nil {
+			return err
+		}
+	}
+
+	if len(changesOverview.SqlTestsToDelete) > 0 {
+		fmt.Println("Deleting SQL tests...")
+		_, err := s.sqlTestsService.BatchDeleteSqlTests(s.ctx, &sqltestsv1.BatchDeleteSqlTestsRequest{
+			Ids: lo.Map(changesOverview.SqlTestsToDelete, func(sqlTest *sqltestsv1.SqlTest, _ int) string {
+				return sqlTest.Id
+			}),
+		})
+
+		if err != nil {
+			return err
+		}
+	}
+
+	if len(changesOverview.SqlTestsChangesOverview) > 0 {
+		fmt.Println("Updating SQL tests...")
+		newDefinitions := lo.Map(changesOverview.SqlTestsChangesOverview, func(changeOverview *SqlTestChangeOverview, _ int) *sqltestsv1.SqlTest {
+			return changeOverview.NewSqlTest
+		})
+		// TODO: Implement this once we have a way to reset sql tests
+		// testIdsToReset := lo.FilterMap(changesOverview.SqlTestsChangesOverview, func(changeOverview *SqlTestChangeOverview, _ int) (string, bool) {
+		// 	return changeOverview.SqlTestId, changeOverview.ShouldReset
+		// })
+
+		_, err := s.sqlTestsService.BatchUpsertSqlTests(s.ctx, &sqltestsv1.BatchUpsertSqlTestsRequest{
+			// SqlTestIdsToReset: testIdsToReset,
+			SqlTests: newDefinitions,
+		})
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+
 }
 
 type ListScope struct {

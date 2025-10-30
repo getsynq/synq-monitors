@@ -169,6 +169,13 @@ func generateMonitorChangesOverview(configId string, protoMonitors []*pb.Monitor
 }
 
 func generateSqlTestChangesOverview(configId string, protoSqlTests []*sqltestsv1.SqlTest, fetchedSqlTests map[string]*sqltestsv1.SqlTest) (*SqlTestChangesOverview, error) {
+	// TODO: Use this once we have a way to get sql tests by config id and source
+	// sqlTestIdsInConfig := []string{}
+	// for id, sqlTest := range fetchedSqlTests {
+	// 	if sqlTest.ConfigId == configId {
+	// 		sqlTestIdsInConfig = append(sqlTestIdsInConfig, id)
+	// 	}
+	// }
 	requestedSqlTests := map[string]*sqltestsv1.SqlTest{}
 	for _, pst := range protoSqlTests {
 		requestedSqlTests[pst.Id] = pst
