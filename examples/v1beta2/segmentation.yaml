@@ -1,3 +1,4 @@
+# yaml-language-server: $schema=../../schema.json
 # Create a single volume monitor for runs table with segmentation by run_status. It will create specific time series for every possible value of run_status.
 
 version: v1beta2

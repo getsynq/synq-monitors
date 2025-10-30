@@ -1,3 +1,4 @@
+# yaml-language-server: $schema=../../schema.json
 # Create a volume monitors for two tables, each identified differently by db coordinates and dot notation path
 
 version: v1beta2

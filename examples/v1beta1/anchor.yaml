@@ -1,3 +1,4 @@
+# yaml-language-server: $schema=../../schema.json
 namespace: "data-team-pipeline"
 
 volume_config: &volume_config

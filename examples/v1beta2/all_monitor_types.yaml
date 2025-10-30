@@ -1,4 +1,4 @@
-# yaml-language-server: $schema=../../schemas/v1beta2.json
+# yaml-language-server: $schema=../../schema.json
 
 version: v1beta2
 namespace: financial_data

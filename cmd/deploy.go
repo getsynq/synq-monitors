@@ -39,15 +39,19 @@ func init() {
 }
 
 var deployCmd = &cobra.Command{
-	Use:   "deploy",
+	Use:   "deploy [FILES...]",
 	Short: "Deploy custom monitors from YAML configuration",
-	Long: `Deploy custom monitors by parsing YAML configuration and converting to protobuf.
-Shows YAML preview and asks for confirmation before proceeding.`,
+	Long: `Deploy custom monitors by parsing YAML configuration files.
+
+Before deploying, it prints what changes will be made and prompts for confirmation,
+unless --auto-confirm is set.
+
+If no files are provided, it will recursively search for YAML files from the working directory.`,
 	Args: cobra.ArbitraryArgs,
 	Run:  deployFromYaml,
 }
 
-func findFiles(path, extension string) ([]string, error) {
+func findFiles(path string, extensions []string) ([]string, error) {
 	files := []string{}
 
 	err := filepath.Walk(path, func(path string, info os.FileInfo, err error) error {
@@ -59,7 +63,7 @@ func findFiles(path, extension string) ([]string, error) {
 			return nil
 		}
 
-		if filepath.Ext(path) == extension {
+		if slices.Contains(extensions, filepath.Ext(path)) {
 			files = append(files, path)
 		}
 
@@ -97,7 +101,7 @@ func deployFromYaml(cmd *cobra.Command, args []string) {
 		filePaths = args
 	} else {
 		fmt.Println("Parsing files found under working directory")
-		filePaths, err = findFiles(".", ".yaml")
+		filePaths, err = findFiles(".", []string{".yaml", ".yml"})
 		if err != nil {
 			exitWithError(fmt.Errorf("❌ Error finding files: %v", err))
 		}
