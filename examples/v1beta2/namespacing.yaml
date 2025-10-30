@@ -1,3 +1,4 @@
+# yaml-language-server: $schema=../../schema.json
 # Monitors change for a given namespace is atomic operation - we collect
 # all defined monitors in code, diff them with current state in Synq and
 # apply the changes. Creating namespaces allows different teams to manage
