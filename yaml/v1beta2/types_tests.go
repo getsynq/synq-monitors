@@ -14,6 +14,7 @@ type TestInline interface {
 	GetName() string
 	GetDescription() string
 	GetSchedule() *SimpleSchedule
+	GetSeverity() string
 }
 type isTestImpl struct{}
 
@@ -198,4 +199,8 @@ func (t TestBase) GetDescription() string {
 
 func (t TestBase) GetSchedule() *SimpleSchedule {
 	return &t.Schedule
+}
+
+func (t TestBase) GetSeverity() string {
+	return t.Severity
 }

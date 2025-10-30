@@ -261,6 +261,10 @@ func generateSqlTestChangeOverview(
 		return nil, errors.New("origin and new sql test must have the same id")
 	}
 
+	// Remove platform and sql expression from origin to avoid diffing them
+	origin.Platform = nil
+	origin.SqlExpression = ""
+
 	originJson, err := protojson.Marshal(origin)
 	if err != nil {
 		return nil, err
@@ -284,7 +288,7 @@ func generateSqlTestChangeOverview(
 	changes := ""
 	changesDelta := "{}"
 	if diff.Modified() {
-		asciiFormatter := formatter.NewAsciiFormatter(originMap, formatter.AsciiFormatterConfig{})
+		asciiFormatter := formatter.NewAsciiFormatter(originMap, formatter.AsciiFormatterConfig{ShowArrayIndex: true})
 		changesDelta, err = deltaFormatter.Format(diff)
 		if err != nil {
 			return nil, err

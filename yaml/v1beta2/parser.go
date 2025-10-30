@@ -114,7 +114,7 @@ func (p *YAMLParser) ConvertToMonitorDefinitions() ([]*pb.MonitorDefinition, err
 				)
 			}
 
-			p.applySeverity(monitor, yamlMonitor.GetMonitorSeverity())
+			p.applyMonitorSeverity(monitor, yamlMonitor.GetMonitorSeverity())
 
 			err := p.applyMode(monitor, yamlMonitor.GetMonitorMode(), &entity)
 			if err.HasErrors() {
@@ -172,6 +172,8 @@ func (p *YAMLParser) ConvertToSqlTests() ([]*sqltestsv1.SqlTest, error) {
 				continue
 			}
 
+			p.applyTestSeverity(test, yamlTest.GetSeverity())
+
 			if _, ok := existingTestIds[test.Id]; ok {
 				errors = append(errors, ConversionError{
 					Field:   "id",
@@ -221,15 +223,27 @@ func (p *YAMLParser) createBaseMonitor(id, name, description, entityId, timePart
 	return monitor
 }
 
-func (p *YAMLParser) applySeverity(monitor *pb.MonitorDefinition, severity string) {
+func (p *YAMLParser) applyMonitorSeverity(monitor *pb.MonitorDefinition, severity string) {
 	if p.yamlConfig.Defaults != nil && severity == "" {
 		severity = p.yamlConfig.Defaults.Severity
 	}
 
-	if parsedSeverity, ok := parseSeverity(severity); ok {
+	if parsedSeverity, ok := parseMonitorSeverity(severity); ok {
 		monitor.Severity = parsedSeverity
 	} else {
 		monitor.Severity = pb.Severity_SEVERITY_ERROR
+	}
+}
+
+func (p *YAMLParser) applyTestSeverity(test *sqltestsv1.SqlTest, severity string) {
+	if p.yamlConfig.Defaults != nil && severity == "" {
+		severity = p.yamlConfig.Defaults.Severity
+	}
+
+	if parsedSeverity, ok := parseTestSeverity(severity); ok {
+		test.Severity = parsedSeverity
+	} else {
+		test.Severity = sqltestsv1.Severity_SEVERITY_ERROR
 	}
 }
 
@@ -369,14 +383,29 @@ func (p *YAMLParser) applyOptionalFields(monitor *pb.MonitorDefinition, yamlMoni
 	return errors
 }
 
-func parseSeverity(severity string) (pb.Severity, bool) {
+func parseMonitorSeverity(severity string) (pb.Severity, bool) {
 	switch strings.ToUpper(severity) {
+	case "INFO":
+		return pb.Severity_SEVERITY_INFO, true
 	case "WARNING", "WARN":
 		return pb.Severity_SEVERITY_WARNING, true
 	case "ERROR", "":
 		return pb.Severity_SEVERITY_ERROR, true
 	default:
 		return pb.Severity_SEVERITY_UNSPECIFIED, false
+	}
+}
+
+func parseTestSeverity(severity string) (sqltestsv1.Severity, bool) {
+	switch strings.ToUpper(severity) {
+	case "INFO":
+		return sqltestsv1.Severity_SEVERITY_INFO, true
+	case "WARNING", "WARN":
+		return sqltestsv1.Severity_SEVERITY_WARNING, true
+	case "ERROR", "":
+		return sqltestsv1.Severity_SEVERITY_ERROR, true
+	default:
+		return sqltestsv1.Severity_SEVERITY_UNSPECIFIED, false
 	}
 }
 
