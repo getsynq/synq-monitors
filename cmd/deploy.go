@@ -164,8 +164,9 @@ func deployFromYaml(cmd *cobra.Command, args []string) {
 		if err != nil {
 			exitWithError(fmt.Errorf("could not resolve tests: %v", err))
 		}
-		duplicateSeen := assignAndValidateUUIDs(workspace, namespace, monitors, sqlTests)
-		if duplicateSeen {
+		duplicates := assignAndValidateUUIDs(workspace, namespace, monitors, sqlTests)
+		if duplicates.HasDuplicates() {
+			printGroupedDuplicates(duplicates, namespace)
 			continue
 		}
 
@@ -229,36 +230,140 @@ func deployFromYaml(cmd *cobra.Command, args []string) {
 	}
 }
 
-func assignAndValidateUUIDs(workspace, namespace string, monitors []*pb.MonitorDefinition, sqlTests []*sqltestsv1.SqlTest) bool {
-	seenMonitorUUIDs := map[string]bool{}
-	seenTestUUIDs := map[string]bool{}
-	duplicateSeen := false
+// DuplicateGroup holds all items that share the same UUID
+type DuplicateGroup struct {
+	UUID     string
+	Items    []interface{}
+	ItemType string // "monitor" or "test"
+}
 
-	// Sanitize UUIDs for monitors.
+// Duplicates holds all duplicate groups for monitors and tests
+type Duplicates struct {
+	MonitorGroups []DuplicateGroup
+	TestGroups    []DuplicateGroup
+}
+
+func (d *Duplicates) HasDuplicates() bool {
+	return len(d.MonitorGroups) > 0 || len(d.TestGroups) > 0
+}
+
+func assignAndValidateUUIDs(workspace, namespace string, monitors []*pb.MonitorDefinition, sqlTests []*sqltestsv1.SqlTest) *Duplicates {
+	// Group all items by UUID
+	monitorDuplicates := map[string][]*pb.MonitorDefinition{}
+	testDuplicates := map[string][]*sqltestsv1.SqlTest{}
+
+	// Sanitize UUIDs and group monitors by UUID
 	uuidGenerator := uuid.NewUUIDGenerator(workspace)
 	for _, protoMonitor := range monitors {
 		protoMonitor.Id = uuidGenerator.GenerateMonitorUUID(protoMonitor)
-
-		if _, exists := seenMonitorUUIDs[protoMonitor.Id]; exists {
-			duplicateSeen = true
-			fmt.Printf("❌ Duplicate monitor in namespace %s: %+v\n", namespace, protoMonitor)
-		}
-
-		seenMonitorUUIDs[protoMonitor.Id] = true
+		monitorDuplicates[protoMonitor.Id] = append(monitorDuplicates[protoMonitor.Id], protoMonitor)
 	}
 
+	// Sanitize UUIDs and group tests by UUID
 	for _, protoTest := range sqlTests {
 		protoTest.Id = uuidGenerator.GenerateTestUUID(protoTest)
-
-		if _, exists := seenTestUUIDs[protoTest.Id]; exists {
-			duplicateSeen = true
-			fmt.Printf("❌ Duplicate test in namespace %s: %+v\n", namespace, protoTest)
-		}
-
-		seenTestUUIDs[protoTest.Id] = true
+		testDuplicates[protoTest.Id] = append(testDuplicates[protoTest.Id], protoTest)
 	}
 
-	return duplicateSeen
+	// Filter out groups with only 1 item (no duplicates) and compose result
+	duplicates := &Duplicates{
+		MonitorGroups: []DuplicateGroup{},
+		TestGroups:    []DuplicateGroup{},
+	}
+
+	for uuid, items := range monitorDuplicates {
+		if len(items) > 1 {
+			groupItems := make([]interface{}, len(items))
+			for i, item := range items {
+				groupItems[i] = item
+			}
+			duplicates.MonitorGroups = append(duplicates.MonitorGroups, DuplicateGroup{
+				UUID:     uuid,
+				Items:    groupItems,
+				ItemType: "monitor",
+			})
+		}
+	}
+
+	for uuid, items := range testDuplicates {
+		if len(items) > 1 {
+			groupItems := make([]interface{}, len(items))
+			for i, item := range items {
+				groupItems[i] = item
+			}
+			duplicates.TestGroups = append(duplicates.TestGroups, DuplicateGroup{
+				UUID:     uuid,
+				Items:    groupItems,
+				ItemType: "test",
+			})
+		}
+	}
+
+	return duplicates
+}
+
+// printGroupedDuplicates prints all duplicates grouped by UUID in a clear, readable format
+func printGroupedDuplicates(duplicates *Duplicates, namespace string) {
+	fmt.Printf("\n❌ Duplicates detected in namespace '%s':\n", namespace)
+	fmt.Println(strings.Repeat("=", 70))
+
+	// Print monitor duplicates
+	for _, group := range duplicates.MonitorGroups {
+		fmt.Printf("\n📊 Duplicate Monitor UUID: %s\n", group.UUID)
+		fmt.Printf("   Found %d monitor(s) with the same UUID:\n", len(group.Items))
+		fmt.Println(strings.Repeat("-", 70))
+
+		for i, item := range group.Items {
+			if monitor, ok := item.(*pb.MonitorDefinition); ok {
+				fmt.Printf("  %d. Name:       %s\n", i+1, monitor.Name)
+				if monitor.MonitoredId != nil {
+					if synqPath := monitor.MonitoredId.GetSynqPath(); synqPath != nil {
+						fmt.Printf("     Monitored:  %s\n", synqPath.Path)
+					}
+				}
+				// Show monitor type
+				switch monitor.GetMonitor().(type) {
+				case *pb.MonitorDefinition_Volume:
+					fmt.Printf("     Type:       volume\n")
+				case *pb.MonitorDefinition_Freshness:
+					fmt.Printf("     Type:       freshness\n")
+				case *pb.MonitorDefinition_FieldStats:
+					fmt.Printf("     Type:       field_stats\n")
+				case *pb.MonitorDefinition_CustomNumeric:
+					fmt.Printf("     Type:       custom_numeric\n")
+				}
+				if i < len(group.Items)-1 {
+					fmt.Println()
+				}
+			}
+		}
+		fmt.Println(strings.Repeat("-", 70))
+	}
+
+	// Print test duplicates
+	for _, group := range duplicates.TestGroups {
+		fmt.Printf("\n🧪 Duplicate Test UUID: %s\n", group.UUID)
+		fmt.Printf("   Found %d test(s) with the same UUID:\n", len(group.Items))
+		fmt.Println(strings.Repeat("-", 70))
+
+		for i, item := range group.Items {
+			if test, ok := item.(*sqltestsv1.SqlTest); ok {
+				fmt.Printf("  %d. Name:       %s\n", i+1, test.Name)
+				if test.Template != nil && test.Template.Identifier != nil {
+					if synqPath := test.Template.Identifier.GetSynqPath(); synqPath != nil {
+						fmt.Printf("     Monitored:  %s\n", synqPath.Path)
+					}
+				}
+				if i < len(group.Items)-1 {
+					fmt.Println()
+				}
+			}
+		}
+		fmt.Println(strings.Repeat("-", 70))
+	}
+
+	fmt.Println(strings.Repeat("=", 70))
+	fmt.Println()
 }
 
 func getParser(path string) (*yaml.VersionedParser, error) {
