@@ -233,82 +233,6 @@ func generateSqlTestChangesOverview(configId string, protoSqlTests []*sqltestsv1
 	}, nil
 }
 
-func generateSqlTestChangeOverview(
-	differ *diff.Differ,
-	deltaFormatter *formatter.DeltaFormatter,
-	origin *sqltestsv1.SqlTest,
-	newTest *sqltestsv1.SqlTest,
-) (*SqlTestChangeOverview, error) {
-	if origin == nil && newTest == nil {
-		return nil, errors.New("origin and new sql test cannot be nil")
-	}
-
-	if origin == nil {
-		return &SqlTestChangeOverview{
-			SqlTestId:  newTest.Id,
-			NewSqlTest: newTest,
-		}, nil
-	}
-
-	if newTest == nil {
-		return &SqlTestChangeOverview{
-			SqlTestId:     origin.Id,
-			OriginSqlTest: origin,
-		}, nil
-	}
-
-	if origin.Id != newTest.Id {
-		return nil, errors.New("origin and new sql test must have the same id")
-	}
-
-	// Remove platform and sql expression from origin to avoid diffing them
-	origin.Platform = nil
-	origin.SqlExpression = ""
-
-	originJson, err := protojson.Marshal(origin)
-	if err != nil {
-		return nil, err
-	}
-	var originMap map[string]interface{}
-	err = json.Unmarshal(originJson, &originMap)
-	if err != nil {
-		return nil, err
-	}
-
-	newTestJson, err := protojson.Marshal(newTest)
-	if err != nil {
-		return nil, err
-	}
-
-	diff, err := differ.Compare(originJson, newTestJson)
-	if err != nil {
-		return nil, err
-	}
-
-	changes := ""
-	changesDelta := "{}"
-	if diff.Modified() {
-		asciiFormatter := formatter.NewAsciiFormatter(originMap, formatter.AsciiFormatterConfig{ShowArrayIndex: true})
-		changesDelta, err = deltaFormatter.Format(diff)
-		if err != nil {
-			return nil, err
-		}
-		changes, err = asciiFormatter.Format(diff)
-		if err != nil {
-			return nil, err
-		}
-	}
-
-	return &SqlTestChangeOverview{
-		SqlTestId:        origin.Id,
-		OriginSqlTest:    origin,
-		NewSqlTest:       newTest,
-		Changes:          changes,
-		ChangesDeltaJson: changesDelta,
-		ShouldReset:      false, // SQL tests don't have reset logic yet
-	}, nil
-}
-
 func (s *MonitorChangesOverview) PrettyPrint() {
 	// Color definitions
 	green := color.New(color.FgGreen, color.Bold)
@@ -703,6 +627,82 @@ func generateMonitorChangeOverview(
 	}, nil
 }
 
+func generateSqlTestChangeOverview(
+	differ *diff.Differ,
+	deltaFormatter *formatter.DeltaFormatter,
+	origin *sqltestsv1.SqlTest,
+	newTest *sqltestsv1.SqlTest,
+) (*SqlTestChangeOverview, error) {
+	if origin == nil && newTest == nil {
+		return nil, errors.New("origin and new sql test cannot be nil")
+	}
+
+	if origin == nil {
+		return &SqlTestChangeOverview{
+			SqlTestId:  newTest.Id,
+			NewSqlTest: newTest,
+		}, nil
+	}
+
+	if newTest == nil {
+		return &SqlTestChangeOverview{
+			SqlTestId:     origin.Id,
+			OriginSqlTest: origin,
+		}, nil
+	}
+
+	if origin.Id != newTest.Id {
+		return nil, errors.New("origin and new sql test must have the same id")
+	}
+
+	// Remove platform and sql expression from origin to avoid diffing them
+	origin.Platform = nil
+	origin.SqlExpression = ""
+
+	originJson, err := protojson.Marshal(origin)
+	if err != nil {
+		return nil, err
+	}
+	var originMap map[string]interface{}
+	err = json.Unmarshal(originJson, &originMap)
+	if err != nil {
+		return nil, err
+	}
+
+	newTestJson, err := protojson.Marshal(newTest)
+	if err != nil {
+		return nil, err
+	}
+
+	diff, err := differ.Compare(originJson, newTestJson)
+	if err != nil {
+		return nil, err
+	}
+
+	changes := ""
+	changesDelta := "{}"
+	if diff.Modified() {
+		asciiFormatter := formatter.NewAsciiFormatter(originMap, formatter.AsciiFormatterConfig{ShowArrayIndex: true})
+		changesDelta, err = deltaFormatter.Format(diff)
+		if err != nil {
+			return nil, err
+		}
+		changes, err = asciiFormatter.Format(diff)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	return &SqlTestChangeOverview{
+		SqlTestId:        origin.Id,
+		OriginSqlTest:    origin,
+		NewSqlTest:       newTest,
+		Changes:          changes,
+		ChangesDeltaJson: changesDelta,
+		ShouldReset:      shouldResetSqlTest(origin, newTest),
+	}, nil
+}
+
 func shouldResetMonitor(
 	originDef *pb.MonitorDefinition,
 	newDef *pb.MonitorDefinition,
@@ -741,6 +741,72 @@ func shouldResetMonitor(
 	}
 
 	if originDef.GetSegmentation().GetExpression() != newDef.GetSegmentation().GetExpression() {
+		return true
+	}
+
+	return false
+}
+
+func shouldResetSqlTest(
+	originDef *sqltestsv1.SqlTest,
+	newDef *sqltestsv1.SqlTest,
+) bool {
+	if originDef.GetRecurrenceRule() != newDef.GetRecurrenceRule() {
+		return true
+	}
+
+	if originDef.GetTemplate() != nil && newDef.GetTemplate() != nil {
+		if originDef.GetTemplate().WhichTest() != newDef.GetTemplate().WhichTest() {
+			return true
+		}
+		// Even if same type, check if underlying struct changed
+		switch originDef.GetTemplate().WhichTest() {
+		case sqltestsv1.Template_NotNullTest_case:
+			if !reflect.DeepEqual(originDef.GetTemplate().GetNotNullTest(), newDef.GetTemplate().GetNotNullTest()) {
+				return true
+			}
+		case sqltestsv1.Template_EmptyTest_case:
+			if !reflect.DeepEqual(originDef.GetTemplate().GetEmptyTest(), newDef.GetTemplate().GetEmptyTest()) {
+				return true
+			}
+		case sqltestsv1.Template_AcceptedValuesTest_case:
+			if !reflect.DeepEqual(originDef.GetTemplate().GetAcceptedValuesTest(), newDef.GetTemplate().GetAcceptedValuesTest()) {
+				return true
+			}
+		case sqltestsv1.Template_RejectedValuesTest_case:
+			if !reflect.DeepEqual(originDef.GetTemplate().GetRejectedValuesTest(), newDef.GetTemplate().GetRejectedValuesTest()) {
+				return true
+			}
+		case sqltestsv1.Template_UniqueTest_case:
+			if !reflect.DeepEqual(originDef.GetTemplate().GetUniqueTest(), newDef.GetTemplate().GetUniqueTest()) {
+				return true
+			}
+		case sqltestsv1.Template_FreshnessTest_case:
+			if !reflect.DeepEqual(originDef.GetTemplate().GetFreshnessTest(), newDef.GetTemplate().GetFreshnessTest()) {
+				return true
+			}
+		case sqltestsv1.Template_MinMaxTest_case:
+			if !reflect.DeepEqual(originDef.GetTemplate().GetMinMaxTest(), newDef.GetTemplate().GetMinMaxTest()) {
+				return true
+			}
+		case sqltestsv1.Template_RelativeTimeTest_case:
+			if !reflect.DeepEqual(originDef.GetTemplate().GetRelativeTimeTest(), newDef.GetTemplate().GetRelativeTimeTest()) {
+				return true
+			}
+		case sqltestsv1.Template_BusinessRuleTest_case:
+			if !reflect.DeepEqual(originDef.GetTemplate().GetBusinessRuleTest(), newDef.GetTemplate().GetBusinessRuleTest()) {
+				return true
+			}
+		case sqltestsv1.Template_MinValueTest_case:
+			if !reflect.DeepEqual(originDef.GetTemplate().GetMinValueTest(), newDef.GetTemplate().GetMinValueTest()) {
+				return true
+			}
+		case sqltestsv1.Template_MaxValueTest_case:
+			if !reflect.DeepEqual(originDef.GetTemplate().GetMaxValueTest(), newDef.GetTemplate().GetMaxValueTest()) {
+				return true
+			}
+		}
+	} else if (originDef.GetTemplate() == nil) != (newDef.GetTemplate() == nil) {
 		return true
 	}
 
