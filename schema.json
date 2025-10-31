@@ -24,6 +24,7 @@
         "severity": {
           "type": "string",
           "enum": [
+            "INFO",
             "WARNING",
             "ERROR"
           ]

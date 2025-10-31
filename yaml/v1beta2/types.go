@@ -11,7 +11,7 @@ import (
 )
 
 type Defaults struct {
-	Severity         string    `yaml:"severity,omitempty"          jsonschema:"enum=WARNING,enum=ERROR"`
+	Severity         string    `yaml:"severity,omitempty"          jsonschema:"enum=INFO,enum=WARNING,enum=ERROR"`
 	TimePartitioning string    `yaml:"time_partitioning,omitempty"`
 	Schedule         *Schedule `yaml:"schedule,omitempty"`
 	Mode             *Mode     `yaml:"mode,omitempty"`
