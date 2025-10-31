@@ -440,7 +440,6 @@ func (s *SqlTestChangesOverview) PrettyPrint() {
 			fmt.Printf("  %d. ", i+1)
 			red.Printf("%s", sqlTest.Name)
 			fmt.Printf(" (%s)\n", sqlTest.Id)
-			fmt.Println("sqlTest", sqlTest)
 			if sqlTest.Template != nil && sqlTest.Template.Identifier != nil {
 				gray.Printf("     → Monitored: %s\n", s.formatSqlTestMonitoredId(sqlTest.Template.Identifier))
 			}
