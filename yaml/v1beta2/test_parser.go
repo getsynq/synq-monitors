@@ -1,14 +1,37 @@
 package v1beta2
 
 import (
+	"bytes"
 	"fmt"
+	"io/fs"
+	"strings"
+	"text/template"
 	"time"
+
+	"embed"
 
 	sqltestsv1 "buf.build/gen/go/getsynq/api/protocolbuffers/go/synq/datachecks/sqltests/v1"
 	testsuggestionsv1 "buf.build/gen/go/getsynq/api/protocolbuffers/go/synq/datachecks/testsuggestions/v1"
 	entitiesv1 "buf.build/gen/go/getsynq/api/protocolbuffers/go/synq/entities/v1"
+	"github.com/getsynq/monitors_mgmt/yaml/v1beta2/templates"
 	"github.com/teambition/rrule-go"
 )
+
+//go:embed templates/test_name_template.tmpl
+var testNameTemplate embed.FS
+
+var testNameTemplateParsed *template.Template
+
+func init() {
+	tmplContent, err := fs.ReadFile(testNameTemplate, "templates/test_name_template.tmpl")
+	if err != nil {
+		panic(fmt.Sprintf("failed to read test name template: %v", err))
+	}
+	testNameTemplateParsed = template.Must(template.New("testName").Funcs(template.FuncMap{
+		"snakeToCamel": templates.SnakeToCamel,
+		"join":         strings.Join,
+	}).Parse(string(tmplContent)))
+}
 
 // convertSingleTest converts a single YAML test to a SqlTest protobuf
 func convertSingleTest(
@@ -46,9 +69,23 @@ func convertSingleTest(
 		})
 	}
 
+	name := yamlTest.GetName()
+	if name == "" {
+		generatedName, err := generateTestName(yamlTest)
+		if err != nil {
+			errors = append(errors, ConversionError{
+				Field:   "name",
+				Message: fmt.Sprintf("failed to generate test name: %v", err),
+				Test:    yamlTest.GetId(),
+			})
+		} else {
+			name = generatedName
+		}
+	}
+
 	proto := &sqltestsv1.SqlTest{
 		Id:             yamlTest.GetId(),
-		Name:           yamlTest.GetName(),
+		Name:           name,
 		Description:    yamlTest.GetDescription(),
 		RecurrenceRule: recurrenceRule,
 		Severity:       parsedSeverity,
@@ -148,7 +185,7 @@ func convertSingleTest(
 	default:
 		errors = append(errors, ConversionError{
 			Field:   "type",
-			Message: fmt.Sprintf("unsupported test type: %s", t),
+			Message: fmt.Sprintf("unsupported test type: %T", t),
 		})
 	}
 
@@ -435,4 +472,17 @@ func convertBusinessRuleTest(yamlTest *BusinessRuleTest) (*sqltestsv1.Template_B
 			SqlExpression: yamlTest.SQLExpression,
 		},
 	}, nil
+}
+
+func generateTestName(yamlTest TestInline) (string, error) {
+	var buf bytes.Buffer
+	err := testNameTemplateParsed.Execute(&buf, map[string]interface{}{
+		"Type":    yamlTest.GetType(),
+		"Columns": yamlTest.GetColumns(),
+	})
+	if err != nil {
+		return "", fmt.Errorf("failed to execute template: %w", err)
+	}
+
+	return buf.String(), nil
 }

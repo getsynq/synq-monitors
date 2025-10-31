@@ -10,11 +10,13 @@ import (
 
 type TestInline interface {
 	isTest()
+	GetType() string
 	GetId() string
 	GetName() string
 	GetDescription() string
 	GetSchedule() *SimpleSchedule
 	GetSeverity() string
+	GetColumns() []string
 }
 type isTestImpl struct{}
 
@@ -123,6 +125,19 @@ type (
 	}
 )
 
+// check all all types below implement TestInline
+var _ TestInline = NotNullTest{}
+var _ TestInline = EmptyTest{}
+var _ TestInline = UniqueTest{}
+var _ TestInline = AcceptedValuesTest{}
+var _ TestInline = RejectedValuesTest{}
+var _ TestInline = MinMaxTest{}
+var _ TestInline = MinValueTest{}
+var _ TestInline = MaxValueTest{}
+var _ TestInline = FreshnessTest{}
+var _ TestInline = RelativeTimeTest{}
+var _ TestInline = BusinessRuleTest{}
+
 type (
 	NotNullTest struct {
 		TestBase        `yaml:",inline"`
@@ -203,4 +218,52 @@ func (t TestBase) GetSchedule() *SimpleSchedule {
 
 func (t TestBase) GetSeverity() string {
 	return t.Severity
+}
+
+func (t TestBase) GetType() string {
+	return t.Type
+}
+
+func (t NotNullTest) GetColumns() []string {
+	return t.TestWithColumns.Columns
+}
+
+func (t EmptyTest) GetColumns() []string {
+	return t.TestWithColumns.Columns
+}
+
+func (t UniqueTest) GetColumns() []string {
+	return t.TestWithColumns.Columns
+}
+
+func (t AcceptedValuesTest) GetColumns() []string {
+	return []string{t.Column}
+}
+
+func (t RejectedValuesTest) GetColumns() []string {
+	return []string{t.Column}
+}
+
+func (t MinMaxTest) GetColumns() []string {
+	return []string{t.Column}
+}
+
+func (t MinValueTest) GetColumns() []string {
+	return []string{t.Column}
+}
+
+func (t MaxValueTest) GetColumns() []string {
+	return []string{t.Column}
+}
+
+func (t FreshnessTest) GetColumns() []string {
+	return []string{}
+}
+
+func (t RelativeTimeTest) GetColumns() []string {
+	return []string{t.Column, t.RelativeColumn}
+}
+
+func (t BusinessRuleTest) GetColumns() []string {
+	return []string{}
 }
