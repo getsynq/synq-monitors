@@ -202,14 +202,13 @@ func (s *remoteMgmtService) DeploySqlTests(
 		newDefinitions := lo.Map(changesOverview.SqlTestsChangesOverview, func(changeOverview *SqlTestChangeOverview, _ int) *sqltestsv1.SqlTest {
 			return changeOverview.NewSqlTest
 		})
-		// TODO: Implement this once we have a way to reset sql tests
-		// testIdsToReset := lo.FilterMap(changesOverview.SqlTestsChangesOverview, func(changeOverview *SqlTestChangeOverview, _ int) (string, bool) {
-		// 	return changeOverview.SqlTestId, changeOverview.ShouldReset
-		// })
+		testIdsToReset := lo.FilterMap(changesOverview.SqlTestsChangesOverview, func(changeOverview *SqlTestChangeOverview, _ int) (string, bool) {
+			return changeOverview.SqlTestId, changeOverview.ShouldReset
+		})
 
 		_, err := s.sqlTestsService.BatchUpsertSqlTests(s.ctx, &sqltestsv1.BatchUpsertSqlTestsRequest{
-			// SqlTestIdsToReset: testIdsToReset,
-			SqlTests: newDefinitions,
+			SqlTestIdsToReset: testIdsToReset,
+			SqlTests:          newDefinitions,
 		})
 		if err != nil {
 			return err
