@@ -174,7 +174,7 @@ func (p *YAMLParser) ConvertToSqlTests() ([]*sqltestsv1.SqlTest, error) {
 
 			p.applyTestSeverity(test, yamlTest.GetSeverity())
 
-			if _, ok := existingTestIds[test.Id]; ok {
+			if _, ok := existingTestIds[test.Id]; ok && test.Id != "" {
 				errors = append(errors, ConversionError{
 					Field:   "id",
 					Message: "must be unique within entity",

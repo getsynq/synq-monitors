@@ -29,7 +29,7 @@ func connectToApi(ctx context.Context) (*grpc.ClientConn, error) {
 
 	creds, err := configLoader.LoadCredentials()
 	if err != nil {
-		exitWithError(fmt.Errorf("❌ Failed to load credentials: %v", err))
+		exitWithError(fmt.Errorf("Failed to load credentials: %v", err))
 	}
 
 	host, port := getHostAndPort(creds.ApiUrl)
@@ -116,6 +116,6 @@ func PrintSqlTests(sqlTests []*sqltestsv1.SqlTest) {
 }
 
 func exitWithError(err error) {
-	fmt.Fprintf(os.Stderr, "%v\n", err)
+	fmt.Fprintf(os.Stderr, "❌ %s\n", err.Error())
 	os.Exit(1)
 }

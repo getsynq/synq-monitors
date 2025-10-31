@@ -103,7 +103,7 @@ func deployFromYaml(cmd *cobra.Command, args []string) {
 		fmt.Println("Parsing files found under working directory")
 		filePaths, err = findFiles(".", []string{".yaml", ".yml"})
 		if err != nil {
-			exitWithError(fmt.Errorf("❌ Error finding files: %v", err))
+			exitWithError(fmt.Errorf("Error finding files: %v", err))
 		}
 	}
 
@@ -139,7 +139,7 @@ func deployFromYaml(cmd *cobra.Command, args []string) {
 		monitors := lo.FlatMap(parsers, func(item *yaml.VersionedParser, index int) []*pb.MonitorDefinition {
 			monitors, err := item.ConvertToMonitorDefinitions()
 			if err != nil {
-				fmt.Printf("could not convert to monitor definitions: %v", err)
+				fmt.Fprintf(os.Stderr, "could not convert to monitor definitions: %v", err)
 				return []*pb.MonitorDefinition{}
 			}
 
@@ -156,15 +156,13 @@ func deployFromYaml(cmd *cobra.Command, args []string) {
 		sqlTests := lo.FlatMap(parsers, func(item *yaml.VersionedParser, index int) []*sqltestsv1.SqlTest {
 			sqlTests, err := item.ConvertToSqlTests()
 			if err != nil {
-				fmt.Fprintf(os.Stderr, "could not convert to sql tests: %v", err)
-				return []*sqltestsv1.SqlTest{}
+				exitWithError(fmt.Errorf("could not convert to sql tests: %v", err))
 			}
 			return sqlTests
 		})
 		sqlTests, err = resolveTests(pathsConverter, sqlTests)
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "could not resolve tests: %v", err)
-			continue
+			exitWithError(fmt.Errorf("could not resolve tests: %v", err))
 		}
 		duplicateSeen := assignAndValidateUUIDs(workspace, namespace, monitors, sqlTests)
 		if duplicateSeen {
