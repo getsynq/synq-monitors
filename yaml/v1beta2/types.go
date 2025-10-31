@@ -96,6 +96,15 @@ func (s *Schedule) MarshalYAML() (any, error) {
 	return s.Type, nil
 }
 
+func (s *Schedule) ToSimpleSchedule() *SimpleSchedule {
+	return &SimpleSchedule{
+		SimpleScheduleInline: SimpleScheduleInline{
+			Type:       s.Type,
+			QueryDelay: s.QueryDelay,
+		},
+	}
+}
+
 type SimpleSchedule struct {
 	SimpleScheduleInline `yaml:",inline"`
 }

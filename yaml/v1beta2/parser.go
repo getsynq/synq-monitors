@@ -166,13 +166,11 @@ func (p *YAMLParser) ConvertToSqlTests() ([]*sqltestsv1.SqlTest, error) {
 
 		for _, wrapper := range entity.Tests {
 			yamlTest := wrapper.Test
-			test, err := convertSingleTest(yamlTest, entityId)
+			test, err := convertSingleTest(yamlTest, entityId, p.yamlConfig.Defaults)
 			if err.HasErrors() {
 				errors = append(errors, err...)
 				continue
 			}
-
-			p.applyTestSeverity(test, yamlTest.GetSeverity())
 
 			if _, ok := existingTestIds[test.Id]; ok && test.Id != "" {
 				errors = append(errors, ConversionError{
@@ -232,18 +230,6 @@ func (p *YAMLParser) applyMonitorSeverity(monitor *pb.MonitorDefinition, severit
 		monitor.Severity = parsedSeverity
 	} else {
 		monitor.Severity = pb.Severity_SEVERITY_ERROR
-	}
-}
-
-func (p *YAMLParser) applyTestSeverity(test *sqltestsv1.SqlTest, severity string) {
-	if p.yamlConfig.Defaults != nil && severity == "" {
-		severity = p.yamlConfig.Defaults.Severity
-	}
-
-	if parsedSeverity, ok := parseTestSeverity(severity); ok {
-		test.Severity = parsedSeverity
-	} else {
-		test.Severity = sqltestsv1.Severity_SEVERITY_ERROR
 	}
 }
 

@@ -14,10 +14,16 @@ import (
 func convertSingleTest(
 	yamlTest TestInline,
 	monitoredID string,
+	defaults *Defaults,
 ) (*sqltestsv1.SqlTest, ConversionErrors) {
 	var errors ConversionErrors
 
-	recurrenceRule, err := convertScheduleToRecurrenceRule(yamlTest.GetSchedule())
+	schedule := yamlTest.GetSchedule()
+	if defaults.Schedule != nil {
+		schedule = defaults.Schedule.ToSimpleSchedule()
+	}
+
+	recurrenceRule, err := convertScheduleToRecurrenceRule(schedule)
 	if err != nil {
 		errors = append(errors, ConversionError{
 			Field:   "schedule",
@@ -27,11 +33,25 @@ func convertSingleTest(
 		return nil, errors
 	}
 
+	severity := yamlTest.GetSeverity()
+	if defaults.Severity != "" {
+		severity = defaults.Severity
+	}
+	parsedSeverity, ok := parseTestSeverity(severity)
+	if !ok {
+		errors = append(errors, ConversionError{
+			Field:   "severity",
+			Message: "invalid severity",
+			Test:    yamlTest.GetId(),
+		})
+	}
+
 	proto := &sqltestsv1.SqlTest{
 		Id:             yamlTest.GetId(),
 		Name:           yamlTest.GetName(),
 		Description:    yamlTest.GetDescription(),
 		RecurrenceRule: recurrenceRule,
+		Severity:       parsedSeverity,
 		Template: &sqltestsv1.Template{
 			Identifier: &entitiesv1.Identifier{
 				Id: &entitiesv1.Identifier_SynqPath{
