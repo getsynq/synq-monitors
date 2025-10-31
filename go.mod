@@ -8,7 +8,7 @@ require (
 	github.com/manifoldco/promptui v0.9.0
 	github.com/samber/lo v1.51.0
 	github.com/spf13/cobra v1.9.1
-	github.com/stretchr/testify v1.10.0
+	github.com/stretchr/testify v1.11.1
 	golang.org/x/oauth2 v0.30.0
 	google.golang.org/grpc v1.74.2
 	google.golang.org/protobuf v1.36.10
@@ -33,24 +33,30 @@ require (
 require (
 	buf.build/gen/go/getsynq/api/grpc/go v1.5.1-20251027123029-e0ebf51a8ef4.2
 	buf.build/gen/go/getsynq/api/protocolbuffers/go v1.36.10-20251031073041-89f2c2b56818.1
+	buf.build/go/protovalidate v1.0.0
 	github.com/gkampitakis/go-snaps v0.5.14
 	github.com/invopop/jsonschema v0.13.0
 	github.com/sebdah/goldie/v2 v2.8.0
+	github.com/teambition/rrule-go v1.8.2
 	go.uber.org/mock v0.6.0
 	go.yaml.in/yaml/v3 v3.0.4
 )
 
 require (
+	cel.dev/expr v0.24.0 // indirect
+	github.com/antlr4-go/antlr/v4 v4.13.1 // indirect
 	github.com/bahlo/generic-list-go v0.2.0 // indirect
 	github.com/buger/jsonparser v1.1.1 // indirect
+	github.com/google/cel-go v0.26.1 // indirect
 	github.com/mailru/easyjson v0.7.7 // indirect
 	github.com/onsi/ginkgo v1.16.5 // indirect
 	github.com/onsi/gomega v1.38.2 // indirect
 	github.com/sergi/go-diff v1.4.0 // indirect
-	github.com/teambition/rrule-go v1.8.2 // indirect
+	github.com/stoewer/go-strcase v1.3.1 // indirect
 	github.com/wk8/go-ordered-map/v2 v2.1.8 // indirect
 	github.com/yudai/golcs v0.0.0-20170316035057-ecda9a501e82 // indirect
 	github.com/yudai/pp v2.0.1+incompatible // indirect
+	golang.org/x/exp v0.0.0-20250620022241-b7579e27df2b // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
 

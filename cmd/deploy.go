@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"context"
+	stderr "errors"
 	"fmt"
 	"net/url"
 	"os"
@@ -14,6 +15,8 @@ import (
 	sqltestsv1 "buf.build/gen/go/getsynq/api/protocolbuffers/go/synq/datachecks/sqltests/v1"
 	entitiesv1 "buf.build/gen/go/getsynq/api/protocolbuffers/go/synq/entities/v1"
 	pb "buf.build/gen/go/getsynq/api/protocolbuffers/go/synq/monitors/custom_monitors/v1"
+	"buf.build/go/protovalidate"
+
 	"github.com/getsynq/monitors_mgmt/mgmt"
 	"github.com/getsynq/monitors_mgmt/paths"
 	"github.com/getsynq/monitors_mgmt/uuid"
@@ -170,6 +173,11 @@ func deployFromYaml(cmd *cobra.Command, args []string) {
 			continue
 		}
 
+		if err = validateProtos(monitors, sqlTests); err != nil {
+			fmt.Fprintf(os.Stderr, "protos contained errors: %v", err)
+			continue
+		}
+
 		// Conditionally show protobuf output based on the -p flag
 		if deployCmd_printProtobuf {
 			PrintMonitorDefs(monitors)
@@ -228,6 +236,24 @@ func deployFromYaml(cmd *cobra.Command, args []string) {
 
 		fmt.Println("✅ Deployment complete!")
 	}
+}
+
+func validateProtos(monitors []*pb.MonitorDefinition, sqlTests []*sqltestsv1.SqlTest) error {
+	var errs []error
+
+	for _, monitor := range monitors {
+		if err := protovalidate.Validate(monitor); err != nil {
+			errs = append(errs, err)
+		}
+	}
+
+	for _, test := range sqlTests {
+		if err := protovalidate.Validate(test); err != nil {
+			errs = append(errs, err)
+		}
+	}
+
+	return stderr.Join(errs...)
 }
 
 // DuplicateGroup holds all items that share the same UUID
