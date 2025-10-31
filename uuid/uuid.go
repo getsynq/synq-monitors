@@ -48,6 +48,7 @@ func (g *UUIDGenerator) GenerateTestUUID(test *sqltestsv1.SqlTest) string {
 	}
 
 	fields := []string{
+		test.Id,
 		// test.ConfigId,
 		test.Template.GetIdentifier().GetSynqPath().GetPath(),
 		test.Template.WhichTest().String(),

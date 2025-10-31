@@ -164,9 +164,9 @@ func deployFromYaml(cmd *cobra.Command, args []string) {
 		if err != nil {
 			exitWithError(fmt.Errorf("could not resolve tests: %v", err))
 		}
-		duplicates := assignAndValidateUUIDs(workspace, namespace, monitors, sqlTests)
+		duplicates := assignAndValidateUUIDs(workspace, monitors, sqlTests)
 		if duplicates.HasDuplicates() {
-			printGroupedDuplicates(duplicates, namespace)
+			duplicates.PrettyPrint(namespace)
 			continue
 		}
 
@@ -247,7 +247,7 @@ func (d *Duplicates) HasDuplicates() bool {
 	return len(d.MonitorGroups) > 0 || len(d.TestGroups) > 0
 }
 
-func assignAndValidateUUIDs(workspace, namespace string, monitors []*pb.MonitorDefinition, sqlTests []*sqltestsv1.SqlTest) *Duplicates {
+func assignAndValidateUUIDs(workspace string, monitors []*pb.MonitorDefinition, sqlTests []*sqltestsv1.SqlTest) *Duplicates {
 	// Group all items by UUID
 	monitorDuplicates := map[string][]*pb.MonitorDefinition{}
 	testDuplicates := map[string][]*sqltestsv1.SqlTest{}
@@ -303,12 +303,13 @@ func assignAndValidateUUIDs(workspace, namespace string, monitors []*pb.MonitorD
 }
 
 // printGroupedDuplicates prints all duplicates grouped by UUID in a clear, readable format
-func printGroupedDuplicates(duplicates *Duplicates, namespace string) {
+func (d *Duplicates) PrettyPrint(namespace string) {
 	fmt.Printf("\n❌ Duplicates detected in namespace '%s':\n", namespace)
+	fmt.Println("💡 You can provide id on entity level to avoid duplicates")
 	fmt.Println(strings.Repeat("=", 70))
 
 	// Print monitor duplicates
-	for _, group := range duplicates.MonitorGroups {
+	for _, group := range d.MonitorGroups {
 		fmt.Printf("\n📊 Duplicate Monitor UUID: %s\n", group.UUID)
 		fmt.Printf("   Found %d monitor(s) with the same UUID:\n", len(group.Items))
 		fmt.Println(strings.Repeat("-", 70))
@@ -341,7 +342,7 @@ func printGroupedDuplicates(duplicates *Duplicates, namespace string) {
 	}
 
 	// Print test duplicates
-	for _, group := range duplicates.TestGroups {
+	for _, group := range d.TestGroups {
 		fmt.Printf("\n🧪 Duplicate Test UUID: %s\n", group.UUID)
 		fmt.Printf("   Found %d test(s) with the same UUID:\n", len(group.Items))
 		fmt.Println(strings.Repeat("-", 70))

@@ -28,6 +28,7 @@ func convertSingleTest(
 	}
 
 	proto := &sqltestsv1.SqlTest{
+		Id:             yamlTest.GetId(),
 		Name:           yamlTest.GetName(),
 		Description:    yamlTest.GetDescription(),
 		RecurrenceRule: recurrenceRule,
