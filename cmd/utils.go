@@ -8,6 +8,7 @@ import (
 	"os"
 	"strings"
 
+	sqltestsv1 "buf.build/gen/go/getsynq/api/protocolbuffers/go/synq/datachecks/sqltests/v1"
 	pb "buf.build/gen/go/getsynq/api/protocolbuffers/go/synq/monitors/custom_monitors/v1"
 	"github.com/getsynq/monitors_mgmt/config"
 	"golang.org/x/oauth2/clientcredentials"
@@ -28,7 +29,7 @@ func connectToApi(ctx context.Context) (*grpc.ClientConn, error) {
 
 	creds, err := configLoader.LoadCredentials()
 	if err != nil {
-		exitWithError(fmt.Errorf("❌ Failed to load credentials: %v", err))
+		exitWithError(fmt.Errorf("Failed to load credentials: %v", err))
 	}
 
 	host, port := getHostAndPort(creds.ApiUrl)
@@ -83,7 +84,38 @@ func PrintMonitorDefs(monitorDefs []*pb.MonitorDefinition) {
 	fmt.Println(strings.Repeat("=", 60))
 }
 
+func PrintSqlTests(sqlTests []*sqltestsv1.SqlTest) {
+	fmt.Println("\n📋 SqlTests (JSON format):")
+	fmt.Println(strings.Repeat("=", 60))
+
+	for i, test := range sqlTests {
+		fmt.Printf("\n--- Test %d: %s ---\n", i+1, test.Name)
+
+		// Convert to JSON for readable display
+		jsonBytes, err := protojson.MarshalOptions{
+			Multiline: true,
+			Indent:    "  ",
+		}.Marshal(test)
+
+		if err != nil {
+			fmt.Printf("❌ Error converting to JSON: %v\n", err)
+			continue
+		}
+
+		// Pretty print the JSON
+		var prettyJSON map[string]interface{}
+		if err := json.Unmarshal(jsonBytes, &prettyJSON); err == nil {
+			prettyBytes, _ := json.MarshalIndent(prettyJSON, "", "  ")
+			fmt.Println(string(prettyBytes))
+		} else {
+			fmt.Println(string(jsonBytes))
+		}
+	}
+
+	fmt.Println(strings.Repeat("=", 60))
+}
+
 func exitWithError(err error) {
-	fmt.Fprintf(os.Stderr, "%v\n", err)
+	fmt.Fprintf(os.Stderr, "❌ %s\n", err.Error())
 	os.Exit(1)
 }

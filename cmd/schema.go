@@ -24,10 +24,10 @@ func init() {
 func generateSchema(cmd *cobra.Command, args []string) {
 	schemaBytes, err := schema.GenerateJSONSchema()
 	if err != nil {
-		exitWithError(fmt.Errorf("❌ Error generating schema: %v", err))
+		exitWithError(fmt.Errorf("Error generating schema: %v", err))
 	}
 
 	if _, err := os.Stdout.Write(schemaBytes); err != nil {
-		exitWithError(fmt.Errorf("❌ Error writing schema: %v", err))
+		exitWithError(fmt.Errorf("Error writing schema: %v", err))
 	}
 }

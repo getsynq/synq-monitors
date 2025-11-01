@@ -8,6 +8,7 @@ import (
 	"slices"
 	"strings"
 
+	sqltestsv1 "buf.build/gen/go/getsynq/api/protocolbuffers/go/synq/datachecks/sqltests/v1"
 	entitiesv1 "buf.build/gen/go/getsynq/api/protocolbuffers/go/synq/entities/v1"
 	pb "buf.build/gen/go/getsynq/api/protocolbuffers/go/synq/monitors/custom_monitors/v1"
 	"github.com/fatih/color"
@@ -18,6 +19,11 @@ import (
 )
 
 type ChangesOverview struct {
+	MonitorChangesOverview *MonitorChangesOverview
+	SqlTestChangesOverview *SqlTestChangesOverview
+}
+
+type MonitorChangesOverview struct {
 	ConfigID                     string
 	MonitorsUnchanged            []*pb.MonitorDefinition
 	MonitorsToCreate             []*pb.MonitorDefinition
@@ -27,11 +33,57 @@ type ChangesOverview struct {
 	MonitorsChangesOverview      []*pb.ChangeOverview
 }
 
+type SqlTestChangeOverview struct {
+	SqlTestId        string
+	OriginSqlTest    *sqltestsv1.SqlTest
+	NewSqlTest       *sqltestsv1.SqlTest
+	Changes          string
+	ChangesDeltaJson string
+	ShouldReset      bool
+}
+type SqlTestChangesOverview struct {
+	ConfigID                     string
+	SqlTestsUnchanged            []*sqltestsv1.SqlTest
+	SqlTestsToCreate             []*sqltestsv1.SqlTest
+	SqlTestsToDelete             []*sqltestsv1.SqlTest
+	SqlTestsManagedByApp         []string
+	SqlTestsManagedByOtherConfig map[string]string
+	SqlTestsChangesOverview      []*SqlTestChangeOverview
+}
+
 func (s *ChangesOverview) HasChanges() bool {
-	return len(s.MonitorsToCreate)+len(s.MonitorsToDelete)+len(s.MonitorsChangesOverview)+len(s.MonitorsManagedByApp)+len(s.MonitorsManagedByOtherConfig) > 0
+	return s.MonitorChangesOverview.HasChanges() || s.SqlTestChangesOverview.HasChanges()
 }
 
 func (s *ChangesOverview) GetBreakingChanges() string {
+	return s.MonitorChangesOverview.GetBreakingChanges() + s.SqlTestChangesOverview.GetBreakingChanges()
+}
+
+func (s *ChangesOverview) PrettyPrint() {
+	s.MonitorChangesOverview.PrettyPrint()
+	s.SqlTestChangesOverview.PrettyPrint()
+}
+
+func GenerateConfigChangesOverview(configId string, protoMonitors []*pb.MonitorDefinition, fetchedMonitors map[string]*pb.MonitorDefinition, sqlTests []*sqltestsv1.SqlTest, fetchedSqlTests map[string]*sqltestsv1.SqlTest) (*ChangesOverview, error) {
+	monitorChangesOverview, err := generateMonitorChangesOverview(configId, protoMonitors, fetchedMonitors)
+	if err != nil {
+		return nil, err
+	}
+	sqlTestChangesOverview, err := generateSqlTestChangesOverview(configId, sqlTests, fetchedSqlTests)
+	if err != nil {
+		return nil, err
+	}
+	return &ChangesOverview{
+		MonitorChangesOverview: monitorChangesOverview,
+		SqlTestChangesOverview: sqlTestChangesOverview,
+	}, nil
+}
+
+func (s *MonitorChangesOverview) HasChanges() bool {
+	return len(s.MonitorsToCreate)+len(s.MonitorsToDelete)+len(s.MonitorsChangesOverview)+len(s.MonitorsManagedByApp)+len(s.MonitorsManagedByOtherConfig) > 0
+}
+
+func (s *MonitorChangesOverview) GetBreakingChanges() string {
 	breakingChanges := []string{}
 	if len(s.MonitorsManagedByOtherConfig) > 0 {
 		breakingChanges = append(breakingChanges, fmt.Sprintf("  🚫 %d monitors managed by other configs.", len(s.MonitorsManagedByOtherConfig)))
@@ -46,7 +98,7 @@ func (s *ChangesOverview) GetBreakingChanges() string {
 	return strings.Join(breakingChanges, "\n")
 }
 
-func GenerateConfigChangesOverview(configId string, protoMonitors []*pb.MonitorDefinition, fetchedMonitors map[string]*pb.MonitorDefinition) (*ChangesOverview, error) {
+func generateMonitorChangesOverview(configId string, protoMonitors []*pb.MonitorDefinition, fetchedMonitors map[string]*pb.MonitorDefinition) (*MonitorChangesOverview, error) {
 	// Map incoming data
 	monitorIdsInConfig := []string{}
 	for id, monitor := range fetchedMonitors {
@@ -94,7 +146,7 @@ func GenerateConfigChangesOverview(configId string, protoMonitors []*pb.MonitorD
 			continue
 		}
 
-		changes, err := generateChangeOverview(differ, deltaFormatter, fetchedMonitor, monitor)
+		changes, err := generateMonitorChangeOverview(differ, deltaFormatter, fetchedMonitor, monitor)
 		if err != nil {
 			return nil, err
 		}
@@ -105,7 +157,7 @@ func GenerateConfigChangesOverview(configId string, protoMonitors []*pb.MonitorD
 		}
 	}
 
-	return &ChangesOverview{
+	return &MonitorChangesOverview{
 		ConfigID:                     configId,
 		MonitorsToCreate:             monitorsToCreate,
 		MonitorsToDelete:             monitorsToDelete,
@@ -116,7 +168,72 @@ func GenerateConfigChangesOverview(configId string, protoMonitors []*pb.MonitorD
 	}, nil
 }
 
-func (s *ChangesOverview) PrettyPrint() {
+func generateSqlTestChangesOverview(configId string, protoSqlTests []*sqltestsv1.SqlTest, fetchedSqlTests map[string]*sqltestsv1.SqlTest) (*SqlTestChangesOverview, error) {
+	// TODO: Use this once we have a way to get sql tests by config id and source
+	// sqlTestIdsInConfig := []string{}
+	// for id, sqlTest := range fetchedSqlTests {
+	// 	if sqlTest.ConfigId == configId {
+	// 		sqlTestIdsInConfig = append(sqlTestIdsInConfig, id)
+	// 	}
+	// }
+	requestedSqlTests := map[string]*sqltestsv1.SqlTest{}
+	for _, pst := range protoSqlTests {
+		requestedSqlTests[pst.Id] = pst
+	}
+
+	// Identify SQL tests to delete
+	sqlTestsToDelete := []*sqltestsv1.SqlTest{}
+	for sqlTestId, fetchedSqlTest := range fetchedSqlTests {
+		if _, exists := requestedSqlTests[sqlTestId]; !exists {
+			sqlTestsToDelete = append(sqlTestsToDelete, fetchedSqlTest)
+		}
+	}
+
+	// For all requested SQL tests check if they are:
+	// * to create
+	// * to update
+	// * unchanged
+	differ := diff.New()
+	deltaFormatter := formatter.NewDeltaFormatter()
+	sqlTestsToCreate, sqlTestsUnchanged := []*sqltestsv1.SqlTest{}, []*sqltestsv1.SqlTest{}
+	// SqlTests do not have 'Source' or 'ConfigId' fields for ownership checks like Monitors.
+	// Therefore, no `managedByApp` or `managedByOtherConfigs` equivalent for SQL tests.
+	sqlTestsChangesOverview := []*SqlTestChangeOverview{}
+
+	for sqlTestId, sqlTest := range requestedSqlTests {
+		fetchedSqlTest := fetchedSqlTests[sqlTestId]
+		if fetchedSqlTest == nil {
+			sqlTestsToCreate = append(sqlTestsToCreate, sqlTest)
+			continue
+		}
+
+		// No 'Source' or 'ConfigId' ownership checks for SqlTests like Monitors.
+
+		// Diffing logic, following the same pattern as generateMonitorChangeOverview
+		sqlTestChange, err := generateSqlTestChangeOverview(differ, deltaFormatter, fetchedSqlTest, sqlTest)
+		if err != nil {
+			return nil, err
+		}
+
+		if sqlTestChange.Changes == "" {
+			sqlTestsUnchanged = append(sqlTestsUnchanged, sqlTest)
+		} else {
+			sqlTestsChangesOverview = append(sqlTestsChangesOverview, sqlTestChange)
+		}
+	}
+
+	return &SqlTestChangesOverview{
+		ConfigID:                     configId,
+		SqlTestsToCreate:             sqlTestsToCreate,
+		SqlTestsToDelete:             sqlTestsToDelete,
+		SqlTestsUnchanged:            sqlTestsUnchanged,
+		SqlTestsChangesOverview:      sqlTestsChangesOverview,
+		SqlTestsManagedByApp:         []string{},
+		SqlTestsManagedByOtherConfig: map[string]string{},
+	}, nil
+}
+
+func (s *MonitorChangesOverview) PrettyPrint() {
 	// Color definitions
 	green := color.New(color.FgGreen, color.Bold)
 	red := color.New(color.FgRed, color.Bold)
@@ -126,7 +243,7 @@ func (s *ChangesOverview) PrettyPrint() {
 	bold := color.New(color.Bold)
 
 	fmt.Println()
-	bold.Printf("📊 Configuration Changes Overview: %s\n", s.ConfigID)
+	bold.Printf("📊 Monitor Changes Overview: %s\n", s.ConfigID)
 	fmt.Println(strings.Repeat("=", 50))
 
 	totalChanges := len(s.MonitorsToCreate) + len(s.MonitorsToDelete) + len(s.MonitorsChangesOverview)
@@ -151,7 +268,7 @@ func (s *ChangesOverview) PrettyPrint() {
 	}
 
 	if totalChanges == 0 {
-		gray.Println("\n✨ No changes detected - configuration is up to date")
+		gray.Println("\n✨ No changes detected - monitors configuration is up to date")
 		return
 	}
 
@@ -243,8 +360,168 @@ func (s *ChangesOverview) PrettyPrint() {
 	fmt.Println(strings.Repeat("=", 50))
 }
 
+func (s *SqlTestChangesOverview) HasChanges() bool {
+	return len(s.SqlTestsToCreate)+len(s.SqlTestsToDelete)+len(s.SqlTestsChangesOverview)+len(s.SqlTestsManagedByApp)+len(s.SqlTestsManagedByOtherConfig) > 0
+}
+
+func (s *SqlTestChangesOverview) GetBreakingChanges() string {
+	breakingChanges := []string{}
+	if len(s.SqlTestsManagedByOtherConfig) > 0 {
+		breakingChanges = append(breakingChanges, fmt.Sprintf("  🚫 %d SQL tests managed by other configs.", len(s.SqlTestsManagedByOtherConfig)))
+	}
+	for sqlTestId, configId := range s.SqlTestsManagedByOtherConfig {
+		namespaceStr := "default"
+		if len(configId) > 0 {
+			namespaceStr = configId
+		}
+		breakingChanges = append(breakingChanges, fmt.Sprintf("     - SQL Test ID: %s, Managed by namespace: %s", sqlTestId, namespaceStr))
+	}
+	return strings.Join(breakingChanges, "\n")
+}
+
+func (s *SqlTestChangesOverview) PrettyPrint() {
+	// Color definitions
+	green := color.New(color.FgGreen, color.Bold)
+	red := color.New(color.FgRed, color.Bold)
+	yellow := color.New(color.FgYellow, color.Bold)
+	blue := color.New(color.FgBlue, color.Bold)
+	gray := color.New(color.FgHiBlack)
+	bold := color.New(color.Bold)
+
+	fmt.Println()
+	bold.Printf("🧪 SQL Test Changes Overview: %s\n", s.ConfigID)
+	fmt.Println(strings.Repeat("=", 50))
+
+	totalChanges := len(s.SqlTestsToCreate) + len(s.SqlTestsToDelete) + len(s.SqlTestsChangesOverview)
+	fmt.Printf("\n📈 Summary: %d total changes\n", totalChanges)
+	if len(s.SqlTestsToCreate) > 0 {
+		green.Printf("  + %d SQL tests to create\n", len(s.SqlTestsToCreate))
+	}
+	if len(s.SqlTestsToDelete) > 0 {
+		red.Printf("  - %d SQL tests to delete\n", len(s.SqlTestsToDelete))
+	}
+	if len(s.SqlTestsChangesOverview) > 0 {
+		yellow.Printf("  ~ %d SQL tests to update\n", len(s.SqlTestsChangesOverview))
+	}
+	if len(s.SqlTestsUnchanged) > 0 {
+		blue.Printf("  = %d SQL tests unchanged\n", len(s.SqlTestsUnchanged))
+	}
+	if len(s.SqlTestsManagedByApp) > 0 {
+		gray.Printf("  ⚠ %d SQL tests managed by app that will now be managed by given config\n", len(s.SqlTestsManagedByApp))
+	}
+	if len(s.SqlTestsManagedByOtherConfig) > 0 {
+		red.Printf("  🚫 %d SQL tests managed by other configs\n", len(s.SqlTestsManagedByOtherConfig))
+	}
+
+	if totalChanges == 0 {
+		gray.Println("\n✨ No changes detected - SQL tests configuration is up to date")
+		return
+	}
+
+	// New SQL tests
+	if len(s.SqlTestsToCreate) > 0 {
+		fmt.Println()
+		green.Println("🆕 SQL Tests to Create:")
+		for i, sqlTest := range s.SqlTestsToCreate {
+			fmt.Printf("  %d. ", i+1)
+			green.Printf("%s", sqlTest.Name)
+			fmt.Printf(" (%s)\n", sqlTest.Id)
+			if sqlTest.Template != nil && sqlTest.Template.Identifier != nil {
+				gray.Printf("     → Monitored: %s\n", s.formatSqlTestMonitoredId(sqlTest.Template.Identifier))
+			}
+		}
+	}
+
+	// Deleted SQL tests
+	if len(s.SqlTestsToDelete) > 0 {
+		fmt.Println()
+		red.Println("🗑️  SQL Tests to Delete:")
+		for i, sqlTest := range s.SqlTestsToDelete {
+			fmt.Printf("  %d. ", i+1)
+			red.Printf("%s", sqlTest.Name)
+			fmt.Printf(" (%s)\n", sqlTest.Id)
+			if sqlTest.Template != nil && sqlTest.Template.Identifier != nil {
+				gray.Printf("     → Monitored: %s\n", s.formatSqlTestMonitoredId(sqlTest.Template.Identifier))
+			}
+		}
+	}
+
+	// Updated SQL tests
+	if len(s.SqlTestsChangesOverview) > 0 {
+		fmt.Println()
+		yellow.Println("📝 SQL Tests to Update:")
+		for i, change := range s.SqlTestsChangesOverview {
+			fmt.Printf("  %d. ", i+1)
+			if change.NewSqlTest != nil {
+				yellow.Printf("%s", change.NewSqlTest.Name)
+				fmt.Printf(" (%s)\n", change.NewSqlTest.Id)
+			} else if change.OriginSqlTest != nil {
+				yellow.Printf("%s", change.OriginSqlTest.Name)
+				fmt.Printf(" (%s)\n", change.OriginSqlTest.Id)
+			}
+
+			// Show ShouldReset flag if true
+			if change.ShouldReset {
+				red.Printf("       🔄 RESET REQUIRED\n")
+			}
+
+			// Show change of ownership
+			if slices.Contains(s.SqlTestsManagedByApp, change.SqlTestId) {
+				red.Printf("       🔄 Management transfer from App\n")
+			}
+
+			if change.Changes != "" {
+				// Indent the diff output
+				lines := strings.Split(change.Changes, "\n")
+				for _, line := range lines {
+					if line != "" {
+						if strings.HasPrefix(line, "+") {
+							green.Printf("       %s\n", line)
+						} else if strings.HasPrefix(line, "-") {
+							red.Printf("       %s\n", line)
+						} else {
+							gray.Printf("       %s\n", line)
+						}
+					}
+				}
+			}
+		}
+	}
+
+	// Unchanged SQL tests
+	if len(s.SqlTestsUnchanged) > 0 {
+		fmt.Println()
+		blue.Println("✅ SQL Tests Unchanged:")
+		for i, sqlTest := range s.SqlTestsUnchanged {
+			fmt.Printf("  %d. ", i+1)
+			blue.Printf("%s", sqlTest.Name)
+			fmt.Printf(" (%s)\n", sqlTest.Id)
+			if sqlTest.Template != nil && sqlTest.Template.Identifier != nil {
+				gray.Printf("     → Monitored: %s\n", s.formatSqlTestMonitoredId(sqlTest.Template.Identifier))
+			}
+		}
+	}
+
+	fmt.Println()
+	fmt.Println(strings.Repeat("=", 50))
+}
+
+// Helper function to format MonitoredId for SQL tests
+func (s *SqlTestChangesOverview) formatSqlTestMonitoredId(id *entitiesv1.Identifier) string {
+	if id == nil {
+		return "unknown"
+	}
+
+	switch v := id.GetId().(type) {
+	case *entitiesv1.Identifier_SynqPath:
+		return v.SynqPath.GetPath()
+	default:
+		return "unknown"
+	}
+}
+
 // Helper function to extract monitor type from MonitorDefinition
-func (s *ChangesOverview) getMonitorType(monitor *pb.MonitorDefinition) string {
+func (s *MonitorChangesOverview) getMonitorType(monitor *pb.MonitorDefinition) string {
 	if monitor == nil {
 		return "unknown"
 	}
@@ -264,7 +541,7 @@ func (s *ChangesOverview) getMonitorType(monitor *pb.MonitorDefinition) string {
 }
 
 // Helper function to format MonitoredId for display
-func (s *ChangesOverview) formatMonitoredId(id *entitiesv1.Identifier) string {
+func (s *MonitorChangesOverview) formatMonitoredId(id *entitiesv1.Identifier) string {
 	if id == nil {
 		panic("id is nil")
 	}
@@ -277,7 +554,7 @@ func (s *ChangesOverview) formatMonitoredId(id *entitiesv1.Identifier) string {
 	panic("unknown id type")
 }
 
-func generateChangeOverview(
+func generateMonitorChangeOverview(
 	differ *diff.Differ,
 	deltaFormatter *formatter.DeltaFormatter,
 	origin *pb.MonitorDefinition,
@@ -345,11 +622,87 @@ func generateChangeOverview(
 		NewDefinition:    newOverview,
 		Changes:          changes,
 		ChangesDeltaJson: changesDelta,
-		ShouldReset:      shouldReset(origin, newOverview),
+		ShouldReset:      shouldResetMonitor(origin, newOverview),
 	}, nil
 }
 
-func shouldReset(
+func generateSqlTestChangeOverview(
+	differ *diff.Differ,
+	deltaFormatter *formatter.DeltaFormatter,
+	origin *sqltestsv1.SqlTest,
+	newTest *sqltestsv1.SqlTest,
+) (*SqlTestChangeOverview, error) {
+	if origin == nil && newTest == nil {
+		return nil, errors.New("origin and new sql test cannot be nil")
+	}
+
+	if origin == nil {
+		return &SqlTestChangeOverview{
+			SqlTestId:  newTest.Id,
+			NewSqlTest: newTest,
+		}, nil
+	}
+
+	if newTest == nil {
+		return &SqlTestChangeOverview{
+			SqlTestId:     origin.Id,
+			OriginSqlTest: origin,
+		}, nil
+	}
+
+	if origin.Id != newTest.Id {
+		return nil, errors.New("origin and new sql test must have the same id")
+	}
+
+	// Remove platform and sql expression from origin to avoid diffing them
+	origin.Platform = nil
+	origin.SqlExpression = ""
+
+	originJson, err := protojson.Marshal(origin)
+	if err != nil {
+		return nil, err
+	}
+	var originMap map[string]interface{}
+	err = json.Unmarshal(originJson, &originMap)
+	if err != nil {
+		return nil, err
+	}
+
+	newTestJson, err := protojson.Marshal(newTest)
+	if err != nil {
+		return nil, err
+	}
+
+	diff, err := differ.Compare(originJson, newTestJson)
+	if err != nil {
+		return nil, err
+	}
+
+	changes := ""
+	changesDelta := "{}"
+	if diff.Modified() {
+		asciiFormatter := formatter.NewAsciiFormatter(originMap, formatter.AsciiFormatterConfig{ShowArrayIndex: true})
+		changesDelta, err = deltaFormatter.Format(diff)
+		if err != nil {
+			return nil, err
+		}
+		changes, err = asciiFormatter.Format(diff)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	return &SqlTestChangeOverview{
+		SqlTestId:        origin.Id,
+		OriginSqlTest:    origin,
+		NewSqlTest:       newTest,
+		Changes:          changes,
+		ChangesDeltaJson: changesDelta,
+		ShouldReset:      shouldResetSqlTest(origin, newTest),
+	}, nil
+}
+
+func shouldResetMonitor(
 	originDef *pb.MonitorDefinition,
 	newDef *pb.MonitorDefinition,
 ) bool {
@@ -387,6 +740,72 @@ func shouldReset(
 	}
 
 	if originDef.GetSegmentation().GetExpression() != newDef.GetSegmentation().GetExpression() {
+		return true
+	}
+
+	return false
+}
+
+func shouldResetSqlTest(
+	originDef *sqltestsv1.SqlTest,
+	newDef *sqltestsv1.SqlTest,
+) bool {
+	if originDef.GetRecurrenceRule() != newDef.GetRecurrenceRule() {
+		return true
+	}
+
+	if originDef.GetTemplate() != nil && newDef.GetTemplate() != nil {
+		if originDef.GetTemplate().WhichTest() != newDef.GetTemplate().WhichTest() {
+			return true
+		}
+		// Even if same type, check if underlying struct changed
+		switch originDef.GetTemplate().WhichTest() {
+		case sqltestsv1.Template_NotNullTest_case:
+			if !reflect.DeepEqual(originDef.GetTemplate().GetNotNullTest(), newDef.GetTemplate().GetNotNullTest()) {
+				return true
+			}
+		case sqltestsv1.Template_EmptyTest_case:
+			if !reflect.DeepEqual(originDef.GetTemplate().GetEmptyTest(), newDef.GetTemplate().GetEmptyTest()) {
+				return true
+			}
+		case sqltestsv1.Template_AcceptedValuesTest_case:
+			if !reflect.DeepEqual(originDef.GetTemplate().GetAcceptedValuesTest(), newDef.GetTemplate().GetAcceptedValuesTest()) {
+				return true
+			}
+		case sqltestsv1.Template_RejectedValuesTest_case:
+			if !reflect.DeepEqual(originDef.GetTemplate().GetRejectedValuesTest(), newDef.GetTemplate().GetRejectedValuesTest()) {
+				return true
+			}
+		case sqltestsv1.Template_UniqueTest_case:
+			if !reflect.DeepEqual(originDef.GetTemplate().GetUniqueTest(), newDef.GetTemplate().GetUniqueTest()) {
+				return true
+			}
+		case sqltestsv1.Template_FreshnessTest_case:
+			if !reflect.DeepEqual(originDef.GetTemplate().GetFreshnessTest(), newDef.GetTemplate().GetFreshnessTest()) {
+				return true
+			}
+		case sqltestsv1.Template_MinMaxTest_case:
+			if !reflect.DeepEqual(originDef.GetTemplate().GetMinMaxTest(), newDef.GetTemplate().GetMinMaxTest()) {
+				return true
+			}
+		case sqltestsv1.Template_RelativeTimeTest_case:
+			if !reflect.DeepEqual(originDef.GetTemplate().GetRelativeTimeTest(), newDef.GetTemplate().GetRelativeTimeTest()) {
+				return true
+			}
+		case sqltestsv1.Template_BusinessRuleTest_case:
+			if !reflect.DeepEqual(originDef.GetTemplate().GetBusinessRuleTest(), newDef.GetTemplate().GetBusinessRuleTest()) {
+				return true
+			}
+		case sqltestsv1.Template_MinValueTest_case:
+			if !reflect.DeepEqual(originDef.GetTemplate().GetMinValueTest(), newDef.GetTemplate().GetMinValueTest()) {
+				return true
+			}
+		case sqltestsv1.Template_MaxValueTest_case:
+			if !reflect.DeepEqual(originDef.GetTemplate().GetMaxValueTest(), newDef.GetTemplate().GetMaxValueTest()) {
+				return true
+			}
+		}
+	} else if (originDef.GetTemplate() == nil) != (newDef.GetTemplate() == nil) {
 		return true
 	}
 

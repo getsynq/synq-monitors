@@ -20,6 +20,7 @@ type YAMLConfig struct {
 		Timezone         string        `yaml:"timezone,omitempty"`
 	} `yaml:"defaults,omitempty"`
 	Monitors []YAMLMonitor `yaml:"monitors"`
+	// Tests    []YAMLTest    `yaml:"tests,omitempty"`
 }
 
 type YAMLMonitor struct {
@@ -68,15 +69,56 @@ type YAMLSchedule struct {
 	IgnoreLast            *int32         `yaml:"ignore_last,omitempty"`
 }
 
+// YAMLTest represents a SQL test definition in YAML format
+type YAMLTest struct {
+	Id           string        `yaml:"id"`
+	Type         string        `yaml:"type"`
+	MonitoredID  string        `yaml:"monitored_id,omitempty"`
+	MonitoredIDs []string      `yaml:"monitored_ids,omitempty"`
+	Daily        *YAMLSchedule `yaml:"daily,omitempty"`
+	Hourly       *YAMLSchedule `yaml:"hourly,omitempty"`
+	ConfigID     string        `yaml:"-"`
+
+	// Test-specific fields (flattened union type)
+	// For not_null, unique, empty tests
+	Columns []string `yaml:"columns,omitempty"`
+
+	// For accepted_values, rejected_values, min_max, min_value, max_value tests
+	Column string `yaml:"column,omitempty"`
+
+	// For accepted_values, rejected_values tests
+	Values []string `yaml:"values,omitempty"`
+
+	// For min_max, min_value tests
+	MinValue *float64 `yaml:"min_value,omitempty"`
+
+	// For min_max, max_value tests
+	MaxValue *float64 `yaml:"max_value,omitempty"`
+
+	// For freshness, unique tests
+	TimePartitionColumn string `yaml:"time_partition_column,omitempty"`
+	TimeWindowSeconds   *int64 `yaml:"time_window_seconds,omitempty"`
+
+	// For relative_time test
+	RelativeColumn string `yaml:"relative_column,omitempty"`
+
+	// For business_rule test
+	SqlExpression string `yaml:"sql_expression,omitempty"`
+}
+
 type ConversionError struct {
 	Field   string
 	Message string
 	Monitor string
+	Test    string
 }
 
 func (e ConversionError) Error() string {
 	if e.Monitor != "" {
 		return fmt.Sprintf("Monitor '%s': %s - %s", e.Monitor, e.Field, e.Message)
+	}
+	if e.Test != "" {
+		return fmt.Sprintf("Test '%s': %s - %s", e.Test, e.Field, e.Message)
 	}
 	return fmt.Sprintf("%s - %s", e.Field, e.Message)
 }

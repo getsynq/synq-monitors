@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"strings"
 
+	sqltestsv1 "buf.build/gen/go/getsynq/api/protocolbuffers/go/synq/datachecks/sqltests/v1"
 	entitiesv1 "buf.build/gen/go/getsynq/api/protocolbuffers/go/synq/entities/v1"
 	pb "buf.build/gen/go/getsynq/api/protocolbuffers/go/synq/monitors/custom_monitors/v1"
 	"github.com/getsynq/monitors_mgmt/yaml/core"
@@ -458,4 +459,8 @@ func convertHourlySchedule(hourly *YAMLSchedule) *pb.MonitorDefinition_Hourly {
 	}
 
 	return &pb.MonitorDefinition_Hourly{Hourly: schedule}
+}
+
+func (p *YAMLParser) ConvertToSqlTests() ([]*sqltestsv1.SqlTest, error) {
+	return nil, nil
 }

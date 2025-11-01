@@ -3,6 +3,8 @@ package uuid
 import (
 	"testing"
 
+	sqltestsv1 "buf.build/gen/go/getsynq/api/protocolbuffers/go/synq/datachecks/sqltests/v1"
+	testsuggestionsv1 "buf.build/gen/go/getsynq/api/protocolbuffers/go/synq/datachecks/testsuggestions/v1"
 	entitiesv1 "buf.build/gen/go/getsynq/api/protocolbuffers/go/synq/entities/v1"
 	pb "buf.build/gen/go/getsynq/api/protocolbuffers/go/synq/monitors/custom_monitors/v1"
 	"github.com/samber/lo"
@@ -181,6 +183,187 @@ func TestGenerateMonitorUUIDFromProto(t *testing.T) {
 
 			// Verify it's deterministic (same input = same output)
 			uuid2 := uuidGenerator.GenerateMonitorUUID(tt.monitor)
+			assert.Equal(t, uuid, uuid2, "UUID should be deterministic")
+
+			t.Logf("Generated UUID: %s", uuid)
+		})
+	}
+}
+
+func TestGenerateTestUUID(t *testing.T) {
+	fixedUuid := "47d40726-e0ae-4892-9ba4-b24bda0bb14d"
+
+	tests := []struct {
+		name     string
+		test     *sqltestsv1.SqlTest
+		expected string
+	}{
+		{
+			name: "business rule test with SQL expression",
+			test: &sqltestsv1.SqlTest{
+				Id: "test_business_rule",
+				Template: &sqltestsv1.Template{
+					Identifier: &entitiesv1.Identifier{
+						Id: &entitiesv1.Identifier_SynqPath{
+							SynqPath: &entitiesv1.SynqPathIdentifier{
+								Path: "table1",
+							},
+						},
+					},
+					Test: &sqltestsv1.Template_BusinessRuleTest{
+						BusinessRuleTest: &testsuggestionsv1.BusinessRuleTest{
+							SqlExpression: "total_amount = subtotal + tax",
+						},
+					},
+				},
+			},
+		},
+		{
+			name: "not null test minimal fields",
+			test: &sqltestsv1.SqlTest{
+				Id: "test_not_null",
+				Template: &sqltestsv1.Template{
+					Identifier: &entitiesv1.Identifier{
+						Id: &entitiesv1.Identifier_SynqPath{
+							SynqPath: &entitiesv1.SynqPathIdentifier{
+								Path: "table2",
+							},
+						},
+					},
+					Test: &sqltestsv1.Template_NotNullTest{
+						NotNullTest: &testsuggestionsv1.NotNullTest{
+							ColumnNames: []string{"user_id"},
+						},
+					},
+				},
+			},
+		},
+		{
+			name: "accepted values test with values",
+			test: &sqltestsv1.SqlTest{
+				Id: "test_accepted_values",
+				Template: &sqltestsv1.Template{
+					Identifier: &entitiesv1.Identifier{
+						Id: &entitiesv1.Identifier_SynqPath{
+							SynqPath: &entitiesv1.SynqPathIdentifier{
+								Path: "table3",
+							},
+						},
+					},
+					Test: &sqltestsv1.Template_AcceptedValuesTest{
+						AcceptedValuesTest: &testsuggestionsv1.AcceptedValuesTest{
+							ColumnName:     "status",
+							AcceptedValues: []string{"active", "inactive", "pending"},
+						},
+					},
+				},
+			},
+		},
+		{
+			name: "unique test with time partition",
+			test: &sqltestsv1.SqlTest{
+				Id: "test_unique",
+				Template: &sqltestsv1.Template{
+					Identifier: &entitiesv1.Identifier{
+						Id: &entitiesv1.Identifier_SynqPath{
+							SynqPath: &entitiesv1.SynqPathIdentifier{
+								Path: "table4",
+							},
+						},
+					},
+					Test: &sqltestsv1.Template_UniqueTest{
+						UniqueTest: &testsuggestionsv1.UniqueTest{
+							ColumnNames:             []string{"order_id"},
+							TimePartitionColumnName: "created_at",
+						},
+					},
+				},
+			},
+		},
+		{
+			name: "freshness test with time window",
+			test: &sqltestsv1.SqlTest{
+				Id: "test_freshness",
+				Template: &sqltestsv1.Template{
+					Identifier: &entitiesv1.Identifier{
+						Id: &entitiesv1.Identifier_SynqPath{
+							SynqPath: &entitiesv1.SynqPathIdentifier{
+								Path: "table5",
+							},
+						},
+					},
+					Test: &sqltestsv1.Template_FreshnessTest{
+						FreshnessTest: &testsuggestionsv1.FreshnessTest{
+							TimePartitionColumnName: "updated_at",
+							TimeWindowSeconds:       86400,
+						},
+					},
+				},
+			},
+		},
+		{
+			name: "test with fixed UUID",
+			test: &sqltestsv1.SqlTest{
+				Id: fixedUuid,
+				Template: &sqltestsv1.Template{
+					Identifier: &entitiesv1.Identifier{
+						Id: &entitiesv1.Identifier_SynqPath{
+							SynqPath: &entitiesv1.SynqPathIdentifier{
+								Path: "table6",
+							},
+						},
+					},
+					Test: &sqltestsv1.Template_NotNullTest{
+						NotNullTest: &testsuggestionsv1.NotNullTest{
+							ColumnNames: []string{"id"},
+						},
+					},
+				},
+			},
+		},
+		{
+			name: "min max test with range",
+			test: &sqltestsv1.SqlTest{
+				Id: "test_min_max",
+				Template: &sqltestsv1.Template{
+					Identifier: &entitiesv1.Identifier{
+						Id: &entitiesv1.Identifier_SynqPath{
+							SynqPath: &entitiesv1.SynqPathIdentifier{
+								Path: "table7",
+							},
+						},
+					},
+					Test: &sqltestsv1.Template_MinMaxTest{
+						MinMaxTest: &testsuggestionsv1.MinMaxTest{
+							ColumnName: "price",
+							MinValue:   0.0,
+							MaxValue:   1000.0,
+						},
+					},
+				},
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			uuidGenerator := NewUUIDGenerator("synq")
+			uuid := uuidGenerator.GenerateTestUUID(tt.test)
+
+			// Verify it's not empty
+			assert.NotEmpty(t, uuid)
+
+			// Verify that fixed UUID is retained
+			if tt.test.Id == fixedUuid {
+				assert.Equal(t, fixedUuid, uuid)
+			}
+
+			// Verify UUID format
+			assert.Len(t, uuid, 36)
+			assert.Contains(t, uuid, "-")
+
+			// Verify it's deterministic (same input = same output)
+			uuid2 := uuidGenerator.GenerateTestUUID(tt.test)
 			assert.Equal(t, uuid, uuid2, "UUID should be deterministic")
 
 			t.Logf("Generated UUID: %s", uuid)

@@ -18,7 +18,7 @@ func TestMgmtServiceTestSuite(t *testing.T) {
 	suite.Run(t, &MgmtServiceTestSuite{})
 }
 
-func (s *MgmtServiceTestSuite) TestConfigChangesOverview() {
+func (s *MgmtServiceTestSuite) TestMonitorChangesOverview() {
 	configId := "config-id"
 
 	// Create existing monitor
@@ -150,7 +150,7 @@ func (s *MgmtServiceTestSuite) TestConfigChangesOverview() {
 			},
 		}
 
-		changes, err := GenerateConfigChangesOverview(configId, requestedMonitors, map[string]*pb.MonitorDefinition{
+		changes, err := generateMonitorChangesOverview(configId, requestedMonitors, map[string]*pb.MonitorDefinition{
 			existingMonitor.Id:      existingMonitor,
 			appMonitor.Id:           appMonitor,
 			toDeleteMonitor.Id:      toDeleteMonitor,
@@ -199,7 +199,7 @@ func (s *MgmtServiceTestSuite) TestConfigChangesOverview() {
 	s.Run("empty_request_no_existing_monitors", func() {
 		requestedMonitors := []*pb.MonitorDefinition{}
 
-		changes, err := GenerateConfigChangesOverview("config-id-no-existing", requestedMonitors, map[string]*pb.MonitorDefinition{})
+		changes, err := generateMonitorChangesOverview("config-id-no-existing", requestedMonitors, map[string]*pb.MonitorDefinition{})
 		s.Require().NoError(err)
 		s.Require().NotNil(changes)
 		s.Require().False(changes.HasChanges())
@@ -232,7 +232,7 @@ func (s *MgmtServiceTestSuite) TestConfigChangesOverview() {
 			Source:   pb.MonitorDefinition_SOURCE_API,
 		}
 
-		changes, err := GenerateConfigChangesOverview("", []*pb.MonitorDefinition{}, map[string]*pb.MonitorDefinition{
+		changes, err := generateMonitorChangesOverview("", []*pb.MonitorDefinition{}, map[string]*pb.MonitorDefinition{
 			monitor.Id: monitor,
 		})
 		s.Require().NoError(err)
@@ -249,7 +249,7 @@ func (s *MgmtServiceTestSuite) TestConfigChangesOverview() {
 	})
 
 	s.Run("empty_request_with_monitors", func() {
-		changes, err := GenerateConfigChangesOverview(configId, []*pb.MonitorDefinition{}, map[string]*pb.MonitorDefinition{
+		changes, err := generateMonitorChangesOverview(configId, []*pb.MonitorDefinition{}, map[string]*pb.MonitorDefinition{
 			existingMonitor.Id: existingMonitor,
 		})
 		s.Require().NoError(err)
@@ -266,7 +266,7 @@ func (s *MgmtServiceTestSuite) TestConfigChangesOverview() {
 	})
 
 	s.Run("no_changes", func() {
-		changes, err := GenerateConfigChangesOverview(configId, []*pb.MonitorDefinition{existingMonitor}, map[string]*pb.MonitorDefinition{
+		changes, err := generateMonitorChangesOverview(configId, []*pb.MonitorDefinition{existingMonitor}, map[string]*pb.MonitorDefinition{
 			existingMonitor.Id: existingMonitor,
 		})
 		s.Require().NoError(err)
@@ -302,7 +302,7 @@ func (s *MgmtServiceTestSuite) TestConfigChangesOverview() {
 			Severity: pb.Severity_SEVERITY_WARNING,
 			Source:   pb.MonitorDefinition_SOURCE_API,
 		}
-		changes, err := GenerateConfigChangesOverview(configId, []*pb.MonitorDefinition{{
+		changes, err := generateMonitorChangesOverview(configId, []*pb.MonitorDefinition{{
 			Name: "named_monitor",
 			Id:   uuid.NewString(),
 			MonitoredId: &entitiesv1.Identifier{
@@ -354,7 +354,7 @@ func (s *MgmtServiceTestSuite) TestConfigChangesOverview() {
 			Severity: pb.Severity_SEVERITY_WARNING,
 			Source:   pb.MonitorDefinition_SOURCE_API,
 		}
-		changes, err := GenerateConfigChangesOverview("", []*pb.MonitorDefinition{{
+		changes, err := generateMonitorChangesOverview("", []*pb.MonitorDefinition{{
 			Name: "named_monitor",
 			Id:   uuid.NewString(),
 			MonitoredId: &entitiesv1.Identifier{

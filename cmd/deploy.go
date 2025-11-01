@@ -11,6 +11,7 @@ import (
 
 	iamv1grpc "buf.build/gen/go/getsynq/api/grpc/go/synq/auth/iam/v1/iamv1grpc"
 	iamv1 "buf.build/gen/go/getsynq/api/protocolbuffers/go/synq/auth/iam/v1"
+	sqltestsv1 "buf.build/gen/go/getsynq/api/protocolbuffers/go/synq/datachecks/sqltests/v1"
 	entitiesv1 "buf.build/gen/go/getsynq/api/protocolbuffers/go/synq/entities/v1"
 	pb "buf.build/gen/go/getsynq/api/protocolbuffers/go/synq/monitors/custom_monitors/v1"
 	"github.com/getsynq/monitors_mgmt/mgmt"
@@ -102,7 +103,7 @@ func deployFromYaml(cmd *cobra.Command, args []string) {
 		fmt.Println("Parsing files found under working directory")
 		filePaths, err = findFiles(".", []string{".yaml", ".yml"})
 		if err != nil {
-			exitWithError(fmt.Errorf("❌ Error finding files: %v", err))
+			exitWithError(fmt.Errorf("Error finding files: %v", err))
 		}
 	}
 
@@ -138,7 +139,7 @@ func deployFromYaml(cmd *cobra.Command, args []string) {
 		monitors := lo.FlatMap(parsers, func(item *yaml.VersionedParser, index int) []*pb.MonitorDefinition {
 			monitors, err := item.ConvertToMonitorDefinitions()
 			if err != nil {
-				fmt.Printf("could not convert to monitor definitions: %v", err)
+				fmt.Fprintf(os.Stderr, "could not convert to monitor definitions: %v", err)
 				return []*pb.MonitorDefinition{}
 			}
 
@@ -152,32 +153,37 @@ func deployFromYaml(cmd *cobra.Command, args []string) {
 			continue
 		}
 
-		duplicateSeen := assignAndValidateUUIDs(workspace, namespace, monitors)
-		if duplicateSeen {
+		sqlTests := lo.FlatMap(parsers, func(item *yaml.VersionedParser, index int) []*sqltestsv1.SqlTest {
+			sqlTests, err := item.ConvertToSqlTests()
+			if err != nil {
+				exitWithError(fmt.Errorf("could not convert to sql tests: %v", err))
+			}
+			return sqlTests
+		})
+		sqlTests, err = resolveTests(pathsConverter, sqlTests)
+		if err != nil {
+			exitWithError(fmt.Errorf("could not resolve tests: %v", err))
+		}
+		duplicates := assignAndValidateUUIDs(workspace, monitors, sqlTests)
+		if duplicates.HasDuplicates() {
+			duplicates.PrettyPrint(namespace)
 			continue
 		}
 
 		// Conditionally show protobuf output based on the -p flag
 		if deployCmd_printProtobuf {
 			PrintMonitorDefs(monitors)
+			PrintSqlTests(sqlTests)
 		} else {
 			fmt.Println("\n💡 Use -p flag to print protobuf messages in JSON format")
 		}
 		fmt.Println("🎉 Deployment preparation complete!")
 
-		// localDatabaseURL := "postgres://postgres:postgres@localhost:5432/kernel_anomalies?sslmode=disable"
-		// localPostgresConn, err := sqlx.Connect("postgres", localDatabaseURL)
-		// if err != nil {
-		// 	panic(err)
-		// }
-		// defer localPostgresConn.Close()
-		// workspace = "synq"
-		// mgmtService := mgmt.NewMgmtLocalService(ctx, localPostgresConn, workspace)
 		mgmtService := mgmt.NewMgmtRemoteService(ctx, conn)
 
 		// Calculate delta
 		configID := namespace
-		changesOverview, err := mgmtService.ConfigChangesOverview(monitors, configID)
+		changesOverview, err := mgmtService.ConfigChangesOverview(monitors, sqlTests, configID)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "❌ Error getting config changes overview: %v", err)
 		}
@@ -206,33 +212,159 @@ func deployFromYaml(cmd *cobra.Command, args []string) {
 			fmt.Println("✅ Auto-confirmed deployment!")
 		}
 
-		err = mgmtService.DeployMonitors(changesOverview)
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "❌ Error deploying monitors: %v", err)
-			continue
+		if changesOverview.MonitorChangesOverview.HasChanges() {
+			err = mgmtService.DeployMonitors(changesOverview.MonitorChangesOverview)
+			if err != nil {
+				exitWithError(fmt.Errorf("❌ Error deploying monitors: %v", err))
+			}
+		}
+
+		if changesOverview.SqlTestChangesOverview.HasChanges() {
+			err = mgmtService.DeploySqlTests(changesOverview.SqlTestChangesOverview)
+			if err != nil {
+				exitWithError(fmt.Errorf("❌ Error deploying sql tests: %v", err))
+			}
 		}
 
 		fmt.Println("✅ Deployment complete!")
 	}
 }
 
-func assignAndValidateUUIDs(workspace, namespace string, monitors []*pb.MonitorDefinition) bool {
-	seenUUIDs := map[string]bool{}
-	duplicateSeen := false
+// DuplicateGroup holds all items that share the same UUID
+type DuplicateGroup struct {
+	UUID     string
+	Items    []interface{}
+	ItemType string // "monitor" or "test"
+}
 
-	// Sanitize UUIDs for monitors.
+// Duplicates holds all duplicate groups for monitors and tests
+type Duplicates struct {
+	MonitorGroups []DuplicateGroup
+	TestGroups    []DuplicateGroup
+}
+
+func (d *Duplicates) HasDuplicates() bool {
+	return len(d.MonitorGroups) > 0 || len(d.TestGroups) > 0
+}
+
+func assignAndValidateUUIDs(workspace string, monitors []*pb.MonitorDefinition, sqlTests []*sqltestsv1.SqlTest) *Duplicates {
+	// Group all items by UUID
+	monitorDuplicates := map[string][]*pb.MonitorDefinition{}
+	testDuplicates := map[string][]*sqltestsv1.SqlTest{}
+
+	// Sanitize UUIDs and group monitors by UUID
 	uuidGenerator := uuid.NewUUIDGenerator(workspace)
 	for _, protoMonitor := range monitors {
 		protoMonitor.Id = uuidGenerator.GenerateMonitorUUID(protoMonitor)
-
-		if _, exists := seenUUIDs[protoMonitor.Id]; exists {
-			duplicateSeen = true
-			fmt.Printf("❌ Duplicate monitor in namespace %s: %+v\n", namespace, protoMonitor)
-		}
-
-		seenUUIDs[protoMonitor.Id] = true
+		monitorDuplicates[protoMonitor.Id] = append(monitorDuplicates[protoMonitor.Id], protoMonitor)
 	}
-	return duplicateSeen
+
+	// Sanitize UUIDs and group tests by UUID
+	for _, protoTest := range sqlTests {
+		protoTest.Id = uuidGenerator.GenerateTestUUID(protoTest)
+		testDuplicates[protoTest.Id] = append(testDuplicates[protoTest.Id], protoTest)
+	}
+
+	// Filter out groups with only 1 item (no duplicates) and compose result
+	duplicates := &Duplicates{
+		MonitorGroups: []DuplicateGroup{},
+		TestGroups:    []DuplicateGroup{},
+	}
+
+	for uuid, items := range monitorDuplicates {
+		if len(items) > 1 {
+			groupItems := make([]interface{}, len(items))
+			for i, item := range items {
+				groupItems[i] = item
+			}
+			duplicates.MonitorGroups = append(duplicates.MonitorGroups, DuplicateGroup{
+				UUID:     uuid,
+				Items:    groupItems,
+				ItemType: "monitor",
+			})
+		}
+	}
+
+	for uuid, items := range testDuplicates {
+		if len(items) > 1 {
+			groupItems := make([]interface{}, len(items))
+			for i, item := range items {
+				groupItems[i] = item
+			}
+			duplicates.TestGroups = append(duplicates.TestGroups, DuplicateGroup{
+				UUID:     uuid,
+				Items:    groupItems,
+				ItemType: "test",
+			})
+		}
+	}
+
+	return duplicates
+}
+
+// printGroupedDuplicates prints all duplicates grouped by UUID in a clear, readable format
+func (d *Duplicates) PrettyPrint(namespace string) {
+	fmt.Printf("\n❌ Duplicates detected in namespace '%s':\n", namespace)
+	fmt.Println("💡 You can provide id on entity level to avoid duplicates")
+	fmt.Println(strings.Repeat("=", 70))
+
+	// Print monitor duplicates
+	for _, group := range d.MonitorGroups {
+		fmt.Printf("\n📊 Duplicate Monitor UUID: %s\n", group.UUID)
+		fmt.Printf("   Found %d monitor(s) with the same UUID:\n", len(group.Items))
+		fmt.Println(strings.Repeat("-", 70))
+
+		for i, item := range group.Items {
+			if monitor, ok := item.(*pb.MonitorDefinition); ok {
+				fmt.Printf("  %d. Name:       %s\n", i+1, monitor.Name)
+				if monitor.MonitoredId != nil {
+					if synqPath := monitor.MonitoredId.GetSynqPath(); synqPath != nil {
+						fmt.Printf("     Monitored:  %s\n", synqPath.Path)
+					}
+				}
+				// Show monitor type
+				switch monitor.GetMonitor().(type) {
+				case *pb.MonitorDefinition_Volume:
+					fmt.Printf("     Type:       volume\n")
+				case *pb.MonitorDefinition_Freshness:
+					fmt.Printf("     Type:       freshness\n")
+				case *pb.MonitorDefinition_FieldStats:
+					fmt.Printf("     Type:       field_stats\n")
+				case *pb.MonitorDefinition_CustomNumeric:
+					fmt.Printf("     Type:       custom_numeric\n")
+				}
+				if i < len(group.Items)-1 {
+					fmt.Println()
+				}
+			}
+		}
+		fmt.Println(strings.Repeat("-", 70))
+	}
+
+	// Print test duplicates
+	for _, group := range d.TestGroups {
+		fmt.Printf("\n🧪 Duplicate Test UUID: %s\n", group.UUID)
+		fmt.Printf("   Found %d test(s) with the same UUID:\n", len(group.Items))
+		fmt.Println(strings.Repeat("-", 70))
+
+		for i, item := range group.Items {
+			if test, ok := item.(*sqltestsv1.SqlTest); ok {
+				fmt.Printf("  %d. Name:       %s\n", i+1, test.Name)
+				if test.Template != nil && test.Template.Identifier != nil {
+					if synqPath := test.Template.Identifier.GetSynqPath(); synqPath != nil {
+						fmt.Printf("     Monitored:  %s\n", synqPath.Path)
+					}
+				}
+				if i < len(group.Items)-1 {
+					fmt.Println()
+				}
+			}
+		}
+		fmt.Println(strings.Repeat("-", 70))
+	}
+
+	fmt.Println(strings.Repeat("=", 70))
+	fmt.Println()
 }
 
 func getParser(path string) (*yaml.VersionedParser, error) {
@@ -282,6 +414,39 @@ func resolve(pathsConverter paths.PathConverter, protoMonitors []*pb.MonitorDefi
 	fmt.Println("✅ Monitored entities resolved!")
 
 	return protoMonitors, nil
+}
+
+func resolveTests(pathsConverter paths.PathConverter, protoTests []*sqltestsv1.SqlTest) ([]*sqltestsv1.SqlTest, error) {
+	fmt.Println("\n🔍 Resolving test entity paths...")
+	pathsToConvert := []string{}
+	for _, test := range protoTests {
+		path := test.Template.GetIdentifier().GetSynqPath().GetPath()
+		if len(path) > 0 {
+			pathsToConvert = append(pathsToConvert, path)
+		}
+	}
+	pathsToConvert = lo.Uniq(pathsToConvert)
+
+	resolvedPaths, err := pathsConverter.SimpleToPath(pathsToConvert)
+	if err != nil && err.HasErrors() {
+		return protoTests, errors.New(err.Error())
+	}
+
+	// set resolved paths back to tests
+	for i := range protoTests {
+		path := protoTests[i].Template.GetIdentifier().GetSynqPath().GetPath()
+		if resolved, ok := resolvedPaths[path]; ok && len(resolved) > 0 {
+			protoTests[i].Template.GetIdentifier().Id = &entitiesv1.Identifier_SynqPath{
+				SynqPath: &entitiesv1.SynqPathIdentifier{
+					Path: resolved,
+				},
+			}
+		}
+	}
+
+	fmt.Println("✅ Test entity paths resolved!")
+
+	return protoTests, nil
 }
 
 func getHostAndPort(apiUrl string) (string, string) {

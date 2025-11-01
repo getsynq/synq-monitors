@@ -3,6 +3,7 @@ package cmd
 import (
 	"testing"
 
+	sqltestsv1 "buf.build/gen/go/getsynq/api/protocolbuffers/go/synq/datachecks/sqltests/v1"
 	entitiesv1 "buf.build/gen/go/getsynq/api/protocolbuffers/go/synq/entities/v1"
 	pb "buf.build/gen/go/getsynq/api/protocolbuffers/go/synq/monitors/custom_monitors/v1"
 	"github.com/stretchr/testify/assert"
@@ -34,17 +35,11 @@ func TestAssignAndValidateUUIDs(t *testing.T) {
 	tests := []struct {
 		name          string
 		monitors      []*pb.MonitorDefinition
+		tests         []*sqltestsv1.SqlTest
 		duplicateSeen bool
 	}{
 		{
-			name: "single_monitor_no_duplicates",
-			monitors: []*pb.MonitorDefinition{
-				createMonitor("monitor1", "config1", "table1"),
-			},
-			duplicateSeen: false,
-		},
-		{
-			name: "multiple_unique_monitors_no_duplicates",
+			name: "multiple_uniques_no_duplicates",
 			monitors: []*pb.MonitorDefinition{
 				createMonitor("monitor1", "config1", "table1"),
 				createMonitor("monitor2", "config2", "table2"),
@@ -80,12 +75,13 @@ func TestAssignAndValidateUUIDs(t *testing.T) {
 			duplicateSeen: true,
 		},
 		{
-			name:          "empty_monitors_list",
+			name:          "empty",
 			monitors:      []*pb.MonitorDefinition{},
+			tests:         []*sqltestsv1.SqlTest{},
 			duplicateSeen: false,
 		},
 		{
-			name: "monitors_with_different_config_same_name",
+			name: "different_configs_same_name",
 			monitors: []*pb.MonitorDefinition{
 				createMonitor("monitor1", "config1", "table1"),
 				createMonitor("monitor1", "config2", "table1"),
@@ -104,9 +100,8 @@ func TestAssignAndValidateUUIDs(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			monitors := tt.monitors
-			duplicateSeen := assignAndValidateUUIDs(workspace, "default", monitors)
-			assert.Equal(t, tt.duplicateSeen, duplicateSeen)
+			duplicates := assignAndValidateUUIDs(workspace, tt.monitors, tt.tests)
+			assert.Equal(t, tt.duplicateSeen, duplicates.HasDuplicates())
 		})
 	}
 }

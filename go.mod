@@ -32,7 +32,7 @@ require (
 
 require (
 	buf.build/gen/go/getsynq/api/grpc/go v1.5.1-20251027123029-e0ebf51a8ef4.2
-	buf.build/gen/go/getsynq/api/protocolbuffers/go v1.36.10-20251027123029-e0ebf51a8ef4.1
+	buf.build/gen/go/getsynq/api/protocolbuffers/go v1.36.10-20251031073041-89f2c2b56818.1
 	github.com/gkampitakis/go-snaps v0.5.14
 	github.com/invopop/jsonschema v0.13.0
 	github.com/sebdah/goldie/v2 v2.8.0
@@ -47,6 +47,7 @@ require (
 	github.com/onsi/ginkgo v1.16.5 // indirect
 	github.com/onsi/gomega v1.38.2 // indirect
 	github.com/sergi/go-diff v1.4.0 // indirect
+	github.com/teambition/rrule-go v1.8.2 // indirect
 	github.com/wk8/go-ordered-map/v2 v2.1.8 // indirect
 	github.com/yudai/golcs v0.0.0-20170316035057-ecda9a501e82 // indirect
 	github.com/yudai/pp v2.0.1+incompatible // indirect

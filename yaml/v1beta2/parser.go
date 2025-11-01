@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"strings"
 
+	sqltestsv1 "buf.build/gen/go/getsynq/api/protocolbuffers/go/synq/datachecks/sqltests/v1"
 	entitiesv1 "buf.build/gen/go/getsynq/api/protocolbuffers/go/synq/entities/v1"
 	pb "buf.build/gen/go/getsynq/api/protocolbuffers/go/synq/monitors/custom_monitors/v1"
 	"github.com/getsynq/monitors_mgmt/yaml/core"
@@ -113,7 +114,7 @@ func (p *YAMLParser) ConvertToMonitorDefinitions() ([]*pb.MonitorDefinition, err
 				)
 			}
 
-			p.applySeverity(monitor, yamlMonitor.GetMonitorSeverity())
+			p.applyMonitorSeverity(monitor, yamlMonitor.GetMonitorSeverity())
 
 			err := p.applyMode(monitor, yamlMonitor.GetMonitorMode(), &entity)
 			if err.HasErrors() {
@@ -141,6 +142,55 @@ func (p *YAMLParser) ConvertToMonitorDefinitions() ([]*pb.MonitorDefinition, err
 	}
 
 	return monitors, errors.Coalesce()
+}
+
+func (p *YAMLParser) ConvertToSqlTests() ([]*sqltestsv1.SqlTest, error) {
+	var errors ConversionErrors
+	var protoTests []*sqltestsv1.SqlTest
+	existingTestIds := make(map[string]bool)
+
+	for _, entity := range p.yamlConfig.Entities {
+		entityId := strings.TrimSpace(entity.Id)
+		if entityId == "" {
+			errors = append(errors, ConversionError{
+				Field:   "id",
+				Message: "must be set",
+			})
+			continue
+		}
+
+		timePartitioning := entity.TimePartitioningColumn
+		if p.yamlConfig.Defaults != nil && timePartitioning == "" {
+			timePartitioning = p.yamlConfig.Defaults.TimePartitioning
+		}
+
+		for _, wrapper := range entity.Tests {
+			yamlTest := wrapper.Test
+			test, err := convertSingleTest(yamlTest, entityId, p.yamlConfig.Defaults)
+			if err.HasErrors() {
+				errors = append(errors, err...)
+				continue
+			}
+
+			if _, ok := existingTestIds[test.Id]; ok && test.Id != "" {
+				errors = append(errors, ConversionError{
+					Field:   "id",
+					Message: "must be unique within entity",
+					Test:    test.Id,
+					Entity:  entityId,
+				})
+			} else {
+				existingTestIds[test.Id] = true
+				protoTests = append(protoTests, test)
+			}
+		}
+	}
+
+	if len(errors) > 0 {
+		return protoTests, errors
+	}
+
+	return protoTests, nil
 }
 
 func (p *YAMLParser) createBaseMonitor(id, name, description, entityId, timePartitioning string) *pb.MonitorDefinition {
@@ -171,12 +221,12 @@ func (p *YAMLParser) createBaseMonitor(id, name, description, entityId, timePart
 	return monitor
 }
 
-func (p *YAMLParser) applySeverity(monitor *pb.MonitorDefinition, severity string) {
+func (p *YAMLParser) applyMonitorSeverity(monitor *pb.MonitorDefinition, severity string) {
 	if p.yamlConfig.Defaults != nil && severity == "" {
 		severity = p.yamlConfig.Defaults.Severity
 	}
 
-	if parsedSeverity, ok := parseSeverity(severity); ok {
+	if parsedSeverity, ok := parseMonitorSeverity(severity); ok {
 		monitor.Severity = parsedSeverity
 	} else {
 		monitor.Severity = pb.Severity_SEVERITY_ERROR
@@ -319,14 +369,29 @@ func (p *YAMLParser) applyOptionalFields(monitor *pb.MonitorDefinition, yamlMoni
 	return errors
 }
 
-func parseSeverity(severity string) (pb.Severity, bool) {
+func parseMonitorSeverity(severity string) (pb.Severity, bool) {
 	switch strings.ToUpper(severity) {
+	case "INFO":
+		return pb.Severity_SEVERITY_INFO, true
 	case "WARNING", "WARN":
 		return pb.Severity_SEVERITY_WARNING, true
 	case "ERROR", "":
 		return pb.Severity_SEVERITY_ERROR, true
 	default:
 		return pb.Severity_SEVERITY_UNSPECIFIED, false
+	}
+}
+
+func parseTestSeverity(severity string) (sqltestsv1.Severity, bool) {
+	switch strings.ToUpper(severity) {
+	case "INFO":
+		return sqltestsv1.Severity_SEVERITY_INFO, true
+	case "WARNING", "WARN":
+		return sqltestsv1.Severity_SEVERITY_WARNING, true
+	case "ERROR", "":
+		return sqltestsv1.Severity_SEVERITY_ERROR, true
+	default:
+		return sqltestsv1.Severity_SEVERITY_UNSPECIFIED, false
 	}
 }
 

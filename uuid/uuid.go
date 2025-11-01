@@ -3,6 +3,7 @@ package uuid
 import (
 	"strings"
 
+	sqltestsv1 "buf.build/gen/go/getsynq/api/protocolbuffers/go/synq/datachecks/sqltests/v1"
 	pb "buf.build/gen/go/getsynq/api/protocolbuffers/go/synq/monitors/custom_monitors/v1"
 	"github.com/google/uuid"
 )
@@ -31,6 +32,32 @@ func (g *UUIDGenerator) GenerateMonitorUUID(monitor *pb.MonitorDefinition) strin
 		monitor.Id,
 		monitor.ConfigId,
 		monitor.MonitoredId.GetSynqPath().GetPath(),
+	}
+
+	// Join fields with a separator
+	input := strings.Join(fields, "")
+	return uuid.NewSHA1(g.uuidSeed, []byte(input)).String()
+}
+
+// GenerateTestUUID generates a deterministic UUID for a test based on its configuration
+func (g *UUIDGenerator) GenerateTestUUID(test *sqltestsv1.SqlTest) string {
+	// Check if test.Id is already a valid UUID
+	parsed, err := uuid.Parse(test.Id)
+	if err == nil {
+		return parsed.String()
+	}
+
+	templateHash := ""
+	if test.Template.WhichTest() == sqltestsv1.Template_BusinessRuleTest_case {
+		templateHash = test.Template.GetBusinessRuleTest().GetSqlExpression()
+	}
+
+	fields := []string{
+		test.Id,
+		// test.ConfigId,
+		templateHash,
+		test.Template.GetIdentifier().GetSynqPath().GetPath(),
+		test.Template.WhichTest().String(),
 	}
 
 	// Join fields with a separator

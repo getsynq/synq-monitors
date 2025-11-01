@@ -59,13 +59,13 @@ func exportMonitors(cmd *cobra.Command, args []string) {
 	// Check if file exists
 	if _, err := os.Stat(yamlFilePath); !os.IsNotExist(err) {
 		exitWithError(
-			fmt.Errorf("❌ Error: File '%s' exists. Please provide a fresh path or remove the existing file before exporting.\n", yamlFilePath),
+			fmt.Errorf("Error: File '%s' exists. Please provide a fresh path or remove the existing file before exporting.\n", yamlFilePath),
 		)
 	}
 
 	// Create file directory if it does not exist
 	if err := os.MkdirAll(filepath.Dir(yamlFilePath), 0o770); err != nil {
-		exitWithError(fmt.Errorf("❌ Error: Unable to create directory for export file '%s'.\n", yamlFilePath))
+		exitWithError(fmt.Errorf("Error: Unable to create directory for export file '%s'.\n", yamlFilePath))
 	}
 
 	conn, err := connectToApi(ctx)
@@ -90,10 +90,10 @@ func exportMonitors(cmd *cobra.Command, args []string) {
 	// Fetch
 	monitors, err := mgmtService.ListMonitors(createListScope(pathsConverter))
 	if err != nil {
-		exitWithError(fmt.Errorf("❌ Error getting monitors: %v", err))
+		exitWithError(fmt.Errorf("Error getting monitors: %v", err))
 	}
 	if len(monitors) == 0 {
-		exitWithError(fmt.Errorf("❌ No monitors found for the given scope: %+v", exportScopeStr()))
+		exitWithError(fmt.Errorf("No monitors found for the given scope: %+v", exportScopeStr()))
 	}
 
 	fmt.Printf("\n✅ Found %d monitors. Exporting...\n", len(monitors))
@@ -102,28 +102,28 @@ func exportMonitors(cmd *cobra.Command, args []string) {
 	version := core.Version_DefaultGenerator
 	generator, err := yaml.NewVersionedGenerator(version, exportCmd_namespace, monitors)
 	if err != nil {
-		exitWithError(fmt.Errorf("❌ Error creating generator: %v", err))
+		exitWithError(fmt.Errorf("Error creating generator: %v", err))
 	}
 
 	yamlBytes, err := generator.GenerateYAML()
 	if err != nil {
-		exitWithError(fmt.Errorf("❌ Conversion errors found: %s\n", err.Error()))
+		exitWithError(fmt.Errorf("Conversion errors found: %s\n", err.Error()))
 	}
 
 	// Simplify monitored paths
 	yamlBytes, err = simplifyPaths(pathsConverter, yamlBytes)
 	if err != nil {
-		exitWithError(fmt.Errorf("❌ Error simplifying monitored paths: %w", err))
+		exitWithError(fmt.Errorf("Error simplifying monitored paths: %w", err))
 	}
 
 	// Parse to test validity
 	yamlParser, err := yaml.NewVersionedParser(yamlBytes)
 	if err != nil {
-		exitWithError(fmt.Errorf("❌ Error parsing generated YAML: %v", err))
+		exitWithError(fmt.Errorf("Error parsing generated YAML: %v", err))
 	}
 	_, err = yamlParser.ConvertToMonitorDefinitions()
 	if err != nil {
-		exitWithError(fmt.Errorf("❌ Conversion errors found while parsing generated YAML: %s\n", err.Error()))
+		exitWithError(fmt.Errorf("Conversion errors found while parsing generated YAML: %s\n", err.Error()))
 	}
 	fmt.Println("✅ Parse test completed for generated YAML...")
 
@@ -135,7 +135,7 @@ func exportMonitors(cmd *cobra.Command, args []string) {
 	defer f.Close()
 
 	if _, err := f.Write(yamlBytes); err != nil {
-		exitWithError(fmt.Errorf("❌ Error writing YAML: %v", err))
+		exitWithError(fmt.Errorf("Error writing YAML: %v", err))
 	}
 
 	fmt.Println("✅ Export complete!")
@@ -225,7 +225,7 @@ func createListScope(pathsConverter paths.PathConverter) *mgmt.ListScope {
 
 	source := strings.ToLower(exportCmd_source)
 	if !slices.Contains(exportCmd_validSources, source) {
-		exitWithError(fmt.Errorf("❌ Invalid source \"%s\". Must be one of %+v.", source, exportCmd_validSources))
+		exitWithError(fmt.Errorf("Invalid source \"%s\". Must be one of %+v.", source, exportCmd_validSources))
 	}
 
 	return &mgmt.ListScope{

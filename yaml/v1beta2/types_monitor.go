@@ -92,7 +92,7 @@ type BaseMonitor struct {
 	Name         string        `yaml:"name,omitempty"`
 	Description  string        `yaml:"description,omitempty"`
 	Filter       string        `yaml:"filter,omitempty"`
-	Severity     string        `yaml:"severity,omitempty"     jsonschema:"enum=WARNING,enum=ERROR"`
+	Severity     string        `yaml:"severity,omitempty"     jsonschema:"enum=INFO,enum=WARNING,enum=ERROR"`
 	Timezone     string        `yaml:"timezone,omitempty"`
 	Mode         *Mode         `yaml:"mode,omitempty"`
 	Segmentation *Segmentation `yaml:"segmentation,omitempty"`
