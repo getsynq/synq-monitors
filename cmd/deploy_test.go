@@ -100,8 +100,8 @@ func TestAssignAndValidateUUIDs(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			duplicateSeen := assignAndValidateUUIDs(workspace, tt.monitors, tt.tests)
-			assert.Equal(t, tt.duplicateSeen, duplicateSeen)
+			duplicates := assignAndValidateUUIDs(workspace, tt.monitors, tt.tests)
+			assert.Equal(t, tt.duplicateSeen, duplicates.HasDuplicates())
 		})
 	}
 }
