@@ -47,9 +47,15 @@ func (g *UUIDGenerator) GenerateTestUUID(test *sqltestsv1.SqlTest) string {
 		return parsed.String()
 	}
 
+	templateHash := ""
+	if test.Template.WhichTest() == sqltestsv1.Template_BusinessRuleTest_case {
+		templateHash = test.Template.GetBusinessRuleTest().GetSqlExpression()
+	}
+
 	fields := []string{
 		test.Id,
 		// test.ConfigId,
+		templateHash,
 		test.Template.GetIdentifier().GetSynqPath().GetPath(),
 		test.Template.WhichTest().String(),
 	}
